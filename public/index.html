@@ -280,6 +280,25 @@
             }
         }
 
+        // Helper function to extract Username and Roblox ID from ER:LC response
+        function parseErlcPlayer(p) {
+            let rawName = p.Player || p.Name || p.username || '';
+            let rawId = p.UserId || p.id || '';
+            let cleanUsername = rawName;
+            let cleanRobloxId = '';
+
+            // Handle Username:RobloxID format (e.g. EternalZtKm:8804437240)
+            if (rawName.includes(':')) {
+                const parts = rawName.split(':');
+                cleanUsername = parts[0].trim();
+                cleanRobloxId = parts[1].trim();
+            } else if (rawId && !isNaN(rawId)) {
+                cleanRobloxId = String(rawId).trim();
+            }
+
+            return { username: cleanUsername, robloxId: cleanRobloxId };
+        }
+
         function handlePlayerSearch(query) {
             const dropdown = document.getElementById('playerSearchDropdown');
             if (!query.trim()) {
@@ -288,8 +307,8 @@
             }
 
             const matches = cachedPlayers.filter(p => {
-                const name = p.Player || p.Name || p.username || '';
-                return name.toLowerCase().includes(query.toLowerCase());
+                const parsed = parseErlcPlayer(p);
+                return parsed.username.toLowerCase().includes(query.toLowerCase());
             });
 
             if (matches.length === 0) {
@@ -300,23 +319,22 @@
 
             dropdown.innerHTML = '';
             matches.forEach(p => {
-                const playerName = p.Player || p.Name || p.username || 'Unknown';
-                const robloxId = p.UserId || p.Permission || p.id || '';
+                const parsed = parseErlcPlayer(p);
 
                 dropdown.innerHTML += `
-                    <div onclick="selectPlayer('${playerName}', '${robloxId}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
+                    <div onclick="selectPlayer('${parsed.username}', '${parsed.robloxId}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
                         <div class="flex items-center space-x-2">
                             <div class="w-7 h-7 rounded-lg bg-emerald-900/60 border border-emerald-700 flex items-center justify-center text-emerald-400 text-xs">
                                 <i class="fa-solid fa-user"></i>
                             </div>
                             <div>
-                                <span class="text-xs font-bold text-white block">${playerName}</span>
+                                <span class="text-xs font-bold text-white block">${parsed.username}</span>
                                 <span class="text-[10px] text-emerald-400 flex items-center gap-1">
                                     <i class="fa-solid fa-hammer text-[8px]"></i> Active In-Game
                                 </span>
                             </div>
                         </div>
-                        <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">${robloxId ? 'ID: ' + robloxId : ''}</span>
+                        <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
                     </div>
                 `;
             });
@@ -328,7 +346,7 @@
             document.getElementById('targetUser').value = name;
             document.getElementById('playerSearchDropdown').classList.add('hidden');
 
-            if (id && id !== 'N/A' && id !== 'undefined') {
+            if (id && id !== 'N/A' && id !== 'undefined' && !isNaN(id)) {
                 document.getElementById('robloxId').value = id;
             } else {
                 autoFetchRobloxId(name);
@@ -339,6 +357,14 @@
             const robloxIdInput = document.getElementById('robloxId');
             const spinner = document.getElementById('idLoadingSpinner');
             
+            // If username contains a colon, parse it immediately!
+            if (username.includes(':')) {
+                const parts = username.split(':');
+                document.getElementById('targetUser').value = parts[0].trim();
+                robloxIdInput.value = parts[1].trim();
+                return;
+            }
+
             if (!username.trim()) return;
             if (robloxIdInput.value.trim() && !isNaN(robloxIdInput.value)) return;
 
