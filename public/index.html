@@ -15,20 +15,45 @@
 </head>
 <body class="p-6 min-h-screen">
 
-    <div id="loginOverlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="card p-8 rounded-2xl max-w-sm w-full text-center space-y-6 border border-slate-800 shadow-2xl">
-            <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg">
-                <i class="fa-brands fa-discord"></i>
+    <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
+            
+            <div id="step1Container" class="space-y-6">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg">
+                    <i class="fa-brands fa-discord"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Staff Dashboard Access</h2>
+                    <p class="text-xs text-slate-400 mt-1">Connect your Discord account to begin staff authorization.</p>
+                </div>
+                <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i class="fa-brands fa-discord text-lg"></i>
+                    <span>Connect Discord Account</span>
+                </a>
             </div>
-            <div>
-                <h2 class="text-xl font-bold text-white">Staff Authorization</h2>
-                <p class="text-xs text-slate-400 mt-1">Sign in with Discord to access the Planet Lenaris Staff Dashboard.</p>
+
+            <div id="step2Container" class="space-y-6 hidden">
+                <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <img id="modalAvatar" class="w-10 h-10 rounded-full border border-indigo-500" alt="Avatar">
+                    <div class="text-left">
+                        <span id="modalUsername" class="text-sm font-bold text-white block"></span>
+                        <span class="text-[10px] text-emerald-400 font-medium">Discord Account Connected</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
+                    <p class="text-xs text-slate-400 mt-1">Click below to check if your account possesses the required Staff Role.</p>
+                </div>
+
+                <button onclick="verifyRoleManually()" id="btnVerifyRole" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i class="fa-solid fa-shield-check text-lg"></i>
+                    <span>Check Staff Role & Enter Dashboard</span>
+                </button>
             </div>
-            <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2">
-                <i class="fa-brands fa-discord"></i>
-                <span>Log In with Discord</span>
-            </a>
-            <p id="authErrorMsg" class="text-xs text-rose-400 font-semibold hidden"></p>
+
+            <div id="authStatusBox" class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-medium hidden"></div>
+
         </div>
     </div>
 
@@ -47,7 +72,7 @@
             <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
             <div>
                 <span id="userName" class="text-xs font-bold text-white block"></span>
-                <span class="text-[10px] text-emerald-400 font-semibold">Verified Staff</span>
+                <span class="text-[10px] text-emerald-400 font-semibold">Verified Staff Member</span>
             </div>
             <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-2">
                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -85,3 +110,261 @@
                         <i class="fa-solid fa-terminal"></i>
                         <span>Run Command</span>
                     </button>
+                    <button onclick="alert('Actions open.')" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Actions</span>
+                    </button>
+                    <button onclick="alert('Staff assistance requested.')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>Request Staff</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="card p-5 rounded-2xl space-y-4">
+                <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Commands</h2>
+                <div class="flex space-x-2">
+                    <input type="text" id="erlcCmdInput" placeholder=":pm EternalZtKm Check Discord" class="flex-1 rounded-lg px-3 py-2 text-xs">
+                    <button onclick="sendErlcCommand()" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition">
+                        Run
+                    </button>
+                </div>
+            </div>
+
+            <div class="card p-5 rounded-2xl space-y-4">
+                <h2 class="font-bold text-white text-sm uppercase tracking-wider">Create Punishment Log</h2>
+
+                <form onsubmit="submitInfraction(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Player Name *</label>
+                        <input type="text" id="targetUser" required placeholder="Target Username" class="w-full rounded-lg px-3 py-2 text-xs">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Roblox Player ID</label>
+                        <input type="text" id="robloxId" placeholder="e.g. 8630572157" class="w-full rounded-lg px-3 py-2 text-xs">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
+                        <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
+                            <option value="Warning">Warning</option>
+                            <option value="Kick">Kick</option>
+                            <option value="Ban">Ban</option>
+                            <option value="Staff Warning">Staff Warning</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
+                        <textarea id="infractionReason" required rows="3" placeholder="Reason for infraction" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+                        Submit Punishment Log
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="card p-5 rounded-2xl space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">Punishment Logs</h2>
+                    <button onclick="loadLogs()" class="text-xs text-blue-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                </div>
+
+                <div id="logsContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-500">No punishments logged yet.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/user');
+                const data = await res.json();
+
+                if (data.success && data.user) {
+                    // Fully authenticated & verified
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('userProfile').classList.remove('hidden');
+                    document.getElementById('userName').textContent = data.user.username;
+                    document.getElementById('userAvatar').src = data.user.avatar;
+                    loadLogs();
+                } else if (data.discordConnected && data.user) {
+                    // Discord connected, ready for manual role verification!
+                    document.getElementById('loginOverlay').classList.remove('hidden');
+                    document.getElementById('step1Container').classList.add('hidden');
+                    document.getElementById('step2Container').classList.remove('hidden');
+                    document.getElementById('modalUsername').textContent = data.user.username;
+                    document.getElementById('modalAvatar').src = data.user.avatar;
+                } else {
+                    // Not connected at all
+                    document.getElementById('loginOverlay').classList.remove('hidden');
+                    document.getElementById('step1Container').classList.remove('hidden');
+                    document.getElementById('step2Container').classList.add('hidden');
+                }
+            } catch (err) {
+                document.getElementById('loginOverlay').classList.remove('hidden');
+            }
+        }
+
+        async function verifyRoleManually() {
+            const btn = document.getElementById('btnVerifyRole');
+            const statusBox = document.getElementById('authStatusBox');
+            
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> <span>Checking Discord Server & Roles...</span>`;
+            statusBox.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/verify-role', { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('userProfile').classList.remove('hidden');
+                    document.getElementById('userName').textContent = data.user.username;
+                    document.getElementById('userAvatar').src = data.user.avatar;
+                    loadLogs();
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Verification</span>`;
+                    statusBox.textContent = data.error || "Failed to verify role.";
+                    statusBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Verification</span>`;
+                statusBox.textContent = "Connection error verifying role.";
+                statusBox.classList.remove('hidden');
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout');
+            window.location.href = '/';
+        }
+
+        async function toggleShift(action) {
+            try {
+                const res = await fetch('/api/shifts/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, department: 'Staff Moderation' })
+                });
+
+                if (res.ok) {
+                    if (action === 'CLOCK_IN') {
+                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.add('hidden');
+                        document.getElementById('btnEndShift').classList.remove('hidden');
+                    } else {
+                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.remove('hidden');
+                        document.getElementById('btnEndShift').classList.add('hidden');
+                    }
+                    alert(`Shift ${action === 'CLOCK_IN' ? 'Started' : 'Ended'} successfully! Posted to Discord.`);
+                } else {
+                    alert('Error toggling shift.');
+                }
+            } catch (err) {
+                alert('Connection error logging shift.');
+            }
+        }
+
+        async function sendErlcCommand() {
+            const command = document.getElementById('erlcCmdInput').value.trim();
+            if (!command) return alert('Enter a command (e.g. :pm EternalZtKm Check Discord)');
+
+            try {
+                const res = await fetch('/api/erlc/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(`Command executed: ${command}`);
+                    document.getElementById('erlcCmdInput').value = '';
+                } else {
+                    alert(`Command Error: ${data.error || 'Failed to execute command'}`);
+                }
+            } catch (err) {
+                alert('Error executing command.');
+            }
+        }
+
+        async function submitInfraction(e) {
+            e.preventDefault();
+            const payload = {
+                targetUser: document.getElementById('targetUser').value,
+                robloxId: document.getElementById('robloxId').value,
+                punishmentType: document.getElementById('punishmentType').value,
+                reason: document.getElementById('infractionReason').value
+            };
+
+            try {
+                const res = await fetch('/api/punishments/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('Punishment Logged & Sent to Discord!');
+                    document.getElementById('targetUser').value = '';
+                    document.getElementById('robloxId').value = '';
+                    document.getElementById('infractionReason').value = '';
+                    loadLogs();
+                } else {
+                    alert('Error logging punishment.');
+                }
+            } catch (err) {
+                alert('Error submitting infraction.');
+            }
+        }
+
+        async function loadLogs() {
+            try {
+                const res = await fetch('/api/punishments/list');
+                const data = await res.json();
+                const container = document.getElementById('logsContainer');
+
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = '';
+                    data.logs.forEach(log => {
+                        container.innerHTML += `
+                            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-bold text-white text-xs">${log.targetUser}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">${log.punishmentType}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400"><strong class="text-slate-300">Roblox ID:</strong> ${log.robloxId}</p>
+                                <p class="text-[11px] text-slate-400"><strong class="text-slate-300">Reason:</strong> ${log.reason}</p>
+                                <div class="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
+                                    <span>By: ${log.staffName}</span>
+                                    <span>${log.createdAt}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error("Failed loading logs", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>
