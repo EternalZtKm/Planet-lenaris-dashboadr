@@ -59,11 +59,9 @@ async function requireStaffAuth(req, res, next) {
         return res.status(401).json({ success: false, error: "Unauthorized: Please log in with Discord." });
     }
 
-    // Perform live query to Discord API to ensure the user currently holds the staff role
     const isStillStaff = await verifyUserRoleLive(req.session.user.id);
 
     if (!isStillStaff) {
-        // Immediately revoke session if role is lost or demoted
         req.session.verifiedRole = false;
         return res.status(403).json({ 
             success: false, 
@@ -167,7 +165,7 @@ app.get('/api/auth/logout', (req, res) => {
     });
 });
 
-// --- PROTECTED DASHBOARD ENDPOINTS (ALL PROTECTED BY LIVE ROLE VERIFICATION) ---
+// --- PROTECTED DASHBOARD ENDPOINTS ---
 
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
@@ -245,12 +243,13 @@ app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
     res.json({ success: true, logs: punishmentLogs });
 });
 
+// --- UPDATED ERLC API DOMAIN HERE ---
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const { command } = req.body || {};
         if (!ERLC_API_KEY) return res.status(500).json({ success: false, error: "ERLC_API_KEY missing." });
 
-        const response = await fetch('https://api.policeroleplay.community/v1/server/command', {
+        const response = await fetch('https://api.erlc.gg/v1/server/command', {
             method: 'POST',
             headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({ command })
