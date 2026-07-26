@@ -6,13 +6,16 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Discord Application Details (from Render Env Variables)
+// Render Proxy Support (Required for HTTPS session cookies on Render)
+app.set('trust proxy', 1);
+
+// Environment Variables
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID; // Your Discord Server ID
+const GUILD_ID = process.env.DISCORD_GUILD_ID;
 const REQUIRED_ROLE_ID = "1427083014147407995";
-const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000/api/auth/discord/callback";
+const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.onrender.com/api/auth/discord/callback";
 
 const DISCORD_WEBHOOK = "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg";
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
@@ -21,36 +24,42 @@ const punishmentLogs = [];
 
 app.use(cors());
 app.use(express.json());
+
+// Session Configuration
 app.use(session({
     secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 86400000 } // 24 Hours
+    cookie: {
+        maxAge: 86400000, // 24 Hours
+        secure: true,     // Force HTTPS cookie
+        sameSite: 'lax'
+    }
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Middleware to protect API endpoints
+// Staff Auth Protection Middleware
 function requireStaffAuth(req, res, next) {
     if (!req.session.user || !req.session.hasRole) {
-        return res.status(401).json({ success: false, error: "Unauthorized: You must log in with Discord and hold the required staff role." });
+        return res.status(401).json({ success: false, error: "Unauthorized: Log in with Discord first." });
     }
     next();
 }
 
-// 1. Redirect to Discord OAuth2 Login
+// 1. Step 1: Start Discord Login
 app.get('/api/auth/discord/login', (req, res) => {
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds`;
     res.redirect(discordAuthUrl);
 });
 
-// 2. Discord OAuth2 Callback Handler
+// 2. Step 2: Discord OAuth Callback
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     if (!code) return res.redirect('/?error=NoCode');
 
     try {
-        // Exchange Code for Access Token
+        // Fetch Access Token
         const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -64,20 +73,24 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         });
 
         const tokenData = await tokenRes.json();
-        if (!tokenData.access_token) return res.redirect('/?error=TokenExchangeFailed');
+        if (!tokenData.access_token) {
+            console.error("Token Exchange Error:", tokenData);
+            return res.redirect('/?error=TokenExchangeFailed');
+        }
 
-        // Get Discord User Profile
+        // Fetch User Info
         const userRes = await fetch('https://discord.com/api/v10/users/@me', {
             headers: { Authorization: `Bearer ${tokenData.access_token}` }
         });
         const userData = await userRes.json();
 
-        // Check if user has required Role ID in Guild using Bot Token
+        // Fetch Guild Member Info via Bot Token
         const guildMemberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userData.id}`, {
             headers: { Authorization: `Bot ${BOT_TOKEN}` }
         });
 
         if (!guildMemberRes.ok) {
+            console.error("Guild Member Fetch Error:", await guildMemberRes.text());
             return res.redirect('/?error=NotInServer');
         }
 
@@ -88,7 +101,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
             return res.redirect('/?error=MissingStaffRole');
         }
 
-        // Save session
+        // Save User Session
         req.session.user = {
             id: userData.id,
             username: userData.global_name || userData.username,
@@ -103,7 +116,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
-// 3. Get Current Logged-In User Status
+// 3. User Session Verification Endpoint
 app.get('/api/auth/user', (req, res) => {
     if (req.session.user && req.session.hasRole) {
         return res.json({ success: true, user: req.session.user });
@@ -117,7 +130,7 @@ app.get('/api/auth/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// --- PROTECTED ROUTES ---
+// --- API ENDPOINTS ---
 
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
