@@ -1,35 +1,128 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// Discord Application Details (from Render Env Variables)
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const GUILD_ID = process.env.DISCORD_GUILD_ID; // Your Discord Server ID
+const REQUIRED_ROLE_ID = "1427083014147407995";
+const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000/api/auth/discord/callback";
 
-// Serve static files from the public folder
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Discord Webhook URL
 const DISCORD_WEBHOOK = "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg";
+const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 
-// In-Memory Infraction Storage
 const punishmentLogs = [];
 
-// ER:LC API Key from Render Environment Settings
-const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
-const erlcHeaders = {
-    'Server-Key': ERLC_API_KEY,
-    'Content-Type': 'application/json'
-};
+app.use(cors());
+app.use(express.json());
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 86400000 } // 24 Hours
+}));
 
-// 1. Shift Tracker Endpoint
-app.post('/api/shifts/toggle', async (req, res) => {
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Middleware to protect API endpoints
+function requireStaffAuth(req, res, next) {
+    if (!req.session.user || !req.session.hasRole) {
+        return res.status(401).json({ success: false, error: "Unauthorized: You must log in with Discord and hold the required staff role." });
+    }
+    next();
+}
+
+// 1. Redirect to Discord OAuth2 Login
+app.get('/api/auth/discord/login', (req, res) => {
+    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds`;
+    res.redirect(discordAuthUrl);
+});
+
+// 2. Discord OAuth2 Callback Handler
+app.get('/api/auth/discord/callback', async (req, res) => {
+    const { code } = req.query;
+    if (!code) return res.redirect('/?error=NoCode');
+
     try {
-        const { staffName, action, department } = req.body || {};
-        if (!staffName) return res.status(400).json({ success: false, error: "Staff name is required." });
+        // Exchange Code for Access Token
+        const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: REDIRECT_URI
+            })
+        });
 
+        const tokenData = await tokenRes.json();
+        if (!tokenData.access_token) return res.redirect('/?error=TokenExchangeFailed');
+
+        // Get Discord User Profile
+        const userRes = await fetch('https://discord.com/api/v10/users/@me', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+        });
+        const userData = await userRes.json();
+
+        // Check if user has required Role ID in Guild using Bot Token
+        const guildMemberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userData.id}`, {
+            headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        });
+
+        if (!guildMemberRes.ok) {
+            return res.redirect('/?error=NotInServer');
+        }
+
+        const memberData = await guildMemberRes.json();
+        const hasRole = memberData.roles && memberData.roles.includes(REQUIRED_ROLE_ID);
+
+        if (!hasRole) {
+            return res.redirect('/?error=MissingStaffRole');
+        }
+
+        // Save session
+        req.session.user = {
+            id: userData.id,
+            username: userData.global_name || userData.username,
+            avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
+        };
+        req.session.hasRole = true;
+
+        res.redirect('/');
+    } catch (err) {
+        console.error("OAuth Error:", err);
+        res.redirect('/?error=AuthError');
+    }
+});
+
+// 3. Get Current Logged-In User Status
+app.get('/api/auth/user', (req, res) => {
+    if (req.session.user && req.session.hasRole) {
+        return res.json({ success: true, user: req.session.user });
+    }
+    res.json({ success: false });
+});
+
+// 4. Logout Route
+app.get('/api/auth/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
+});
+
+// --- PROTECTED ROUTES ---
+
+app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
+    try {
+        const { action, department } = req.body || {};
+        const staffName = req.session.user.username;
         const timestamp = new Date().toLocaleString();
 
         await fetch(DISCORD_WEBHOOK, {
@@ -40,14 +133,14 @@ app.post('/api/shifts/toggle', async (req, res) => {
                     title: action === 'CLOCK_IN' ? "🟢 Shift Started" : "🔴 Shift Ended",
                     color: action === 'CLOCK_IN' ? 5763719 : 15548997,
                     fields: [
-                        { name: "Staff Member", value: staffName, inline: true },
+                        { name: "Staff Member", value: `${staffName} (<@${req.session.user.id}>)`, inline: true },
                         { name: "Department", value: department || "General Staff", inline: true },
                         { name: "Time", value: timestamp, inline: false }
                     ],
                     footer: { text: "Melonly Staff Panel • Planet Lenaris" }
                 }]
             })
-        }).catch(err => console.error("Webhook Error:", err));
+        });
 
         res.json({ success: true });
     } catch (err) {
@@ -55,14 +148,10 @@ app.post('/api/shifts/toggle', async (req, res) => {
     }
 });
 
-// 2. Punishment Log Endpoint
-app.post('/api/punishments/create', async (req, res) => {
+app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     try {
-        const { targetUser, robloxId, punishmentType, reason, staffName } = req.body || {};
-
-        if (!targetUser || !reason || !staffName) {
-            return res.status(400).json({ success: false, error: "Target User, Reason, and Staff Name are required!" });
-        }
+        const { targetUser, robloxId, punishmentType, reason } = req.body || {};
+        const staffName = req.session.user.username;
 
         const logEntry = {
             id: punishmentLogs.length + 1,
@@ -76,26 +165,25 @@ app.post('/api/punishments/create', async (req, res) => {
 
         punishmentLogs.unshift(logEntry);
 
-        // Send to Discord
         await fetch(DISCORD_WEBHOOK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 embeds: [{
-                    title: ⚠️ New Punishment Logged: ${logEntry.punishmentType}`,
+                    title: `⚠️ New Punishment Logged: ${logEntry.punishmentType}`,
                     color: logEntry.punishmentType === 'Ban' ? 15548997 : (logEntry.punishmentType === 'Kick' ? 16744192 : 16776960),
                     fields: [
                         { name: "Target User", value: targetUser, inline: true },
                         { name: "Roblox ID", value: logEntry.robloxId, inline: true },
                         { name: "Punishment Type", value: logEntry.punishmentType, inline: true },
                         { name: "Reason", value: reason, inline: false },
-                        { name: "Logged By Staff", value: staffName, inline: true },
+                        { name: "Logged By Staff", value: `${staffName} (<@${req.session.user.id}>)`, inline: true },
                         { name: "Timestamp", value: logEntry.createdAt, inline: true }
                     ],
                     footer: { text: "Melonly Punishment System • Planet Lenaris" }
                 }]
             })
-        }).catch(err => console.error("Webhook Error:", err));
+        });
 
         res.json({ success: true, log: logEntry });
     } catch (err) {
@@ -103,24 +191,18 @@ app.post('/api/punishments/create', async (req, res) => {
     }
 });
 
-// 3. Get Punishment Logs List
-app.get('/api/punishments/list', (req, res) => {
+app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
     res.json({ success: true, logs: punishmentLogs });
 });
 
-// 4. ER:LC Command Sender (:pm, :hint, :m)
-app.post('/api/erlc/command', async (req, res) => {
+app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const { command } = req.body || {};
-        if (!command) return res.status(400).json({ success: false, error: "Command required!" });
-
-        if (!ERLC_API_KEY) {
-            return res.status(500).json({ success: false, error: "ERLC_API_KEY missing in Render environment variables." });
-        }
+        if (!ERLC_API_KEY) return res.status(500).json({ success: false, error: "ERLC_API_KEY missing." });
 
         const response = await fetch('https://api.policeroleplay.community/v1/server/command', {
             method: 'POST',
-            headers: erlcHeaders,
+            headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({ command })
         });
 
@@ -135,29 +217,6 @@ app.post('/api/erlc/command', async (req, res) => {
     }
 });
 
-// 5. ER:LC Command Logs Feed
-app.get('/api/erlc/logs', async (req, res) => {
-    try {
-        if (!ERLC_API_KEY) {
-            return res.status(200).json({ success: false, data: [], error: "ERLC_API_KEY not set." });
-        }
-
-        const response = await fetch('https://api.policeroleplay.community/v1/server/commandlogs', {
-            headers: erlcHeaders
-        });
-        
-        if (!response.ok) {
-            return res.status(200).json({ success: false, data: [] });
-        }
-
-        const data = await response.json();
-        res.json({ success: true, data: data || [] });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-// Serve frontend SPA for all remaining routes
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
