@@ -36,11 +36,41 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Middleware
-function requireStaffAuth(req, res, next) {
-    if (!req.session || !req.session.user || !req.session.verifiedRole) {
-        return res.status(401).json({ success: false, error: "Unauthorized: Please verify your staff role first." });
+// --- HELPER FUNCTION: Live Discord API Role Verification ---
+async function verifyUserRoleLive(userId) {
+    try {
+        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
+            headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        });
+
+        if (!memberRes.ok) return false;
+
+        const memberData = await memberRes.json();
+        return memberData.roles && memberData.roles.includes(REQUIRED_ROLE_ID);
+    } catch (err) {
+        console.error("Live role check error:", err);
+        return false;
     }
+}
+
+// --- STRICT MIDDLEWARE: Verifies Discord Role on EVERY SINGLE ACTION ---
+async function requireStaffAuth(req, res, next) {
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ success: false, error: "Unauthorized: Please log in with Discord." });
+    }
+
+    // Perform live query to Discord API to ensure the user currently holds the staff role
+    const isStillStaff = await verifyUserRoleLive(req.session.user.id);
+
+    if (!isStillStaff) {
+        // Immediately revoke session if role is lost or demoted
+        req.session.verifiedRole = false;
+        return res.status(403).json({ 
+            success: false, 
+            error: "Access Denied: You do not currently possess the required Staff Role in Discord!" 
+        });
+    }
+
     next();
 }
 
@@ -92,53 +122,41 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
-// 3. Step 3: Explicit Manual Role Verification
+// 3. Step 3: Explicit Role Verification Button
 app.post('/api/auth/verify-role', async (req, res) => {
     if (!req.session || !req.session.user) {
         return res.status(400).json({ success: false, error: "Please connect your Discord account first." });
     }
 
-    try {
-        const userId = req.session.user.id;
+    const hasRole = await verifyUserRoleLive(req.session.user.id);
 
-        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
-            headers: { Authorization: `Bot ${BOT_TOKEN}` }
+    if (!hasRole) {
+        return res.status(403).json({ 
+            success: false, 
+            error: `Role Check Failed: Your Discord profile is missing Staff Role ID (${REQUIRED_ROLE_ID}) or you are not in the server.` 
         });
-
-        if (!memberRes.ok) {
-            return res.status(403).json({ 
-                success: false, 
-                error: "You are not in the Planet Lenaris Discord server, or the Bot cannot see you!" 
-            });
-        }
-
-        const memberData = await memberRes.json();
-        const hasRole = memberData.roles && memberData.roles.includes(REQUIRED_ROLE_ID);
-
-        if (!hasRole) {
-            return res.status(403).json({ 
-                success: false, 
-                error: `Role Check Failed: Your Discord profile is missing Staff Role ID (${REQUIRED_ROLE_ID}).` 
-            });
-        }
-
-        req.session.verifiedRole = true;
-        req.session.save(() => {
-            res.json({ success: true, user: req.session.user });
-        });
-
-    } catch (err) {
-        res.status(500).json({ success: false, error: "Internal error checking role: " + err.message });
     }
+
+    req.session.verifiedRole = true;
+    req.session.save(() => {
+        res.json({ success: true, user: req.session.user });
+    });
 });
 
-// 4. Session Check Endpoint
-app.get('/api/auth/user', (req, res) => {
-    if (req.session && req.session.user && req.session.verifiedRole) {
-        return res.json({ success: true, user: req.session.user });
-    } else if (req.session && req.session.user) {
+// 4. Session Status Check Endpoint
+app.get('/api/auth/user', async (req, res) => {
+    if (req.session && req.session.user) {
+        const isStillStaff = await verifyUserRoleLive(req.session.user.id);
+        if (isStillStaff) {
+            req.session.verifiedRole = true;
+            return res.json({ success: true, user: req.session.user });
+        }
+    }
+    
+    if (req.session && req.session.user) {
         return res.json({ success: false, discordConnected: true, user: req.session.user });
     }
+
     res.json({ success: false });
 });
 
@@ -149,7 +167,7 @@ app.get('/api/auth/logout', (req, res) => {
     });
 });
 
-// --- PROTECTED DASHBOARD ENDPOINTS ---
+// --- PROTECTED DASHBOARD ENDPOINTS (ALL PROTECTED BY LIVE ROLE VERIFICATION) ---
 
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
