@@ -6,10 +6,8 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust Render's proxy for HTTPS cookies
 app.set('trust proxy', 1);
 
-// Environment Variables
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
@@ -25,42 +23,39 @@ const punishmentLogs = [];
 app.use(cors());
 app.use(express.json());
 
-// Cookie settings for Render
 app.use(session({
     secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
-        maxAge: 86400000, // 24 Hours
+        maxAge: 86400000,
         secure: true,
-        httpOnly: true,
         sameSite: 'lax'
     }
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Staff Auth Protection Middleware
+// Middleware
 function requireStaffAuth(req, res, next) {
-    if (!req.session || !req.session.user || !req.session.hasRole) {
-        return res.status(401).json({ success: false, error: "Unauthorized: Log in with Discord first." });
+    if (!req.session || !req.session.user || !req.session.verifiedRole) {
+        return res.status(401).json({ success: false, error: "Unauthorized: Please verify your staff role first." });
     }
     next();
 }
 
-// 1. Step 1: Start Discord Login (Restored guilds scope)
+// 1. Step 1: Redirect to Discord Login
 app.get('/api/auth/discord/login', (req, res) => {
-    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds`;
+    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
 });
 
-// 2. Step 2: Discord OAuth Callback
+// 2. Step 2: Discord OAuth Callback (Stores Discord ID & Username, then sends user back)
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
-    if (!code) return res.redirect('/?error=NoCode');
+    if (!code) return res.redirect('/?auth=failed&reason=NoCode');
 
     try {
-        // Exchange Code for Access Token
         const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -74,74 +69,90 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         });
 
         const tokenData = await tokenRes.json();
-        if (!tokenData.access_token) {
-            console.error("Token Exchange Error:", tokenData);
-            return res.redirect('/?error=TokenExchangeFailed');
-        }
+        if (!tokenData.access_token) return res.redirect('/?auth=failed&reason=TokenError');
 
-        // Fetch User Info
         const userRes = await fetch('https://discord.com/api/v10/users/@me', {
             headers: { Authorization: `Bearer ${tokenData.access_token}` }
         });
         const userData = await userRes.json();
 
-        // Fetch Guild Member Info via Bot
-        const guildMemberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userData.id}`, {
-            headers: { Authorization: `Bot ${BOT_TOKEN}` }
-        });
-
-        if (!guildMemberRes.ok) {
-            console.error("Guild Member Fetch Error:", await guildMemberRes.text());
-            return res.redirect('/?error=NotInServer');
-        }
-
-        const memberData = await guildMemberRes.json();
-        const hasRole = memberData.roles && memberData.roles.includes(REQUIRED_ROLE_ID);
-
-        if (!hasRole) {
-            console.error(`User ${userData.username} is missing role ID: ${REQUIRED_ROLE_ID}`);
-            return res.redirect('/?error=MissingStaffRole');
-        }
-
-        // Save User Session
+        // Store user in session (unverified role initially)
         req.session.user = {
             id: userData.id,
             username: userData.global_name || userData.username,
             avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
         };
-        req.session.hasRole = true;
+        req.session.verifiedRole = false;
 
-        // Force Session Save before Redirecting
-        req.session.save((err) => {
-            if (err) {
-                console.error("Session Save Error:", err);
-                return res.redirect('/?error=SessionSaveFailed');
-            }
-            res.redirect('/');
+        req.session.save(() => {
+            res.redirect('/?discord=connected');
         });
 
     } catch (err) {
-        console.error("OAuth Catch Error:", err);
-        res.redirect('/?error=AuthError');
+        res.redirect('/?auth=failed&reason=Exception');
     }
 });
 
-// 3. Session Status Check Endpoint
+// 3. Step 3: Explicit Manual Role Verification Endpoint (Triggered when user clicks the button!)
+app.post('/api/auth/verify-role', async (req, res) => {
+    if (!req.session || !req.session.user) {
+        return res.status(400).json({ success: false, error: "Please connect your Discord account first." });
+    }
+
+    try {
+        const userId = req.session.user.id;
+
+        // Check Discord Guild Membership via Bot
+        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
+            headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        });
+
+        if (!memberRes.ok) {
+            return res.status(403).json({ 
+                success: false, 
+                error: "You are not in the Planet Lenaris Discord server, or the Bot cannot see you!" 
+            });
+        }
+
+        const memberData = await memberRes.json();
+        const hasRole = memberData.roles && memberData.roles.includes(REQUIRED_ROLE_ID);
+
+        if (!hasRole) {
+            return res.status(403).json({ 
+                success: false, 
+                error: `Role Check Failed: Your Discord profile is missing Staff Role ID (${REQUIRED_ROLE_ID}).` 
+            });
+        }
+
+        // Mark as verified
+        req.session.verifiedRole = true;
+        req.session.save(() => {
+            res.json({ success: true, user: req.session.user });
+        });
+
+    } catch (err) {
+        res.status(500).json({ success: false, error: "Internal error checking role: " + err.message });
+    }
+});
+
+// 4. Session Check Endpoint
 app.get('/api/auth/user', (req, res) => {
-    if (req.session && req.session.user && req.session.hasRole) {
+    if (req.session && req.session.user && req.session.verifiedRole) {
         return res.json({ success: true, user: req.session.user });
+    } else if (req.session && req.session.user) {
+        return res.json({ success: false, discordConnected: true, user: req.session.user });
     }
     res.json({ success: false });
 });
 
-// 4. Logout Route
+// 5. Logout
 app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => {
         res.json({ success: true });
     });
 });
 
-// --- API ROUTES ---
+// --- PROTECTED DASHBOARD ENDPOINTS ---
 
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
