@@ -36,7 +36,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- HELPER: Live Role Check ---
+// Helper: Live Role Check
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -56,7 +56,7 @@ async function verifyUserRoleLive(userId) {
     }
 }
 
-// --- MIDDLEWARE: Live Role Protection ---
+// Middleware: Live Role Check
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) {
         return res.status(401).json({ success: false, error: "Unauthorized: Please log in with Discord." });
@@ -79,8 +79,7 @@ async function requireStaffAuth(req, res, next) {
     next();
 }
 
-// --- AUTH ROUTES ---
-
+// Auth Routes
 app.get('/api/auth/discord/login', (req, res) => {
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
@@ -175,8 +174,7 @@ app.get('/api/auth/logout', (req, res) => {
     });
 });
 
-// --- DASHBOARD API ENDPOINTS ---
-
+// Dashboard Endpoints
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
         const { action, department } = req.body || {};
@@ -213,25 +211,24 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     }
 });
 
+// Create Punishment / Warning
 app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     try {
         const { targetUser, robloxId, punishmentType, reason } = req.body || {};
         const discordUser = req.session.user;
 
-        // Extract Roblox Username after "|"
         let staffRobloxName = discordUser.username;
         if (discordUser.displayName && discordUser.displayName.includes('|')) {
             const parts = discordUser.displayName.split('|');
             staffRobloxName = parts[parts.length - 1].trim();
         }
 
-        // Count existing warnings
+        // Count active warnings for target user
         const existingWarnings = punishmentLogs.filter(
-            log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning'
+            log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
         ).length;
 
         const currentWarningCount = existingWarnings + 1;
-        const warningsLeft = Math.max(0, 3 - currentWarningCount);
 
         const logEntry = {
             id: punishmentLogs.length + 1,
@@ -240,14 +237,15 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             punishmentType: punishmentType || 'Warning',
             reason,
             staffName: staffRobloxName,
+            removed: false,
             createdAt: new Date().toLocaleString()
         };
 
         punishmentLogs.unshift(logEntry);
 
-        // Send In-Game PM for Warnings
+        // Send Formatted Warning PM to Player
         if (punishmentType === 'Warning' && ERLC_API_KEY) {
-            const pmCommand = `:pm ${targetUser} You have ${currentWarningCount} warning(s). You have ${warningsLeft} warning(s) left until 3 warnings, if you get 3 warnings in total you will automatically be kicked. Reason: ${reason} | Staff: ${staffRobloxName}`;
+            const pmCommand = `:pm ${targetUser} You have received a warning, you now have ${currentWarningCount} warnings. If you receive 3 warnings you will be kicked. Reason: ${reason} Staff: ${staffRobloxName}`;
 
             await fetch('https://api.erlc.gg/v1/server/command', {
                 method: 'POST',
@@ -256,7 +254,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             }).catch(err => console.error("Failed to send warning PM:", err));
         }
 
-        // Send Discord Webhook Log
+        // Discord Webhook
         await fetch(DISCORD_WEBHOOK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -268,7 +266,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
                         { name: "Target User", value: targetUser, inline: true },
                         { name: "Roblox ID", value: logEntry.robloxId, inline: true },
                         { name: "Punishment Type", value: logEntry.punishmentType, inline: true },
-                        { name: "Warning Count", value: `${currentWarningCount}/3`, inline: true },
+                        { name: "Active Warning Count", value: `${currentWarningCount}/3`, inline: true },
                         { name: "Reason", value: reason, inline: false },
                         { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
                         { name: "Timestamp", value: logEntry.createdAt, inline: true }
@@ -279,6 +277,65 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
         });
 
         res.json({ success: true, log: logEntry });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Remove Warning Endpoint
+app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) => {
+    try {
+        const { logId } = req.body || {};
+        const discordUser = req.session.user;
+
+        let staffRobloxName = discordUser.username;
+        if (discordUser.displayName && discordUser.displayName.includes('|')) {
+            const parts = discordUser.displayName.split('|');
+            staffRobloxName = parts[parts.length - 1].trim();
+        }
+
+        const logIndex = punishmentLogs.findIndex(l => l.id === logId);
+        if (logIndex === -1) {
+            return res.status(404).json({ success: false, error: "Warning log not found." });
+        }
+
+        punishmentLogs[logIndex].removed = true;
+        const targetUser = punishmentLogs[logIndex].targetUser;
+
+        // Recalculate remaining active warnings
+        const remainingWarnings = punishmentLogs.filter(
+            log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
+        ).length;
+
+        // Send PM in-game notifying of warning removal
+        if (ERLC_API_KEY) {
+            const pmCommand = `:pm ${targetUser} A warning has been removed from your record by Staff: ${staffRobloxName}. You now have ${remainingWarnings} warning(s).`;
+            await fetch('https://api.erlc.gg/v1/server/command', {
+                method: 'POST',
+                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: pmCommand })
+            }).catch(() => {});
+        }
+
+        // Webhook notification for removal
+        await fetch(DISCORD_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                embeds: [{
+                    title: `🟢 Warning Removed`,
+                    color: 5763719,
+                    fields: [
+                        { name: "Target User", value: targetUser, inline: true },
+                        { name: "New Active Warning Count", value: `${remainingWarnings}/3`, inline: true },
+                        { name: "Removed By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
+                    ],
+                    footer: { text: "Lenaris Punishment System • Planet Lenaris" }
+                }]
+            })
+        });
+
+        res.json({ success: true, remainingWarnings });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -310,7 +367,6 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     }
 });
 
-// ER:LC Live Player Search Endpoint
 app.get('/api/erlc/players', requireStaffAuth, async (req, res) => {
     try {
         if (!ERLC_API_KEY) return res.json({ success: false, players: [] });
@@ -328,7 +384,6 @@ app.get('/api/erlc/players', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Outbound IP for Whitelisting
 app.get('/api/get-ip', async (req, res) => {
     try {
         const response = await fetch('https://api.ipify.org?format=json');
