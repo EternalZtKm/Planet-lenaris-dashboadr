@@ -100,6 +100,16 @@
                             End Shift
                         </button>
                     </div>
+
+                    <div class="pt-3 border-t border-slate-800 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] font-semibold text-slate-400 uppercase">Active Staff On Shift</span>
+                            <button onclick="loadActiveShifts()" class="text-[10px] text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                        <div id="activeShiftsList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            <p class="text-[11px] text-slate-500">No staff currently on shift.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card p-5 rounded-2xl space-y-4">
@@ -248,6 +258,7 @@
 
     <script>
         let cachedPlayers = [];
+        let currentUserId = null;
 
         async function checkAuth() {
             try {
@@ -255,6 +266,7 @@
                 const data = await res.json();
 
                 if (data.success && data.user) {
+                    currentUserId = data.user.id;
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
                     document.getElementById('userName').textContent = data.user.username;
@@ -262,6 +274,7 @@
                     loadLogs();
                     loadServerInfo();
                     fetchActivityFeed();
+                    loadActiveShifts();
                 } else if (data.discordConnected && data.user) {
                     document.getElementById('loginOverlay').classList.remove('hidden');
                     document.getElementById('step1Container').classList.add('hidden');
@@ -291,6 +304,7 @@
                 const data = await res.json();
 
                 if (res.ok && data.success) {
+                    currentUserId = data.user.id;
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
                     document.getElementById('userName').textContent = data.user.username;
@@ -298,6 +312,7 @@
                     loadLogs();
                     loadServerInfo();
                     fetchActivityFeed();
+                    loadActiveShifts();
                 } else {
                     btn.disabled = false;
                     btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Verification</span>`;
@@ -312,7 +327,6 @@
             }
         }
 
-        // Toggle UI Sections
         function toggleSection(secId, isChecked) {
             const el = document.getElementById(secId);
             if (el) {
@@ -324,7 +338,85 @@
             }
         }
 
-        // Fetch Live ER:LC Players & Server Info
+        // Fetch & Render Active Shifts
+        async function loadActiveShifts() {
+            try {
+                const res = await fetch('/api/shifts/active');
+                const data = await res.json();
+                const container = document.getElementById('activeShiftsList');
+
+                if (data.success && data.activeShifts.length > 0) {
+                    container.innerHTML = '';
+                    let userIsOnShift = false;
+
+                    data.activeShifts.forEach(s => {
+                        if (s.userId === currentUserId) userIsOnShift = true;
+
+                        const endShiftBtn = (data.isManager || s.userId === currentUserId)
+                            ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>`
+                            : '';
+
+                        container.innerHTML += `
+                            <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                                    <div>
+                                        <span class="font-bold text-white block text-[11px]">${s.robloxName}</span>
+                                        <span class="text-[9px] text-slate-400 block">${s.department} • <strong class="text-emerald-400">${s.duration}</strong></span>
+                                    </div>
+                                </div>
+                                ${endShiftBtn}
+                            </div>
+                        `;
+                    });
+
+                    // Update local shift controls state
+                    if (userIsOnShift) {
+                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.add('hidden');
+                        document.getElementById('btnEndShift').classList.remove('hidden');
+                    } else {
+                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.remove('hidden');
+                        document.getElementById('btnEndShift').classList.add('hidden');
+                    }
+
+                } else {
+                    container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
+                    document.getElementById('shiftBadge').textContent = 'OFFLINE';
+                    document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
+                    document.getElementById('btnStartShift').classList.remove('hidden');
+                    document.getElementById('btnEndShift').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error("Failed loading active shifts", err);
+            }
+        }
+
+        async function forceEndShift(targetUserId) {
+            if (!confirm("Are you sure you want to end this staff member's shift?")) return;
+
+            try {
+                const res = await fetch('/api/shifts/force-end', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUserId })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert("Shift successfully ended!");
+                    loadActiveShifts();
+                } else {
+                    alert(`Error: ${data.error || 'Failed to end shift'}`);
+                }
+            } catch (err) {
+                alert("Connection error ending shift.");
+            }
+        }
+
         async function loadServerInfo() {
             try {
                 const res = await fetch('/api/erlc/server-info');
@@ -360,7 +452,6 @@
             }
         }
 
-        // Fetch Activity & Kill Logs Feed
         async function fetchActivityFeed() {
             try {
                 const res = await fetch('/api/erlc/activity');
@@ -533,17 +624,7 @@
                 });
 
                 if (res.ok) {
-                    if (action === 'CLOCK_IN') {
-                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
-                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
-                        document.getElementById('btnStartShift').classList.add('hidden');
-                        document.getElementById('btnEndShift').classList.remove('hidden');
-                    } else {
-                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
-                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
-                        document.getElementById('btnStartShift').classList.remove('hidden');
-                        document.getElementById('btnEndShift').classList.add('hidden');
-                    }
+                    loadActiveShifts();
                     alert(`Shift ${action === 'CLOCK_IN' ? 'Started' : 'Ended'} successfully! Logged to Discord.`);
                 } else {
                     alert('Error toggling shift.');
@@ -589,7 +670,7 @@
                 const res = await fetch('/api/punishments/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ ...payload })
                 });
 
                 if (res.ok) {
