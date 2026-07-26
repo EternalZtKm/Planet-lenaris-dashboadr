@@ -18,7 +18,26 @@ const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboa
 const DISCORD_WEBHOOK = "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg";
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 
-const punishmentLogs = [];
+let punishmentLogs = [];
+
+// Automated Daily Reset at 12:00 AM Midnight
+function scheduleMidnightReset() {
+    const now = new Date();
+    const night = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1, // Tomorrow
+        0, 0, 0            // 12:00 AM
+    );
+    const msToMidnight = night.getTime() - now.getTime();
+
+    setTimeout(() => {
+        console.log("🕛 Midnight reached! Clearing daily punishment logs...");
+        punishmentLogs = [];
+        scheduleMidnightReset(); // Reschedule for next midnight
+    }, msToMidnight);
+}
+scheduleMidnightReset();
 
 app.use(cors());
 app.use(express.json());
@@ -36,7 +55,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: Live Role Check
+// Helper: Live Discord Role Check
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -72,9 +91,7 @@ async function requireStaffAuth(req, res, next) {
         });
     }
 
-    if (check.nickname) {
-        req.session.user.displayName = check.nickname;
-    }
+    if (check.nickname) req.session.user.displayName = check.nickname;
 
     next();
 }
@@ -141,9 +158,7 @@ app.post('/api/auth/verify-role', async (req, res) => {
         });
     }
 
-    if (check.nickname) {
-        req.session.user.displayName = check.nickname;
-    }
+    if (check.nickname) req.session.user.displayName = check.nickname;
 
     req.session.verifiedRole = true;
     req.session.save(() => {
@@ -211,7 +226,42 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Create Punishment / Warning
+// Request Higher Up Assistance Webhook
+app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
+    try {
+        const { reason } = req.body || {};
+        const discordUser = req.session.user;
+
+        let staffRobloxName = discordUser.username;
+        if (discordUser.displayName && discordUser.displayName.includes('|')) {
+            const parts = discordUser.displayName.split('|');
+            staffRobloxName = parts[parts.length - 1].trim();
+        }
+
+        await fetch(DISCORD_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: "@everyone 🚨 **HIGHER-UP ASSISTANCE REQUESTED!**",
+                embeds: [{
+                    title: "🚨 Staff Assistance Requested",
+                    color: 15548997,
+                    fields: [
+                        { name: "Requested By", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
+                        { name: "Reason / Situation", value: reason || "Immediate higher-up assistance needed in-game/discord.", inline: false }
+                    ],
+                    footer: { text: "Lenaris Staff Dashboard • Emergency System" }
+                }]
+            })
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Create Punishment Log
 app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     try {
         const { targetUser, robloxId, punishmentType, reason } = req.body || {};
@@ -223,7 +273,6 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             staffRobloxName = parts[parts.length - 1].trim();
         }
 
-        // Count active warnings for target user
         const existingWarnings = punishmentLogs.filter(
             log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
         ).length;
@@ -243,7 +292,6 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
 
         punishmentLogs.unshift(logEntry);
 
-        // Send Formatted Warning PM to Player
         if (punishmentType === 'Warning' && ERLC_API_KEY) {
             const pmCommand = `:pm ${targetUser} You have received a warning, you now have ${currentWarningCount} warnings. If you receive 3 warnings you will be kicked. Reason: ${reason} Staff: ${staffRobloxName}`;
 
@@ -254,7 +302,6 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             }).catch(err => console.error("Failed to send warning PM:", err));
         }
 
-        // Discord Webhook
         await fetch(DISCORD_WEBHOOK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -302,12 +349,10 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
         punishmentLogs[logIndex].removed = true;
         const targetUser = punishmentLogs[logIndex].targetUser;
 
-        // Recalculate remaining active warnings
         const remainingWarnings = punishmentLogs.filter(
             log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
         ).length;
 
-        // Send PM in-game notifying of warning removal
         if (ERLC_API_KEY) {
             const pmCommand = `:pm ${targetUser} A warning has been removed from your record by Staff: ${staffRobloxName}. You now have ${remainingWarnings} warning(s).`;
             await fetch('https://api.erlc.gg/v1/server/command', {
@@ -317,7 +362,6 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
             }).catch(() => {});
         }
 
-        // Webhook notification for removal
         await fetch(DISCORD_WEBHOOK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -345,6 +389,7 @@ app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
     res.json({ success: true, logs: punishmentLogs });
 });
 
+// ER:LC Command Endpoint
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const { command } = req.body || {};
@@ -367,20 +412,44 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     }
 });
 
-app.get('/api/erlc/players', requireStaffAuth, async (req, res) => {
+// Full ER:LC Server Info & Live Players
+app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => {
     try {
-        if (!ERLC_API_KEY) return res.json({ success: false, players: [] });
+        if (!ERLC_API_KEY) return res.json({ success: false });
 
-        const response = await fetch('https://api.erlc.gg/v1/server/players', {
+        const [serverRes, playersRes] = await Promise.all([
+            fetch('https://api.erlc.gg/v1/server', { headers: { 'Server-Key': ERLC_API_KEY } }),
+            fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } })
+        ]);
+
+        const serverData = serverRes.ok ? await serverRes.json() : {};
+        const playersData = playersRes.ok ? await playersRes.json() : [];
+
+        res.json({
+            success: true,
+            server: serverData,
+            players: Array.isArray(playersData) ? playersData : []
+        });
+    } catch (err) {
+        res.json({ success: false, error: err.message });
+    }
+});
+
+// Activity & Killfeed Endpoint
+app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
+    try {
+        if (!ERLC_API_KEY) return res.json({ success: false, logs: [] });
+
+        const resLogs = await fetch('https://api.erlc.gg/v1/server/commandlogs', {
             headers: { 'Server-Key': ERLC_API_KEY }
         });
 
-        if (!response.ok) return res.json({ success: false, players: [] });
+        if (!resLogs.ok) return res.json({ success: false, logs: [] });
 
-        const players = await response.json();
-        res.json({ success: true, players: Array.isArray(players) ? players : [] });
+        const logs = await resLogs.json();
+        res.json({ success: true, logs: Array.isArray(logs) ? logs : [] });
     } catch (err) {
-        res.json({ success: false, players: [] });
+        res.json({ success: false, logs: [] });
     }
 });
 
