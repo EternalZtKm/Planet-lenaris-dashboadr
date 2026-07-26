@@ -36,7 +36,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- HELPER FUNCTION: Live Discord API Role Verification ---
+// Helper: Live Role Check
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -53,7 +53,7 @@ async function verifyUserRoleLive(userId) {
     }
 }
 
-// --- STRICT MIDDLEWARE: Verifies Discord Role on EVERY SINGLE ACTION ---
+// Strict Middleware
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) {
         return res.status(401).json({ success: false, error: "Unauthorized: Please log in with Discord." });
@@ -72,13 +72,12 @@ async function requireStaffAuth(req, res, next) {
     next();
 }
 
-// 1. Step 1: Redirect to Discord Login
+// Auth Routes
 app.get('/api/auth/discord/login', (req, res) => {
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
 });
 
-// 2. Step 2: Discord OAuth Callback
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     if (!code) return res.redirect('/?auth=failed&reason=NoCode');
@@ -120,7 +119,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
-// 3. Step 3: Explicit Role Verification Button
 app.post('/api/auth/verify-role', async (req, res) => {
     if (!req.session || !req.session.user) {
         return res.status(400).json({ success: false, error: "Please connect your Discord account first." });
@@ -141,7 +139,6 @@ app.post('/api/auth/verify-role', async (req, res) => {
     });
 });
 
-// 4. Session Status Check Endpoint
 app.get('/api/auth/user', async (req, res) => {
     if (req.session && req.session.user) {
         const isStillStaff = await verifyUserRoleLive(req.session.user.id);
@@ -158,15 +155,13 @@ app.get('/api/auth/user', async (req, res) => {
     res.json({ success: false });
 });
 
-// 5. Logout
 app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => {
         res.json({ success: true });
     });
 });
 
-// --- PROTECTED DASHBOARD ENDPOINTS ---
-
+// Dashboard Endpoints
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
         const { action, department } = req.body || {};
@@ -243,7 +238,6 @@ app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
     res.json({ success: true, logs: punishmentLogs });
 });
 
-// --- UPDATED ERLC API DOMAIN HERE ---
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const { command } = req.body || {};
@@ -266,6 +260,18 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     }
 });
 
+// Outbound IP Route for ER:LC Whitelisting
+app.get('/api/get-ip', async (req, res) => {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        res.json({ ip: data.ip });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Catch-all Route
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
