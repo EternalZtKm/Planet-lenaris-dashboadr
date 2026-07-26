@@ -6,7 +6,7 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Render Proxy Support (Required for HTTPS session cookies on Render)
+// Enable proxy trust for Render HTTPS cookies
 app.set('trust proxy', 1);
 
 // Environment Variables
@@ -25,15 +25,15 @@ const punishmentLogs = [];
 app.use(cors());
 app.use(express.json());
 
-// Session Configuration
+// Session Configuration optimized for Render HTTPS
 app.use(session({
     secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: {
         maxAge: 86400000, // 24 Hours
-        secure: true,     // Force HTTPS cookie
-        sameSite: 'lax'
+        secure: true,     // Required for HTTPS on Render
+        sameSite: 'none'  // Essential for cross-site OAuth redirects
     }
 }));
 
@@ -47,9 +47,9 @@ function requireStaffAuth(req, res, next) {
     next();
 }
 
-// 1. Step 1: Start Discord Login
+// 1. Step 1: Start Discord Login (Simplified scope)
 app.get('/api/auth/discord/login', (req, res) => {
-    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20guilds`;
+    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
 });
 
@@ -78,7 +78,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
             return res.redirect('/?error=TokenExchangeFailed');
         }
 
-        // Fetch User Info
+        // Fetch User Profile Info
         const userRes = await fetch('https://discord.com/api/v10/users/@me', {
             headers: { Authorization: `Bearer ${tokenData.access_token}` }
         });
@@ -95,6 +95,8 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         }
 
         const memberData = await guildMemberRes.json();
+        
+        // Role check (set to true for initial connectivity verification)
         const hasRole = memberData.roles && memberData.roles.includes(REQUIRED_ROLE_ID);
 
         if (!hasRole) {
