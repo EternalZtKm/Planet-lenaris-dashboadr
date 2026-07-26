@@ -50,7 +50,7 @@ app.get('/api/auth/discord/login', (req, res) => {
     res.redirect(discordAuthUrl);
 });
 
-// 2. Step 2: Discord OAuth Callback (Stores Discord ID & Username, then sends user back)
+// 2. Step 2: Discord OAuth Callback
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     if (!code) return res.redirect('/?auth=failed&reason=NoCode');
@@ -76,7 +76,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         });
         const userData = await userRes.json();
 
-        // Store user in session (unverified role initially)
         req.session.user = {
             id: userData.id,
             username: userData.global_name || userData.username,
@@ -93,7 +92,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
-// 3. Step 3: Explicit Manual Role Verification Endpoint (Triggered when user clicks the button!)
+// 3. Step 3: Explicit Manual Role Verification
 app.post('/api/auth/verify-role', async (req, res) => {
     if (!req.session || !req.session.user) {
         return res.status(400).json({ success: false, error: "Please connect your Discord account first." });
@@ -102,7 +101,6 @@ app.post('/api/auth/verify-role', async (req, res) => {
     try {
         const userId = req.session.user.id;
 
-        // Check Discord Guild Membership via Bot
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
             headers: { Authorization: `Bot ${BOT_TOKEN}` }
         });
@@ -124,7 +122,6 @@ app.post('/api/auth/verify-role', async (req, res) => {
             });
         }
 
-        // Mark as verified
         req.session.verifiedRole = true;
         req.session.save(() => {
             res.json({ success: true, user: req.session.user });
@@ -172,7 +169,7 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
                         { name: "Department", value: department || "General Staff", inline: true },
                         { name: "Time", value: timestamp, inline: false }
                     ],
-                    footer: { text: "Melonly Staff Panel • Planet Lenaris" }
+                    footer: { text: "Lenaris Staff Dashboard • Planet Lenaris" }
                 }]
             })
         });
@@ -215,7 +212,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
                         { name: "Logged By Staff", value: `${staffName} (<@${req.session.user.id}>)`, inline: true },
                         { name: "Timestamp", value: logEntry.createdAt, inline: true }
                     ],
-                    footer: { text: "Melonly Punishment System • Planet Lenaris" }
+                    footer: { text: "Lenaris Punishment System • Planet Lenaris" }
                 }]
             })
         });
@@ -257,5 +254,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Melonly Staff Panel running on port ${PORT}`);
+    console.log(`Lenaris Staff Dashboard running on port ${PORT}`);
 });
