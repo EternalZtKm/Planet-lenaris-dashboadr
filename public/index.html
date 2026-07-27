@@ -11,6 +11,10 @@
         .card { background-color: #161b22; border: 1px solid #21262d; }
         input, select, textarea { background-color: #0d1117; border: 1px solid #30363d; color: #f0f6fc; }
         input:focus, select:focus, textarea:focus { border-color: #58a6ff; outline: none; }
+        .sidebar-item { transition: all 0.15s ease-in-out; }
+        .sidebar-item:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .sidebar-active { background-color: rgba(16, 185, 129, 0.12); color: #10b981; font-weight: 600; border-left: 3px solid #10b981; }
+        .sub-active { background-color: #10b981; color: #090d11; font-weight: 700; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -155,6 +159,10 @@
                         </button>
                         <button id="btnCadCustomize" onclick="alert('CAD Settings Panel')" class="w-full bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-amber-800/50 hidden">
                             <span><i class="fa-solid fa-sliders mr-2"></i> CAD Customization</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                        <button id="btnServerPanel" onclick="switchView('serverPanel')" class="w-full bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-indigo-800/60 hidden">
+                            <span><i class="fa-solid fa-sliders mr-2 text-indigo-400"></i> Server Dashboard & Settings</span>
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
                     </div>
@@ -382,6 +390,232 @@
                 </div>
             </div>
         </main>
+
+        <main id="viewServerPanel" class="p-6 max-w-[1600px] mx-auto hidden">
+            <div class="flex flex-col lg:flex-row gap-6">
+
+                <aside class="w-full lg:w-64 card p-3 rounded-2xl space-y-1 flex-shrink-0">
+                    <div class="p-3 border-b border-slate-800/80 mb-2">
+                        <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block">Server Management</span>
+                        <h2 class="text-sm font-bold text-white mt-0.5">Planet Lenaris</h2>
+                    </div>
+
+                    <div class="space-y-0.5 max-h-[75vh] overflow-y-auto pr-1 text-xs">
+                        
+                        <div onclick="selectPanelMenu('general')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-slate-300 hover:text-white">
+                            <i class="fa-solid fa-gear w-4 text-emerald-400"></i>
+                            <span class="font-medium">General</span>
+                        </div>
+
+                        <div onclick="selectPanelMenu('panel')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-slate-300 hover:text-white sidebar-active">
+                            <i class="fa-solid fa-desktop w-4 text-emerald-400"></i>
+                            <span class="font-medium">Panel</span>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpMembers')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-users w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Members</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpMembers" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('members-list')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Members</div>
+                                <div onclick="selectPanelMenu('members-requests')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Requests</div>
+                            </div>
+                        </div>
+
+                        <div onclick="selectPanelMenu('roles')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-slate-300 hover:text-white">
+                            <i class="fa-solid fa-key w-4 text-emerald-400"></i>
+                            <span class="font-medium">Roles</span>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpActivity')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-chart-line w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Activity</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpActivity" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('activity-waves')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Waves</div>
+                                <div onclick="selectPanelMenu('activity-shifts')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Shifts</div>
+                                <div onclick="selectPanelMenu('activity-member')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Member Activity</div>
+                                <div onclick="selectPanelMenu('activity-leaderboard')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Leaderboard</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpInfractions')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-gavel w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Infractions</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpInfractions" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('infraction-members')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Members</div>
+                                <div onclick="selectPanelMenu('infraction-appeals')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Appeals</div>
+                                <div onclick="selectPanelMenu('infraction-settings')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Settings</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpDepartments')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-building-shield w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Departments</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpDepartments" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('dept-overview')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Overview</div>
+                                <div onclick="selectPanelMenu('dept-settings')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Settings</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpSessions')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-chart-area w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Sessions</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpSessions" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('sessions-overview')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Overview</div>
+                                <div onclick="selectPanelMenu('sessions-settings')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Settings</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpReminders')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-bell w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Reminders & Actions</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpReminders" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('reminders-list')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Reminders</div>
+                                <div onclick="selectPanelMenu('actions-list')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Actions</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpDiscord')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-brands fa-discord w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Discord Integration</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpDiscord" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('discord-nicknames')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Nicknames</div>
+                                <div onclick="selectPanelMenu('discord-channels')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Channels</div>
+                                <div onclick="selectPanelMenu('discord-roles')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Roles</div>
+                                <div onclick="selectPanelMenu('discord-verification')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Verification</div>
+                            </div>
+                        </div>
+
+                        <div onclick="selectPanelMenu('resources')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-slate-300 hover:text-white">
+                            <i class="fa-solid fa-file-lines w-4 text-emerald-400"></i>
+                            <span class="font-medium">Resources</span>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpLoa')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-calendar-xmark w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Leave of Absence</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpLoa" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('loa-recent')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Recent</div>
+                                <div onclick="selectPanelMenu('loa-settings')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Settings</div>
+                                <div onclick="selectPanelMenu('loa-history')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">History</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpErlc')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-plug w-4 text-emerald-400"></i>
+                                    <span class="font-medium">ER:LC Integration</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpErlc" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('erlc-api')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">API</div>
+                                <div onclick="selectPanelMenu('erlc-webhooks')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Webhooks</div>
+                                <div onclick="selectPanelMenu('erlc-playtime')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Playtime Levels</div>
+                                <div onclick="selectPanelMenu('erlc-analytics')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Analytics</div>
+                                <div onclick="selectPanelMenu('erlc-watchdog')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Watchdog</div>
+                            </div>
+                        </div>
+
+                        <div onclick="selectPanelMenu('audit-logs')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-slate-300 hover:text-white">
+                            <i class="fa-solid fa-clock-rotate-left w-4 text-emerald-400"></i>
+                            <span class="font-medium">Audit Logs</span>
+                        </div>
+
+                        <div>
+                            <div onclick="toggleSidebarGroup('grpDirectory')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-slate-300 hover:text-white">
+                                <div class="flex items-center space-x-2.5">
+                                    <i class="fa-solid fa-globe w-4 text-emerald-400"></i>
+                                    <span class="font-medium">Server Directory</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                            </div>
+                            <div id="grpDirectory" class="pl-8 space-y-1 my-1 hidden">
+                                <div onclick="selectPanelMenu('dir-apply')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Apply</div>
+                                <div onclick="selectPanelMenu('dir-feedback')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Feedback</div>
+                                <div onclick="selectPanelMenu('dir-analytics')" class="p-2 rounded-lg cursor-pointer text-slate-400 hover:text-white text-[11px]">Analytics</div>
+                            </div>
+                        </div>
+
+                        <div onclick="selectPanelMenu('advertisers')" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-slate-300 hover:text-white">
+                            <i class="fa-solid fa-bullhorn w-4 text-emerald-400"></i>
+                            <span class="font-medium">Advertisers</span>
+                        </div>
+
+                        <div onclick="attemptModPanelAccess()" class="sidebar-item p-2.5 rounded-xl cursor-pointer flex items-center space-x-2.5 text-emerald-400 hover:text-emerald-300 pt-3 border-t border-slate-800/80 mt-2">
+                            <i class="fa-solid fa-shield-halved w-4"></i>
+                            <span class="font-semibold">Moderator Panel</span>
+                        </div>
+
+                    </div>
+                </aside>
+
+                <section class="flex-1 card p-6 rounded-2xl min-h-[600px]">
+                    <div id="panelDisplayHeader" class="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center">
+                        <div>
+                            <h2 id="panelTitle" class="text-xl font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-desktop text-emerald-400"></i> Panel Overview
+                            </h2>
+                            <p id="panelSubTitle" class="text-xs text-slate-400 mt-1">Select a category from the sidebar to view or customize options.</p>
+                        </div>
+                        <button onclick="switchView('hub')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-2 rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Back to Hub
+                        </button>
+                    </div>
+
+                    <div id="panelContentArea" class="space-y-6">
+                        <div class="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 space-y-3">
+                            <div class="w-12 h-12 rounded-full bg-emerald-950/60 border border-emerald-800 flex items-center justify-center mx-auto text-emerald-400 text-xl">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white">Panel Loaded & Ready</h3>
+                            <p class="text-xs text-slate-400 max-w-md mx-auto">This is the main Server Dashboard. Select any sidebar category to start customizing!</p>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
     </div>
 
     <div id="webhookModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -485,20 +719,49 @@
         function switchView(viewName) {
             const hub = document.getElementById('viewHub');
             const modPanel = document.getElementById('viewModPanel');
+            const serverPanel = document.getElementById('viewServerPanel');
             const navHub = document.getElementById('navHub');
             const navMod = document.getElementById('navModPanel');
 
+            // Hide all primary views
+            hub.classList.add('hidden');
+            modPanel.classList.add('hidden');
+            serverPanel.classList.add('hidden');
+
             if (viewName === 'modPanel') {
-                hub.classList.add('hidden');
                 modPanel.classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
                 if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
+            } else if (viewName === 'serverPanel') {
+                serverPanel.classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
             } else {
-                modPanel.classList.add('hidden');
                 hub.classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
                 if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
             }
+        }
+
+        function toggleSidebarGroup(groupId) {
+            const el = document.getElementById(groupId);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        function selectPanelMenu(menuKey) {
+            const title = document.getElementById('panelTitle');
+            const subTitle = document.getElementById('panelSubTitle');
+            const content = document.getElementById('panelContentArea');
+
+            title.innerHTML = `<i class="fa-solid fa-sliders text-emerald-400"></i> ${menuKey.toUpperCase().replace('-', ' ')}`;
+            subTitle.textContent = `Customizing view for: ${menuKey}`;
+
+            content.innerHTML = `
+                <div class="p-6 bg-slate-900/60 rounded-xl border border-slate-800 space-y-3">
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider block">Editing ${menuKey}</span>
+                    <p class="text-xs text-slate-300">Ready to build features for <strong>${menuKey}</strong>!</p>
+                </div>
+            `;
         }
 
         async function attemptModPanelAccess() {
@@ -538,542 +801,3 @@
                 }
             } catch (err) {
                 errorBox.textContent = "Connection error checking roles.";
-                errorBox.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
-            }
-        }
-
-        function closeModPanelGate() {
-            document.getElementById('modPanelGateModal').classList.add('hidden');
-            switchView('hub');
-        }
-
-        async function openDonateModal() {
-            await checkAuth();
-            document.getElementById('donateModal').classList.remove('hidden');
-        }
-
-        function closeDonateModal() {
-            document.getElementById('donateModal').classList.add('hidden');
-        }
-
-        // --- WEBHOOK SETTINGS FUNCTIONS ---
-        async function openWebhookModal() {
-            try {
-                const res = await fetch('/api/settings/webhooks');
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('webhookShift').value = data.webhooks.shiftWebhook || '';
-                    document.getElementById('webhookPunish').value = data.webhooks.punishmentWebhook || '';
-                    document.getElementById('webhookAssistance').value = data.webhooks.assistanceWebhook || '';
-                    document.getElementById('webhookActivity').value = data.webhooks.activityWebhook || '';
-                    document.getElementById('webhookModal').classList.remove('hidden');
-                }
-            } catch (err) {
-                alert("Failed to load settings.");
-            }
-        }
-
-        function closeWebhookModal() {
-            document.getElementById('webhookModal').classList.add('hidden');
-        }
-
-        async function saveWebhookSettings(e) {
-            e.preventDefault();
-            const payload = {
-                shiftWebhook: document.getElementById('webhookShift').value,
-                punishmentWebhook: document.getElementById('webhookPunish').value,
-                assistanceWebhook: document.getElementById('webhookAssistance').value,
-                activityWebhook: document.getElementById('webhookActivity').value
-            };
-
-            try {
-                const res = await fetch('/api/settings/webhooks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    alert('Webhook URLs updated successfully!');
-                    closeWebhookModal();
-                } else {
-                    alert('Failed to save webhook settings.');
-                }
-            } catch (err) {
-                alert('Connection error.');
-            }
-        }
-
-        // --- SUPPORT MODAL FUNCTIONS ---
-        function openSupportModal() {
-            document.getElementById('supportModal').classList.remove('hidden');
-        }
-
-        function closeSupportModal() {
-            document.getElementById('supportModal').classList.add('hidden');
-        }
-
-        async function submitSupportTicket(e) {
-            e.preventDefault();
-            const subject = document.getElementById('supportSubject').value;
-            const message = document.getElementById('supportMessage').value;
-
-            try {
-                const res = await fetch('/api/support/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subject, message })
-                });
-
-                if (res.ok) {
-                    alert('Support ticket submitted successfully!');
-                    document.getElementById('supportSubject').value = '';
-                    document.getElementById('supportMessage').value = '';
-                    closeSupportModal();
-                } else {
-                    alert('Failed to send support request. Make sure you are logged in.');
-                }
-            } catch (err) {
-                alert('Connection error.');
-            }
-        }
-
-        // --- NOTIFICATION FUNCTIONS ---
-        function toggleNotificationDropdown(e) {
-            if (e) e.stopPropagation();
-            const dropdown = document.getElementById('notifDropdown');
-            dropdown.classList.toggle('hidden');
-            if (!dropdown.classList.contains('hidden')) {
-                loadNotifications();
-            }
-        }
-
-        async function loadNotifications() {
-            try {
-                const res = await fetch('/api/notifications/list');
-                const data = await res.json();
-                
-                if (data.success) {
-                    const listContainer = document.getElementById('notifListContainer');
-                    const badge = document.getElementById('notifBadge');
-                    const unreadCount = data.notifications.filter(n => !n.read).length;
-
-                    if (unreadCount > 0) {
-                        badge.textContent = unreadCount;
-                        badge.classList.remove('hidden');
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-
-                    if (!data.notifications || data.notifications.length === 0) {
-                        listContainer.innerHTML = `<p class="text-xs text-slate-500 p-4 text-center">No notifications.</p>`;
-                        return;
-                    }
-
-                    listContainer.innerHTML = '';
-                    data.notifications.forEach(n => {
-                        const unreadDot = !n.read ? `<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1"></span>` : '';
-                        listContainer.innerHTML += `
-                            <div class="p-3 hover:bg-slate-800/50 transition flex items-start space-x-2.5">
-                                ${unreadDot}
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-center">
-                                        <strong class="text-xs text-white block truncate">${n.title}</strong>
-                                        <span class="text-[9px] text-slate-500">${n.time}</span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-400 mt-0.5">${n.message}</p>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-            } catch (err) {}
-        }
-
-        async function markNotificationsRead() {
-            try {
-                await fetch('/api/notifications/read', { method: 'POST' });
-                loadNotifications();
-            } catch (err) {}
-        }
-
-        document.addEventListener('click', (e) => {
-            const dropdown = document.getElementById('notifDropdown');
-            const bellBtn = document.getElementById('notifBellBtn');
-            if (dropdown && !dropdown.contains(e.target) && bellBtn && !bellBtn.contains(e.target)) {
-                dropdown.classList.add('hidden');
-            }
-        });
-
-        // Dynamic 4-Second Polling & Permission UI Sync Loop
-        async function checkAuth() {
-            try {
-                const res = await fetch('/api/auth/user');
-                const data = await res.json();
-
-                if (data.success && data.user) {
-                    currentUserId = data.user.id;
-                    currentUserData = data.user;
-                    document.getElementById('loginOverlay').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('hidden');
-                    document.getElementById('userName').textContent = data.user.username;
-                    document.getElementById('userAvatar').src = data.user.avatar;
-
-                    // STRICT MANAGEMENT ROLE CHECK
-                    if (data.user.isManager) {
-                        document.getElementById('btnWebhookSettings').classList.remove('hidden');
-                        document.getElementById('btnCadCustomize').classList.remove('hidden');
-                        document.getElementById('btnEditDept').classList.remove('hidden');
-                        document.getElementById('btnNewResource').classList.remove('hidden');
-                        document.getElementById('resStaffHandbook').classList.remove('hidden');
-                        document.getElementById('userRoleBadge').textContent = 'Management Team';
-                    } 
-                    // VERIFIED STAFF (CANNOT SEE ANY CUSTOMIZATION OPTIONS)
-                    else if (data.user.verifiedRole) {
-                        document.getElementById('btnWebhookSettings').classList.add('hidden');
-                        document.getElementById('btnCadCustomize').classList.add('hidden');
-                        document.getElementById('btnEditDept').classList.add('hidden');
-                        document.getElementById('btnNewResource').classList.add('hidden');
-                        document.getElementById('resStaffHandbook').classList.remove('hidden');
-                        document.getElementById('userRoleBadge').textContent = 'Verified Staff';
-                    } 
-                    // COMMUNITY MEMBER
-                    else {
-                        document.getElementById('btnWebhookSettings').classList.add('hidden');
-                        document.getElementById('btnCadCustomize').classList.add('hidden');
-                        document.getElementById('btnEditDept').classList.add('hidden');
-                        document.getElementById('btnNewResource').classList.add('hidden');
-                        document.getElementById('resStaffHandbook').classList.add('hidden');
-                        document.getElementById('userRoleBadge').textContent = 'Community Member';
-                        
-                        if (!document.getElementById('viewModPanel').classList.contains('hidden')) {
-                            switchView('hub');
-                        }
-                    }
-
-                    loadNotifications();
-                    loadLogs();
-                    loadServerInfo();
-                    fetchActivityFeed();
-                    loadActiveShifts();
-                } else if (data.discordConnected) {
-                    document.getElementById('loginOverlay').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('hidden');
-                } else {
-                    document.getElementById('loginOverlay').classList.remove('hidden');
-                }
-            } catch (err) {}
-        }
-
-        setInterval(checkAuth, 4000);
-
-        function toggleSection(secId, isChecked) {
-            const el = document.getElementById(secId);
-            if (el) el.classList.toggle('hidden', !isChecked);
-        }
-
-        async function loadActiveShifts() {
-            try {
-                const res = await fetch('/api/shifts/active');
-                const data = await res.json();
-                const container = document.getElementById('activeShiftsList');
-
-                if (data.success && data.activeShifts.length > 0) {
-                    container.innerHTML = '';
-                    let userIsOnShift = false;
-
-                    data.activeShifts.forEach(s => {
-                        if (s.userId === currentUserId) userIsOnShift = true;
-
-                        const endShiftBtn = (data.isManager || s.userId === currentUserId)
-                            ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>`
-                            : '';
-
-                        container.innerHTML += `
-                            <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                                    <div>
-                                        <span class="font-bold text-white block text-[11px]">${s.robloxName}</span>
-                                        <span class="text-[9px] text-slate-400 block">${s.department} • <strong class="text-emerald-400">${s.duration}</strong></span>
-                                    </div>
-                                </div>
-                                ${endShiftBtn}
-                            </div>
-                        `;
-                    });
-
-                    if (userIsOnShift) {
-                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
-                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
-                        document.getElementById('btnStartShift').classList.add('hidden');
-                        document.getElementById('btnEndShift').classList.remove('hidden');
-                    } else {
-                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
-                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
-                        document.getElementById('btnStartShift').classList.remove('hidden');
-                        document.getElementById('btnEndShift').classList.add('hidden');
-                    }
-                } else {
-                    container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
-                }
-            } catch (err) {}
-        }
-
-        async function forceEndShift(targetUserId) {
-            if (!confirm("End this staff member's shift?")) return;
-            try {
-                const res = await fetch('/api/shifts/force-end', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ targetUserId })
-                });
-                if (res.ok) loadActiveShifts();
-            } catch (err) {}
-        }
-
-        async function loadServerInfo() {
-            try {
-                const res = await fetch('/api/erlc/server-info');
-                const data = await res.json();
-                if (data.success) {
-                    cachedPlayers = data.players || [];
-                    const pContainer = document.getElementById('livePlayersList');
-                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.length} Players`;
-
-                    if (cachedPlayers.length > 0) {
-                        pContainer.innerHTML = '';
-                        cachedPlayers.forEach(p => {
-                            const parsed = parseErlcPlayer(p);
-                            pContainer.innerHTML += `
-                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
-                                        <span class="font-bold text-white">${parsed.username}</span>
-                                    </div>
-                                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">In Discord</span>
-                                </div>
-                            `;
-                        });
-                    }
-                }
-            } catch (err) {}
-        }
-
-        async function fetchActivityFeed() {
-            try {
-                const res = await fetch('/api/erlc/activity');
-                const data = await res.json();
-                const container = document.getElementById('activityContainer');
-                if (data.success && data.logs.length > 0) {
-                    container.innerHTML = '';
-                    data.logs.slice(0, 10).forEach(log => {
-                        container.innerHTML += `
-                            <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs flex items-center space-x-2">
-                                <i class="fa-solid fa-terminal text-pink-400 text-xs"></i>
-                                <span class="text-slate-300"><strong class="text-white">${log.Player || 'Server'}:</strong> ${log.Command || 'Executed action'}</span>
-                            </div>
-                        `;
-                    });
-                }
-            } catch (err) {}
-        }
-
-        function parseErlcPlayer(p) {
-            let rawName = p.Player || p.Name || p.username || '';
-            let rawId = p.UserId || p.id || '';
-            let cleanUsername = rawName;
-            let cleanRobloxId = '';
-
-            if (rawName.includes(':')) {
-                const parts = rawName.split(':');
-                cleanUsername = parts[0].trim();
-                cleanRobloxId = parts[1].trim();
-            } else if (rawId && !isNaN(rawId)) {
-                cleanRobloxId = String(rawId).trim();
-            }
-
-            return { username: cleanUsername, robloxId: cleanRobloxId };
-        }
-
-        function handlePlayerSearch(query) {
-            const dropdown = document.getElementById('playerSearchDropdown');
-            if (!query.trim()) {
-                dropdown.classList.add('hidden');
-                return;
-            }
-
-            const matches = cachedPlayers.filter(p => {
-                const parsed = parseErlcPlayer(p);
-                return parsed.username.toLowerCase().includes(query.toLowerCase());
-            });
-
-            if (matches.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching in-game players found</div>`;
-                dropdown.classList.remove('hidden');
-                return;
-            }
-
-            dropdown.innerHTML = '';
-            matches.forEach(p => {
-                const parsed = parseErlcPlayer(p);
-                dropdown.innerHTML += `
-                    <div onclick="selectPlayer('${parsed.username}', '${parsed.robloxId}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
-                        <span class="text-xs font-bold text-white">${parsed.username}</span>
-                        <span class="text-[10px] text-slate-400">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
-                    </div>
-                `;
-            });
-            dropdown.classList.remove('hidden');
-        }
-
-        function selectPlayer(name, id) {
-            document.getElementById('targetUser').value = name;
-            document.getElementById('playerSearchDropdown').classList.add('hidden');
-            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
-        }
-
-        async function autoFetchRobloxId(username) {
-            if (!username.trim() || document.getElementById('robloxId').value) return;
-            const spinner = document.getElementById('idLoadingSpinner');
-            spinner.classList.remove('hidden');
-
-            try {
-                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false })
-                });
-                const data = await res.json();
-                if (data.data && data.data.length > 0) {
-                    document.getElementById('robloxId').value = data.data[0].id;
-                }
-            } catch (err) {
-            } finally {
-                spinner.classList.add('hidden');
-            }
-        }
-
-        async function requestHigherUpAssistance() {
-            const reason = prompt("Enter reason for higher-up assistance:");
-            if (!reason) return;
-
-            try {
-                await fetch('/api/assistance/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reason })
-                });
-                alert("Assistance requested!");
-            } catch (err) {}
-        }
-
-        async function logout() {
-            await fetch('/api/auth/logout');
-            window.location.href = '/';
-        }
-
-        async function toggleShift(action) {
-            try {
-                const res = await fetch('/api/shifts/toggle', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action, department: 'Staff Moderation' })
-                });
-                if (res.ok) loadActiveShifts();
-            } catch (err) {}
-        }
-
-        async function sendErlcCommand() {
-            const command = document.getElementById('erlcCmdInput').value.trim();
-            if (!command) return;
-
-            try {
-                const res = await fetch('/api/erlc/command', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    alert(`Command executed: ${command}`);
-                    document.getElementById('erlcCmdInput').value = '';
-                }
-            } catch (err) {}
-        }
-
-        async function submitInfraction(e) {
-            e.preventDefault();
-            const payload = {
-                targetUser: document.getElementById('targetUser').value,
-                robloxId: document.getElementById('robloxId').value,
-                punishmentType: document.getElementById('punishmentType').value,
-                reason: document.getElementById('infractionReason').value
-            };
-
-            try {
-                const res = await fetch('/api/punishments/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    alert('Punishment Logged!');
-                    document.getElementById('targetUser').value = '';
-                    document.getElementById('robloxId').value = '';
-                    document.getElementById('infractionReason').value = '';
-                    loadLogs();
-                }
-            } catch (err) {}
-        }
-
-        async function removeWarning(logId) {
-            if (!confirm("Remove this warning?")) return;
-            try {
-                const res = await fetch('/api/punishments/remove-warning', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ logId })
-                });
-                if (res.ok) loadLogs();
-            } catch (err) {}
-        }
-
-        async function loadLogs() {
-            try {
-                const res = await fetch('/api/punishments/list');
-                const data = await res.json();
-                const container = document.getElementById('logsContainer');
-
-                if (data.success && data.logs.length > 0) {
-                    container.innerHTML = '';
-                    data.logs.forEach(log => {
-                        const isRemoved = log.removed ? 'opacity-50 line-through' : '';
-                        const removeBtn = (log.punishmentType === 'Warning' && !log.removed) 
-                            ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">Remove</button>`
-                            : (log.removed ? `<span class="text-[10px] text-rose-400 font-semibold">[Removed]</span>` : '');
-
-                        container.innerHTML += `
-                            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-white text-xs">${log.targetUser}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">${log.punishmentType}</span>
-                                </div>
-                                <p class="text-[11px] text-slate-400"><strong>ID:</strong> ${log.robloxId} | <strong>Reason:</strong> ${log.reason}</p>
-                                <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
-                                    <span>By: ${log.staffName}</span>
-                                    ${removeBtn}
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-            } catch (err) {}
-        }
-
-        document.addEventListener('DOMContentLoaded', checkAuth);
-    </script>
-</body>
-</html>
