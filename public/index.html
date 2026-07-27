@@ -412,8 +412,15 @@
     <script>
         let cachedPlayers = [];
         let currentUserId = null;
+        let userIsStaff = false;
 
         function switchView(viewName) {
+            // Anti-raid security check before switching views
+            if (viewName === 'modPanel' && !userIsStaff) {
+                alert("Access Denied: You do not possess required staff permissions!");
+                return switchView('hub');
+            }
+
             const hub = document.getElementById('viewHub');
             const modPanel = document.getElementById('viewModPanel');
             const navHub = document.getElementById('navHub');
@@ -452,10 +459,10 @@
                     document.getElementById('userName').textContent = data.user.username;
                     document.getElementById('userAvatar').src = data.user.avatar;
 
-                    // Management Access Check
+                    // 1. Management Access Check
                     if (data.user.isManager) {
+                        userIsStaff = true;
                         document.getElementById('navModPanel').classList.remove('hidden');
-                        document.getElementById('navCad').classList.add('hidden');
                         document.getElementById('cardFullLinks').classList.remove('hidden');
                         document.getElementById('cardGeneralLinks').classList.add('hidden');
                         document.getElementById('btnEditDept').classList.remove('hidden');
@@ -463,21 +470,26 @@
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Management Team';
                     } 
-                    // Staff Access Check
+                    // 2. Staff Access Check
                     else if (data.user.verifiedRole) {
+                        userIsStaff = true;
                         document.getElementById('navModPanel').classList.remove('hidden');
-                        document.getElementById('navCad').classList.add('hidden');
                         document.getElementById('cardStaffLinks').classList.remove('hidden');
                         document.getElementById('cardGeneralLinks').classList.add('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Verified Staff';
                     }
-                    // Non-Staff / Community Member Fallback
+                    // 3. Community Member Fallback
                     else {
+                        userIsStaff = false;
                         document.getElementById('navModPanel').classList.add('hidden');
-                        document.getElementById('navCad').classList.remove('hidden');
                         document.getElementById('cardGeneralLinks').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Community Member';
+                        
+                        // If user lost staff role while viewing mod panel, kick them back to hub
+                        if (!document.getElementById('viewModPanel').classList.contains('hidden')) {
+                            switchView('hub');
+                        }
                     }
 
                     loadLogs();
@@ -499,6 +511,9 @@
                 document.getElementById('loginOverlay').classList.remove('hidden');
             }
         }
+
+        // Anti-Raid Loop: Continuously re-check roles every 15 seconds
+        setInterval(checkAuth, 15000);
 
         async function verifyRoleManually() {
             const btn = document.getElementById('btnVerifyRole');
