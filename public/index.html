@@ -84,10 +84,23 @@
             </div>
 
             <div class="flex items-center space-x-4">
-                <button class="relative p-2 text-slate-400 hover:text-white transition">
-                    <i class="fa-regular fa-bell text-lg"></i>
-                    <span class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center">1</span>
-                </button>
+                
+                <div class="relative">
+                    <button id="notifBellBtn" onclick="toggleNotificationDropdown(event)" class="relative p-2 text-slate-400 hover:text-white transition focus:outline-none">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        <span id="notifBadge" class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+                    </button>
+
+                    <div id="notifDropdown" class="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 hidden overflow-hidden">
+                        <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">Notifications</span>
+                            <button onclick="markNotificationsRead()" class="text-[10px] text-emerald-400 hover:underline">Mark all read</button>
+                        </div>
+                        <div id="notifListContainer" class="max-h-64 overflow-y-auto divide-y divide-slate-800/60">
+                            <p class="text-xs text-slate-500 p-4 text-center">No new notifications.</p>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="userProfile" class="flex items-center space-x-3 hidden">
                     <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
@@ -414,14 +427,11 @@
         }
 
         async function attemptModPanelAccess() {
-            // Live security re-check before entering mod panel
             const checkRes = await fetch('/api/auth/verify-role', { method: 'POST' }).catch(() => null);
             if (checkRes && checkRes.ok) {
-                // Instantly sync dashboard elements upon successful role check
                 await checkAuth();
                 switchView('modPanel');
             } else {
-                // If role check failed, update live permissions immediately
                 await checkAuth();
                 document.getElementById('gateModalAvatar').src = currentUserData?.avatar || '';
                 document.getElementById('gateModalUsername').textContent = currentUserData?.username || 'User';
@@ -466,7 +476,7 @@
         }
 
         async function openDonateModal() {
-            await checkAuth(); // Fast dynamic role re-check on interaction
+            await checkAuth();
             document.getElementById('donateModal').classList.remove('hidden');
         }
 
@@ -474,7 +484,75 @@
             document.getElementById('donateModal').classList.add('hidden');
         }
 
-        // Dynamic 4-Second Polling & Permission UI Sync Loop
+        // --- NOTIFICATION FUNCTIONS ---
+        function toggleNotificationDropdown(e) {
+            if (e) e.stopPropagation();
+            const dropdown = document.getElementById('notifDropdown');
+            dropdown.classList.toggle('hidden');
+            if (!dropdown.classList.contains('hidden')) {
+                loadNotifications();
+            }
+        }
+
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/api/notifications/list');
+                const data = await res.json();
+                
+                if (data.success) {
+                    const listContainer = document.getElementById('notifListContainer');
+                    const badge = document.getElementById('notifBadge');
+                    const unreadCount = data.notifications.filter(n => !n.read).length;
+
+                    if (unreadCount > 0) {
+                        badge.textContent = unreadCount;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+
+                    if (!data.notifications || data.notifications.length === 0) {
+                        listContainer.innerHTML = `<p class="text-xs text-slate-500 p-4 text-center">No notifications.</p>`;
+                        return;
+                    }
+
+                    listContainer.innerHTML = '';
+                    data.notifications.forEach(n => {
+                        const unreadDot = !n.read ? `<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1"></span>` : '';
+                        listContainer.innerHTML += `
+                            <div class="p-3 hover:bg-slate-800/50 transition flex items-start space-x-2.5">
+                                ${unreadDot}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-center">
+                                        <strong class="text-xs text-white block truncate">${n.title}</strong>
+                                        <span class="text-[9px] text-slate-500">${n.time}</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">${n.message}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (err) {}
+        }
+
+        async function markNotificationsRead() {
+            try {
+                await fetch('/api/notifications/read', { method: 'POST' });
+                loadNotifications();
+            } catch (err) {}
+        }
+
+        // Close notification dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('notifDropdown');
+            const bellBtn = document.getElementById('notifBellBtn');
+            if (dropdown && !dropdown.contains(e.target) && bellBtn && !bellBtn.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // Dynamic 4-Second Polling & UI Sync
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -504,12 +582,12 @@
                         document.getElementById('resStaffHandbook').classList.add('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Community Member';
                         
-                        // Boot user to hub if they lost staff permissions while inside mod panel
                         if (!document.getElementById('viewModPanel').classList.contains('hidden')) {
                             switchView('hub');
                         }
                     }
 
+                    loadNotifications();
                     loadLogs();
                     loadServerInfo();
                     fetchActivityFeed();
@@ -523,7 +601,6 @@
             } catch (err) {}
         }
 
-        // Dynamic refresh every 4 seconds
         setInterval(checkAuth, 4000);
 
         function toggleSection(secId, isChecked) {
