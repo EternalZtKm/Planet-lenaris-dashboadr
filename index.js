@@ -29,7 +29,7 @@ const SUPPORT_ROLE_IDS = [
     "1425618454337028116"
 ];
 
-// Custom Webhook Configuration (Modifiable by Managers)
+// Custom Webhook Configuration
 let botConfig = {
     shiftWebhook: process.env.SHIFT_WEBHOOK || "",
     punishmentWebhook: process.env.PUNISHMENT_WEBHOOK || "",
@@ -45,7 +45,6 @@ let botConfig = {
 let punishmentLogs = [];
 let activeShifts = [];
 
-// In-Memory Notification System
 let notificationsList = [
     {
         id: 1,
@@ -67,7 +66,6 @@ function addNotification(title, message) {
     if (notificationsList.length > 20) notificationsList.pop();
 }
 
-// Helper to send Discord Webhooks with Content / Role Pings
 async function sendDiscordLog(webhookUrl, embed, content = "") {
     if (!webhookUrl) return;
     try {
@@ -81,7 +79,6 @@ async function sendDiscordLog(webhookUrl, embed, content = "") {
     }
 }
 
-// Automated Daily Reset at Midnight
 function scheduleMidnightReset() {
     const now = new Date();
     const night = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
@@ -109,6 +106,11 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// DIRECT LOGO ROUTE SERVING (Guarantees image loads regardless of case sensitivity)
+app.get(['/Logo.png', '/logo.png', '/server-logo.png'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'Logo.png'));
+});
 
 // Live Role Verification Helper
 async function verifyUserRoleLive(userId) {
@@ -281,7 +283,7 @@ app.post('/api/settings/webhooks', requireManagerAuth, (req, res) => {
     res.json({ success: true, webhooks: botConfig });
 });
 
-// --- SUPPORT TICKET ENDPOINT (AVAILABLE TO ALL LOGGED IN USERS) ---
+// --- SUPPORT TICKET ENDPOINT ---
 app.post('/api/support/create', async (req, res) => {
     if (!req.session || !req.session.user) {
         return res.status(401).json({ success: false, error: "Please log in with Discord first." });
