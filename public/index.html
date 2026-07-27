@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planet Lenaris | Official Hub</title>
+    <title id="docTitle">Planet Lenaris | Official Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -11,7 +11,6 @@
         .card { background-color: #161b22; border: 1px solid #21262d; }
         input, select, textarea { background-color: #0d1117; border: 1px solid #30363d; color: #f0f6fc; }
         input:focus, select:focus, textarea:focus { border-color: #58a6ff; outline: none; }
-        /* Custom scrollbar for sidebar */
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-track { background: #0b0e14; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #21262d; border-radius: 4px; }
@@ -24,11 +23,11 @@
         <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
                 <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                    <img src="https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
                 </div>
                 <div>
-                    <h2 class="text-xl font-bold text-white">Planet Lenaris Hub</h2>
+                    <h2 class="text-xl font-bold text-white txt-server-name">Planet Lenaris Hub</h2>
                     <p class="text-xs text-slate-400 mt-1">Connect your Discord account to view server features.</p>
                 </div>
                 <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
@@ -68,10 +67,10 @@
             <div class="flex items-center space-x-8">
                 <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('hub')">
                     <div class="w-9 h-9 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                        <img src="https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-lg font-bold">L</div>
                     </div>
-                    <span class="font-bold text-white text-base tracking-wide">Planet Lenaris</span>
+                    <span class="font-bold text-white text-base tracking-wide txt-server-name">Planet Lenaris</span>
                 </div>
 
                 <div class="hidden md:flex items-center space-x-2 text-xs font-semibold">
@@ -137,12 +136,12 @@
                 <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
-                            <img src="https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-xl font-bold">L</div>
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h2 class="font-bold text-white text-base">Planet Lenaris</h2>
+                                <h2 class="font-bold text-white text-base txt-server-name">Planet Lenaris</h2>
                                 <i class="fa-solid fa-crown text-amber-400 text-xs" title="Official Server"></i>
                             </div>
                             <span class="text-[11px] text-slate-400"><i class="fa-solid fa-users text-[10px] text-emerald-400"></i> Active Private Server</span>
@@ -587,14 +586,13 @@
                 <div class="max-w-5xl mx-auto space-y-6">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-4">
                         <div>
-                            <h1 id="sdActiveTitle" class="text-2xl font-bold text-white capitalize">General Settings</h1>
-                            <p id="sdActiveDesc" class="text-xs text-slate-400 mt-1">Configure general server settings and management parameters.</p>
+                            <h1 id="sdActiveTitle" class="text-2xl font-bold text-white capitalize">General</h1>
+                            <p id="sdActiveDesc" class="text-xs text-slate-400 mt-1">Configure general server branding and display settings.</p>
                         </div>
                     </div>
 
-                    <div id="sdContentContainer" class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                        <p class="text-xs text-slate-400">Select an item from the left sidebar to customize this section.</p>
-                    </div>
+                    <div id="sdContentContainer" class="space-y-6">
+                        </div>
                 </div>
             </section>
         </main>
@@ -644,7 +642,7 @@
                 <i class="fa-solid fa-dollar-sign"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-white">Support Planet Lenaris</h3>
+                <h3 class="text-lg font-bold text-white">Support Server</h3>
                 <p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p>
             </div>
             <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
@@ -659,7 +657,7 @@
         <div class="card p-6 rounded-2xl max-w-md w-full space-y-4 border border-indigo-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-headset text-indigo-400"></i> Planet Lenaris Support
+                    <i class="fa-solid fa-headset text-indigo-400"></i> <span class="txt-server-name">Planet Lenaris</span> Support
                 </h3>
                 <button onclick="closeSupportModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
@@ -686,7 +684,7 @@
     <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400 m-6 mt-0">
         <div class="flex items-center space-x-2">
             <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="serverStatusText" class="font-semibold text-white">Planet Lenaris Server: Online</span>
+            <span id="serverStatusText" class="font-semibold text-white"><span class="txt-server-name">Planet Lenaris</span> Server: Online</span>
         </div>
         <div>
             <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
@@ -697,6 +695,31 @@
         let cachedPlayers = [];
         let currentUserId = null;
         let currentUserData = null;
+        let currentServerConfig = {
+            serverName: "Planet Lenaris",
+            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true"
+        };
+
+        async function fetchGeneralSettings() {
+            try {
+                const res = await fetch('/api/settings/general');
+                const data = await res.json();
+                if (data.success && data.config) {
+                    currentServerConfig = data.config;
+                    applyServerBranding();
+                }
+            } catch (err) {}
+        }
+
+        function applyServerBranding() {
+            document.querySelectorAll('.txt-server-name').forEach(el => {
+                el.textContent = currentServerConfig.serverName;
+            });
+            document.querySelectorAll('.img-logo').forEach(img => {
+                img.src = currentServerConfig.serverIcon;
+            });
+            document.getElementById('docTitle').textContent = `${currentServerConfig.serverName} | Official Hub`;
+        }
 
         function switchView(viewName) {
             const hub = document.getElementById('viewHub');
@@ -705,7 +728,6 @@
             const navHub = document.getElementById('navHub');
             const navMod = document.getElementById('navModPanel');
 
-            // Hide all views first
             hub.classList.add('hidden');
             modPanel.classList.add('hidden');
             serverDash.classList.add('hidden');
@@ -718,6 +740,7 @@
                 serverDash.classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
                 if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                selectSidebarItem('general');
             } else {
                 hub.classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
@@ -725,7 +748,6 @@
             }
         }
 
-        // --- SIDEBAR TOGGLE & NAVIGATION ---
         function toggleSidebarMenu(menuId) {
             const el = document.getElementById(menuId);
             const arrow = document.getElementById('arrow-' + menuId);
@@ -740,16 +762,81 @@
             const descEl = document.getElementById('sdActiveDesc');
             const container = document.getElementById('sdContentContainer');
 
-            const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            titleEl.textContent = formattedTitle;
-            descEl.textContent = `Manage and view ${formattedTitle} details for Planet Lenaris.`;
+            if (tabKey === 'general') {
+                titleEl.textContent = "General";
+                descEl.textContent = "Configure general server branding and display settings.";
+                
+                container.innerHTML = `
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Server Name</h3>
+                            <p class="text-xs text-slate-400">The name of your server displayed throughout the hub.</p>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-slate-400 uppercase">Server Name <span class="text-rose-400">*</span></label>
+                            <input type="text" id="inputServerName" value="${currentServerConfig.serverName}" class="w-full rounded-xl px-3 py-2 text-xs">
+                        </div>
+                    </div>
 
-            container.innerHTML = `
-                <div class="space-y-3">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3>
-                    <p class="text-xs text-slate-400">Content and controls for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized here.</p>
-                </div>
-            `;
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Server Icon</h3>
+                            <p class="text-xs text-slate-400">The icon image of your server displayed throughout the hub.</p>
+                        </div>
+                        <div class="flex items-center space-x-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                            <img src="${currentServerConfig.serverIcon}" class="w-10 h-10 rounded-xl object-cover border border-slate-700" alt="Server Preview">
+                            <span class="text-xs font-bold text-white">${currentServerConfig.serverName}</span>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Icon Image URL</label>
+                            <input type="text" id="inputServerIcon" value="${currentServerConfig.serverIcon}" placeholder="https://..." class="w-full rounded-xl px-3 py-2 text-xs">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="saveGeneralSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Save General Settings</span>
+                        </button>
+                    </div>
+                `;
+            } else {
+                const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                titleEl.textContent = formattedTitle;
+                descEl.textContent = `Manage and view ${formattedTitle} details for ${currentServerConfig.serverName}.`;
+
+                container.innerHTML = `
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3>
+                        <p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized here next.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function saveGeneralSettings() {
+            const serverName = document.getElementById('inputServerName').value.trim();
+            const serverIcon = document.getElementById('inputServerIcon').value.trim();
+
+            if (!serverName) return alert("Server Name cannot be empty.");
+
+            try {
+                const res = await fetch('/api/settings/general', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serverName, serverIcon })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentServerConfig = data.config;
+                    applyServerBranding();
+                    alert("General server settings saved!");
+                } else {
+                    alert("Failed to save settings.");
+                }
+            } catch (err) {
+                alert("Connection error saving settings.");
+            }
         }
 
         async function attemptModPanelAccess() {
@@ -1007,6 +1094,7 @@
                         }
                     }
 
+                    fetchGeneralSettings();
                     loadNotifications();
                     loadLogs();
                     loadServerInfo();
@@ -1015,6 +1103,7 @@
                 } else if (data.discordConnected) {
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
+                    fetchGeneralSettings();
                 } else {
                     document.getElementById('loginOverlay').classList.remove('hidden');
                 }
