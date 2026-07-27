@@ -18,44 +18,44 @@
     <div>
         <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
-                
-                <div id="step1Container" class="space-y-6">
-                    <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                        <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
+                <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
+                    <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Planet Lenaris Hub</h2>
+                    <p class="text-xs text-slate-400 mt-1">Connect your Discord account to view server features.</p>
+                </div>
+                <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i class="fa-brands fa-discord text-lg"></i>
+                    <span>Connect Discord Account</span>
+                </a>
+            </div>
+        </div>
+
+        <div id="modPanelGateModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+            <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
+                <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <img id="gateModalAvatar" class="w-10 h-10 rounded-full border border-indigo-500" alt="Avatar">
+                    <div class="text-left">
+                        <span id="gateModalUsername" class="text-sm font-bold text-white block"></span>
+                        <span class="text-[10px] text-emerald-400 font-medium">Discord Account Connected</span>
                     </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-white">Planet Lenaris Hub</h2>
-                        <p class="text-xs text-slate-400 mt-1">Connect your Discord account to begin authorization.</p>
-                    </div>
-                    <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
-                        <i class="fa-brands fa-discord text-lg"></i>
-                        <span>Connect Discord Account</span>
-                    </a>
                 </div>
 
-                <div id="step2Container" class="space-y-6 hidden">
-                    <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                        <img id="modalAvatar" class="w-10 h-10 rounded-full border border-indigo-500" alt="Avatar">
-                        <div class="text-left">
-                            <span id="modalUsername" class="text-sm font-bold text-white block"></span>
-                            <span class="text-[10px] text-emerald-400 font-medium">Discord Account Connected</span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
-                        <p class="text-xs text-slate-400 mt-1">Checking your Discord server roles and permissions...</p>
-                    </div>
-
-                    <button onclick="verifyRoleManually()" id="btnVerifyRole" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
-                        <i class="fa-solid fa-shield-check text-lg"></i>
-                        <span>Check Server Roles & Enter</span>
-                    </button>
+                <div>
+                    <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
+                    <p class="text-xs text-slate-400 mt-1">Checking your Discord server roles and permissions...</p>
                 </div>
 
-                <div id="authStatusBox" class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-medium hidden"></div>
+                <button onclick="verifyRoleForModPanel()" id="btnGateVerify" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i class="fa-solid fa-shield-check text-lg"></i>
+                    <span>Retry Role Check</span>
+                </button>
 
+                <div id="gateErrorBox" class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-medium hidden"></div>
+
+                <button onclick="closeModPanelGate()" class="text-xs text-slate-400 hover:text-white transition">Return to Main Hub</button>
             </div>
         </div>
 
@@ -71,14 +71,10 @@
 
                 <div class="hidden md:flex items-center space-x-2 text-xs font-semibold">
                     <button onclick="switchView('hub')" id="navHub" class="px-3 py-2 rounded-lg bg-slate-800 text-white transition">Main Dashboard</button>
-                    
-                    <button onclick="switchView('modPanel')" id="navModPanel" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition hidden">
+                    <button onclick="attemptModPanelAccess()" id="navModPanel" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                         Moderator Panel
                     </button>
-                    <button id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                        CAD
-                    </button>
-
+                    <button id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">CAD</button>
                     <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
                     <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
                     <button onclick="openDonateModal()" class="px-3 py-2 rounded-lg text-emerald-400 bg-emerald-950/40 border border-emerald-800 hover:bg-emerald-900/50 transition flex items-center gap-1.5">
@@ -131,30 +127,14 @@
                     </div>
 
                     <div class="space-y-2 pt-2 border-t border-slate-800/80">
-                        <div id="cardFullLinks" class="space-y-2 hidden">
-                            <button onclick="switchView('modPanel')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
-                                <span><i class="fa-solid fa-gauge mr-2"></i> Moderator Panel</span>
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                            </button>
-                            <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
-                                <span><i class="fa-solid fa-sliders mr-2 text-indigo-400"></i> CAD Customization</span>
-                                <span class="text-[9px] text-amber-400">Manager Access</span>
-                            </button>
-                        </div>
-
-                        <div id="cardStaffLinks" class="hidden">
-                            <button onclick="switchView('modPanel')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
-                                <span><i class="fa-solid fa-shield-halved mr-2"></i> Moderator Panel</span>
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                            </button>
-                        </div>
-
-                        <div id="cardGeneralLinks">
-                            <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
-                                <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                            </button>
-                        </div>
+                        <button onclick="attemptModPanelAccess()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
+                            <span><i class="fa-solid fa-shield-halved mr-2"></i> Moderator Panel</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                        <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
+                            <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -412,15 +392,9 @@
     <script>
         let cachedPlayers = [];
         let currentUserId = null;
-        let userIsStaff = false;
+        let currentUserData = null;
 
         function switchView(viewName) {
-            // Anti-raid security check before switching views
-            if (viewName === 'modPanel' && !userIsStaff) {
-                alert("Access Denied: You do not possess required staff permissions!");
-                return switchView('hub');
-            }
-
             const hub = document.getElementById('viewHub');
             const modPanel = document.getElementById('viewModPanel');
             const navHub = document.getElementById('navHub');
@@ -439,6 +413,52 @@
             }
         }
 
+        async function attemptModPanelAccess() {
+            // Live security re-check before entering mod panel
+            const checkRes = await fetch('/api/auth/verify-role', { method: 'POST' }).catch(() => null);
+            if (checkRes && checkRes.ok) {
+                switchView('modPanel');
+            } else {
+                document.getElementById('gateModalAvatar').src = currentUserData?.avatar || '';
+                document.getElementById('gateModalUsername').textContent = currentUserData?.username || 'User';
+                document.getElementById('gateErrorBox').textContent = "Role Check Failed: Missing Role (1427083014147407995).";
+                document.getElementById('gateErrorBox').classList.remove('hidden');
+                document.getElementById('modPanelGateModal').classList.remove('hidden');
+            }
+        }
+
+        async function verifyRoleForModPanel() {
+            const btn = document.getElementById('btnGateVerify');
+            const errorBox = document.getElementById('gateErrorBox');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> <span>Checking Roles...</span>`;
+            errorBox.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/verify-role', { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    document.getElementById('modPanelGateModal').classList.add('hidden');
+                    switchView('modPanel');
+                } else {
+                    errorBox.textContent = data.error || "Role check failed.";
+                    errorBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorBox.textContent = "Connection error checking roles.";
+                errorBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
+            }
+        }
+
+        function closeModPanelGate() {
+            document.getElementById('modPanelGateModal').classList.add('hidden');
+            switchView('hub');
+        }
+
         function openDonateModal() {
             document.getElementById('donateModal').classList.remove('hidden');
         }
@@ -447,6 +467,7 @@
             document.getElementById('donateModal').classList.add('hidden');
         }
 
+        // Fast 4-Second Polling & Auth Sync Loop
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -454,39 +475,23 @@
 
                 if (data.success && data.user) {
                     currentUserId = data.user.id;
+                    currentUserData = data.user;
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
                     document.getElementById('userName').textContent = data.user.username;
                     document.getElementById('userAvatar').src = data.user.avatar;
 
-                    // 1. Management Access Check
                     if (data.user.isManager) {
-                        userIsStaff = true;
-                        document.getElementById('navModPanel').classList.remove('hidden');
-                        document.getElementById('cardFullLinks').classList.remove('hidden');
-                        document.getElementById('cardGeneralLinks').classList.add('hidden');
                         document.getElementById('btnEditDept').classList.remove('hidden');
                         document.getElementById('btnNewResource').classList.remove('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Management Team';
-                    } 
-                    // 2. Staff Access Check
-                    else if (data.user.verifiedRole) {
-                        userIsStaff = true;
-                        document.getElementById('navModPanel').classList.remove('hidden');
-                        document.getElementById('cardStaffLinks').classList.remove('hidden');
-                        document.getElementById('cardGeneralLinks').classList.add('hidden');
+                    } else if (data.user.verifiedRole) {
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Verified Staff';
-                    }
-                    // 3. Community Member Fallback
-                    else {
-                        userIsStaff = false;
-                        document.getElementById('navModPanel').classList.add('hidden');
-                        document.getElementById('cardGeneralLinks').classList.remove('hidden');
+                    } else {
                         document.getElementById('userRoleBadge').textContent = 'Community Member';
-                        
-                        // If user lost staff role while viewing mod panel, kick them back to hub
+                        // Kick user to hub if they lost staff role while viewing moderator panel
                         if (!document.getElementById('viewModPanel').classList.contains('hidden')) {
                             switchView('hub');
                         }
@@ -496,52 +501,17 @@
                     loadServerInfo();
                     fetchActivityFeed();
                     loadActiveShifts();
-                } else if (data.discordConnected && data.user) {
-                    document.getElementById('loginOverlay').classList.remove('hidden');
-                    document.getElementById('step1Container').classList.add('hidden');
-                    document.getElementById('step2Container').classList.remove('hidden');
-                    document.getElementById('modalUsername').textContent = data.user.username;
-                    document.getElementById('modalAvatar').src = data.user.avatar;
+                } else if (data.discordConnected) {
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('userProfile').classList.remove('hidden');
                 } else {
                     document.getElementById('loginOverlay').classList.remove('hidden');
-                    document.getElementById('step1Container').classList.remove('hidden');
-                    document.getElementById('step2Container').classList.add('hidden');
                 }
-            } catch (err) {
-                document.getElementById('loginOverlay').classList.remove('hidden');
-            }
+            } catch (err) {}
         }
 
-        // Anti-Raid Loop: Continuously re-check roles every 15 seconds
-        setInterval(checkAuth, 15000);
-
-        async function verifyRoleManually() {
-            const btn = document.getElementById('btnVerifyRole');
-            const statusBox = document.getElementById('authStatusBox');
-            
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> <span>Checking Roles...</span>`;
-            statusBox.classList.add('hidden');
-
-            try {
-                const res = await fetch('/api/auth/verify-role', { method: 'POST' });
-                const data = await res.json();
-
-                if (res.ok && data.success) {
-                    location.reload();
-                } else {
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
-                    statusBox.textContent = data.error || "Role check failed.";
-                    statusBox.classList.remove('hidden');
-                }
-            } catch (err) {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
-                statusBox.textContent = "Connection error.";
-                statusBox.classList.remove('hidden');
-            }
-        }
+        // Live refresh loop every 4 seconds
+        setInterval(checkAuth, 4000);
 
         function toggleSection(secId, isChecked) {
             const el = document.getElementById(secId);
