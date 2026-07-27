@@ -15,19 +15,23 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID;
 const REQUIRED_ROLE_ID = "1427083014147407995";
 const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.onrender.com/api/auth/discord/callback";
 
-const DISCORD_WEBHOOK = "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg";
+// DYNAMIC BOT CONFIGURATION (Can be changed dynamically via Discord Bot commands!)
+let botConfig = {
+    shiftWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
+    punishmentWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
+    assistanceWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
+    managerRoleIds: [
+        "1425618356912001135",
+        "1425618591637835797",
+        "1425632069479960686"
+    ]
+};
+
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 const DISCORD_BOT_API_KEY = process.env.DISCORD_BOT_API_KEY || "lenaris-secret-bot-key";
 
-// Role IDs allowed to force-end other staff members' shifts
-const MANAGER_ROLE_IDS = [
-    "1425618356912001135",
-    "1425618591637835797",
-    "1425632069479960686"
-];
-
 let punishmentLogs = [];
-let activeShifts = []; // [{ userId, username, robloxName, startTime, department }]
+let activeShifts = []; // Array of active staff shifts
 
 // Automated Daily Reset at 12:00 AM Midnight
 function scheduleMidnightReset() {
@@ -64,7 +68,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: Live Role & Nickname Check
+// Helper: Live Role Check
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -77,7 +81,7 @@ async function verifyUserRoleLive(userId) {
         const userRoles = memberData.roles || [];
         
         const hasStaffRole = userRoles.includes(REQUIRED_ROLE_ID);
-        const isManager = userRoles.some(r => MANAGER_ROLE_IDS.includes(r));
+        const isManager = userRoles.some(r => botConfig.managerRoleIds.includes(r));
 
         return {
             hasRole: hasStaffRole,
@@ -91,7 +95,7 @@ async function verifyUserRoleLive(userId) {
     }
 }
 
-// Middleware: Live Role Check
+// Middleware: Strict Live Role Protection
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) {
         return res.status(401).json({ success: false, error: "Unauthorized: Please log in with Discord." });
@@ -113,7 +117,8 @@ async function requireStaffAuth(req, res, next) {
     next();
 }
 
-// Auth Routes
+// --- AUTHENTICATION ROUTES ---
+
 app.get('/api/auth/discord/login', (req, res) => {
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
@@ -210,7 +215,6 @@ app.get('/api/auth/logout', (req, res) => {
 
 // --- SHIFT CONTROL ENDPOINTS ---
 
-// Get all active shifts
 app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
     const formattedShifts = activeShifts.map(s => {
         const durationMs = Date.now() - s.startTime;
@@ -229,7 +233,6 @@ app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
     res.json({ success: true, activeShifts: formattedShifts, isManager: req.session.user.isManager });
 });
 
-// Toggle Start/End Shift
 app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     try {
         const { action, department } = req.body || {};
@@ -244,7 +247,6 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
         const timestamp = new Date().toLocaleString();
 
         if (action === 'CLOCK_IN') {
-            // Remove existing shift if present
             activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
             activeShifts.push({
                 userId: discordUser.id,
@@ -258,9 +260,8 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
             activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
         }
 
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch(botConfig.shiftWebhook, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, // or application/json
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 embeds: [{
@@ -282,7 +283,6 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Force End Another Staff Member's Shift (Managers Only)
 app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
     try {
         const { targetUserId } = req.body || {};
@@ -301,7 +301,7 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
 
         activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
 
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch(botConfig.shiftWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -324,7 +324,8 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Request Higher Up Assistance Webhook
+// --- ASSISTANCE & PUNISHMENT ENDPOINTS ---
+
 app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
     try {
         const { reason } = req.body || {};
@@ -336,7 +337,7 @@ app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
             staffRobloxName = parts[parts.length - 1].trim();
         }
 
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch(botConfig.assistanceWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -359,7 +360,6 @@ app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Create Punishment Log
 app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     try {
         const { targetUser, robloxId, punishmentType, reason } = req.body || {};
@@ -400,7 +400,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             }).catch(err => console.error("Failed to send warning PM:", err));
         }
 
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch(botConfig.punishmentWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -427,7 +427,6 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Remove Warning Endpoint
 app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) => {
     try {
         const { logId } = req.body || {};
@@ -460,7 +459,7 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
             }).catch(() => {});
         }
 
-        await fetch(DISCORD_WEBHOOK, {
+        await fetch(botConfig.punishmentWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -487,7 +486,8 @@ app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
     res.json({ success: true, logs: punishmentLogs });
 });
 
-// ER:LC Command Endpoint
+// --- ER:LC INTEGRATION ROUTES ---
+
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const { command } = req.body || {};
@@ -510,7 +510,6 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Server Info
 app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => {
     try {
         if (!ERLC_API_KEY) return res.json({ success: false });
@@ -533,7 +532,6 @@ app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => {
     }
 });
 
-// Activity Feed
 app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
     try {
         if (!ERLC_API_KEY) return res.json({ success: false, logs: [] });
@@ -551,17 +549,18 @@ app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
     }
 });
 
-// --- DISCORD BOT BOT INTEGRATION API (FOR DISCORD COMMANDS) ---
+// --- DISCORD BOT BOT INTEGRATION & DYNAMIC CONFIG ENDPOINTS ---
+
 app.post('/api/discord/bot-action', async (req, res) => {
     const apiKey = req.headers['x-bot-key'];
     if (apiKey !== DISCORD_BOT_API_KEY) {
         return res.status(401).json({ success: false, error: "Invalid Bot API Key" });
     }
 
-    const { action, userId, robloxName, department, command, targetUser, reason } = req.body || {};
+    const { action, userId, robloxName, department, command, webhookType, webhookUrl, newManagerRoles } = req.body || {};
 
     try {
-        if (action === 'ACTIVE_SHIFTS') {
+        if (action === 'GET_ACTIVE_SHIFTS') {
             return res.json({ success: true, activeShifts });
         }
 
@@ -591,12 +590,30 @@ app.post('/api/discord/bot-action', async (req, res) => {
             return res.json({ success: response.ok });
         }
 
+        if (action === 'GET_PUNISHMENT_LOGS') {
+            return res.json({ success: true, logs: punishmentLogs });
+        }
+
+        if (action === 'SET_WEBHOOK' && webhookType && webhookUrl) {
+            if (webhookType === 'shift') botConfig.shiftWebhook = webhookUrl;
+            if (webhookType === 'punishment') botConfig.punishmentWebhook = webhookUrl;
+            if (webhookType === 'assistance') botConfig.assistanceWebhook = webhookUrl;
+
+            return res.json({ success: true, message: `Updated ${webhookType} webhook URL successfully!` });
+        }
+
+        if (action === 'SET_MANAGER_ROLES' && Array.isArray(newManagerRoles)) {
+            botConfig.managerRoleIds = newManagerRoles;
+            return res.json({ success: true, message: "Manager roles updated successfully!" });
+        }
+
         res.status(400).json({ success: false, error: "Unknown action" });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
+// Outbound IP Route for ER:LC Whitelisting
 app.get('/api/get-ip', async (req, res) => {
     try {
         const response = await fetch('https://api.ipify.org?format=json');
@@ -607,6 +624,7 @@ app.get('/api/get-ip', async (req, res) => {
     }
 });
 
+// Catch-All HTML Route
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
