@@ -417,8 +417,12 @@
             // Live security re-check before entering mod panel
             const checkRes = await fetch('/api/auth/verify-role', { method: 'POST' }).catch(() => null);
             if (checkRes && checkRes.ok) {
+                // Instantly sync dashboard elements upon successful role check
+                await checkAuth();
                 switchView('modPanel');
             } else {
+                // If role check failed, update live permissions immediately
+                await checkAuth();
                 document.getElementById('gateModalAvatar').src = currentUserData?.avatar || '';
                 document.getElementById('gateModalUsername').textContent = currentUserData?.username || 'User';
                 document.getElementById('gateErrorBox').textContent = "Role Check Failed: Missing Role (1427083014147407995).";
@@ -439,9 +443,11 @@
                 const data = await res.json();
 
                 if (res.ok && data.success) {
+                    await checkAuth();
                     document.getElementById('modPanelGateModal').classList.add('hidden');
                     switchView('modPanel');
                 } else {
+                    await checkAuth();
                     errorBox.textContent = data.error || "Role check failed.";
                     errorBox.classList.remove('hidden');
                 }
@@ -459,7 +465,8 @@
             switchView('hub');
         }
 
-        function openDonateModal() {
+        async function openDonateModal() {
+            await checkAuth(); // Fast dynamic role re-check on interaction
             document.getElementById('donateModal').classList.remove('hidden');
         }
 
@@ -467,7 +474,7 @@
             document.getElementById('donateModal').classList.add('hidden');
         }
 
-        // Fast 4-Second Polling & Auth Sync Loop
+        // Dynamic 4-Second Polling & Permission UI Sync Loop
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -487,11 +494,17 @@
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Management Team';
                     } else if (data.user.verifiedRole) {
+                        document.getElementById('btnEditDept').classList.add('hidden');
+                        document.getElementById('btnNewResource').classList.add('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Verified Staff';
                     } else {
+                        document.getElementById('btnEditDept').classList.add('hidden');
+                        document.getElementById('btnNewResource').classList.add('hidden');
+                        document.getElementById('resStaffHandbook').classList.add('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Community Member';
-                        // Kick user to hub if they lost staff role while viewing moderator panel
+                        
+                        // Boot user to hub if they lost staff permissions while inside mod panel
                         if (!document.getElementById('viewModPanel').classList.contains('hidden')) {
                             switchView('hub');
                         }
@@ -510,7 +523,7 @@
             } catch (err) {}
         }
 
-        // Live refresh loop every 4 seconds
+        // Dynamic refresh every 4 seconds
         setInterval(checkAuth, 4000);
 
         function toggleSection(secId, isChecked) {
