@@ -1,680 +1,836 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const session = require('express-session');
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Lenaris | Official Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0b0e14; color: #d0d7de; font-family: 'Inter', sans-serif; }
+        .card { background-color: #161b22; border: 1px solid #21262d; }
+        input, select, textarea { background-color: #0d1117; border: 1px solid #30363d; color: #f0f6fc; }
+        input:focus, select:focus, textarea:focus { border-color: #58a6ff; outline: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+    <div>
+        <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
+                <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
+                    <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Planet Lenaris Hub</h2>
+                    <p class="text-xs text-slate-400 mt-1">Connect your Discord account to view server features.</p>
+                </div>
+                <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i class="fa-brands fa-discord text-lg"></i>
+                    <span>Connect Discord Account</span>
+                </a>
+            </div>
+        </div>
 
-app.set('trust proxy', 1);
+        <div id="modPanelGateModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+            <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
+                <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                    <img id="gateModalAvatar" class="w-10 h-10 rounded-full border border-indigo-500" alt="Avatar">
+                    <div class="text-left">
+                        <span id="gateModalUsername" class="text-sm font-bold text-white block"></span>
+                        <span class="text-[10px] text-emerald-400 font-medium">Discord Account Connected</span>
+                    </div>
+                </div>
 
-// --- ENVIRONMENT VARIABLES ---
-const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
-const REQUIRED_ROLE_ID = "1427083014147407995";
-const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.onrender.com/api/auth/discord/callback";
+                <div>
+                    <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
+                    <p class="text-xs text-slate-400 mt-1">Checking your Discord server roles and permissions...</p>
+                </div>
 
-const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
+                <button onclick="verifyRoleForModPanel()" id="btnGateVerify" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                    <i class="fa-solid fa-shield-check text-lg"></i>
+                    <span>Retry Role Check</span>
+                </button>
 
-let botConfig = {
-    shiftWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
-    punishmentWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
-    assistanceWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
-    managerRoleIds: [
-        "1425618356912001135",
-        "1425618591637835797",
-        "1425632069479960686"
-    ]
-};
+                <div id="gateErrorBox" class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-medium hidden"></div>
 
-let punishmentLogs = [];
-let activeShifts = [];
+                <button onclick="closeModPanelGate()" class="text-xs text-slate-400 hover:text-white transition">Return to Main Hub</button>
+            </div>
+        </div>
 
-// Automated Daily Reset at Midnight
-function scheduleMidnightReset() {
-    const now = new Date();
-    const night = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-    const msToMidnight = night.getTime() - now.getTime();
+        <nav class="bg-[#161b22] border-b border-slate-800 px-6 py-3 flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center space-x-8">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('hub')">
+                    <div class="w-9 h-9 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
+                        <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-lg font-bold">L</div>
+                    </div>
+                    <span class="font-bold text-white text-base tracking-wide">Planet Lenaris</span>
+                </div>
 
-    setTimeout(() => {
-        punishmentLogs = [];
-        scheduleMidnightReset();
-    }, msToMidnight);
-}
-scheduleMidnightReset();
+                <div class="hidden md:flex items-center space-x-2 text-xs font-semibold">
+                    <button onclick="switchView('hub')" id="navHub" class="px-3 py-2 rounded-lg bg-slate-800 text-white transition">Main Dashboard</button>
+                    <button onclick="attemptModPanelAccess()" id="navModPanel" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                        Moderator Panel
+                    </button>
+                    <button id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">CAD</button>
+                    <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
+                    <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
+                    <button onclick="openDonateModal()" class="px-3 py-2 rounded-lg text-emerald-400 bg-emerald-950/40 border border-emerald-800 hover:bg-emerald-900/50 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-dollar-sign"></i> Donate
+                    </button>
+                </div>
+            </div>
 
-app.use(cors());
-app.use(express.json());
+            <div class="flex items-center space-x-4">
+                <button class="relative p-2 text-slate-400 hover:text-white transition">
+                    <i class="fa-regular fa-bell text-lg"></i>
+                    <span class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center">1</span>
+                </button>
 
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
-    resave: true,
-    saveUninitialized: true,
-    cookie: {
-        maxAge: 86400000,
-        secure: true,
-        sameSite: 'lax'
-    }
-}));
+                <div id="userProfile" class="flex items-center space-x-3 hidden">
+                    <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
+                    <div class="hidden sm:block">
+                        <span id="userName" class="text-xs font-bold text-white block"></span>
+                        <span id="userRoleBadge" class="text-[9px] text-slate-400 font-semibold block">Community Member</span>
+                    </div>
+                    <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-1">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
 
-app.use(express.static(path.join(__dirname, 'public')));
+        <main id="viewHub" class="p-6 max-w-7xl mx-auto space-y-8">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div>
+                    <h1 class="text-xl font-bold text-white">My Servers & Departments</h1>
+                    <p class="text-xs text-slate-400">Select an active panel or department to proceed.</p>
+                </div>
+            </div>
 
-// Live Role Verification Helper
-async function verifyUserRoleLive(userId) {
-    try {
-        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
-            headers: { Authorization: `Bot ${BOT_TOKEN}` }
-        });
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+                            <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-xl font-bold">L</div>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="font-bold text-white text-base">Planet Lenaris</h2>
+                                <i class="fa-solid fa-crown text-amber-400 text-xs" title="Official Server"></i>
+                            </div>
+                            <span class="text-[11px] text-slate-400"><i class="fa-solid fa-users text-[10px] text-emerald-400"></i> Active Private Server</span>
+                        </div>
+                    </div>
 
-        if (!memberRes.ok) return false;
+                    <div class="space-y-2 pt-2 border-t border-slate-800/80">
+                        <button onclick="attemptModPanelAccess()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
+                            <span><i class="fa-solid fa-shield-halved mr-2"></i> Moderator Panel</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                        <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
+                            <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
 
-        const memberData = await memberRes.json();
-        const userRoles = memberData.roles || [];
-        
-        return {
-            hasRole: userRoles.includes(REQUIRED_ROLE_ID),
-            isManager: userRoles.some(r => botConfig.managerRoleIds.includes(r)),
-            roles: userRoles,
-            nickname: memberData.nick || null
-        };
-    } catch (err) {
-        return false;
-    }
-}
+                <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 lg:col-span-2">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-building-shield text-indigo-400"></i> Server Departments
+                        </h2>
+                        <span id="btnEditDept" class="text-xs bg-slate-800/80 text-amber-400 border border-amber-800/50 px-2.5 py-1 rounded-lg font-medium hidden">
+                            <i class="fa-solid fa-pen-to-square mr-1"></i> Management Customizable
+                        </span>
+                    </div>
 
-// Middleware
-async function requireStaffAuth(req, res, next) {
-    if (!req.session || !req.session.user) {
-        return res.status(401).json({ success: false, error: "Unauthorized" });
-    }
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Lenaris Highway Patrol (LHP)</span>
+                            <p class="text-[11px] text-slate-400">Primary state law enforcement division.</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Lenaris Fire Dept. (LFD)</span>
+                            <p class="text-[11px] text-slate-400">Emergency fire & medical service response.</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Lenaris Dept. of Transportation (LDOT)</span>
+                            <p class="text-[11px] text-slate-400">Roadway maintenance and traffic safety.</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Civilian Operations</span>
+                            <p class="text-[11px] text-slate-400">General RP and civilian registration.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    const check = await verifyUserRoleLive(req.session.user.id);
+            <div class="card p-6 rounded-2xl space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="font-bold text-white text-base">Resources & Applications</h2>
+                        <p class="text-xs text-slate-400">Official forms, handbooks, and documentation.</p>
+                    </div>
+                    <span id="btnNewResource" class="text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold hidden">
+                        <i class="fa-solid fa-plus mr-1"></i> Management + New Enabled
+                    </span>
+                </div>
 
-    if (!check || !check.hasRole) {
-        req.session.verifiedRole = false;
-        return res.status(403).json({ success: false, error: "Access Denied: Missing Staff Role" });
-    }
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Staff Application</span>
+                        <p class="text-xs text-slate-300">Apply to become a staff moderator for Planet Lenaris.</p>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
+                    </div>
 
-    if (check.nickname) req.session.user.displayName = check.nickname;
-    req.session.user.isManager = check.isManager;
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LHP Department Application</span>
+                        <p class="text-xs text-slate-300">Apply for the Lenaris Highway Patrol division.</p>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
+                    </div>
 
-    next();
-}
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LFD Department Application</span>
+                        <p class="text-xs text-slate-300">Apply for Fire & EMS response teams.</p>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
+                    </div>
 
-// --- AUTH ROUTES ---
-app.get('/api/auth/discord/login', (req, res) => {
-    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
-    res.redirect(discordAuthUrl);
-});
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Server Rules Handbook</span>
+                        <p class="text-xs text-slate-300">Official community rules and roleplay guidelines.</p>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Read Handbook</button>
+                    </div>
 
-app.get('/api/auth/discord/callback', async (req, res) => {
-    const { code } = req.query;
-    if (!code) return res.redirect('/?auth=failed&reason=NoCode');
+                    <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 hidden">
+                        <span class="text-xs font-bold text-rose-400 uppercase tracking-wider block">Staff Handbook</span>
+                        <p class="text-xs text-slate-300">Dept Comms restricted moderation guide.</p>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Staff Access Only</button>
+                    </div>
+                </div>
+            </div>
+        </main>
 
-    try {
-        const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                grant_type: 'authorization_code',
-                code,
-                redirect_uri: REDIRECT_URI
-            })
-        });
+        <main id="viewModPanel" class="p-6 max-w-7xl mx-auto hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
-        const tokenData = await tokenRes.json();
-        if (!tokenData.access_token) return res.redirect('/?auth=failed&reason=TokenError');
+                <div class="space-y-6">
+                    <div class="card p-5 rounded-2xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">Shift Controls</h2>
+                            <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
+                        </div>
 
-        const userRes = await fetch('https://discord.com/api/v10/users/@me', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` }
-        });
-        const userData = await userRes.json();
+                        <div class="flex space-x-3">
+                            <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
+                                Start Shift
+                            </button>
+                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg hidden">
+                                End Shift
+                            </button>
+                        </div>
 
-        req.session.user = {
-            id: userData.id,
-            username: userData.global_name || userData.username,
-            displayName: userData.global_name || userData.username,
-            avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png'
-        };
-        req.session.verifiedRole = false;
+                        <div class="pt-3 border-t border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-semibold text-slate-400 uppercase">Active Staff On Shift</span>
+                                <button onclick="loadActiveShifts()" class="text-[10px] text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+                            <div id="activeShiftsList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                <p class="text-[11px] text-slate-500">No staff currently on shift.</p>
+                            </div>
+                        </div>
+                    </div>
 
-        req.session.save(() => {
-            res.redirect('/?discord=connected');
-        });
+                    <div class="card p-5 rounded-2xl space-y-4">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Toolbox</h2>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="alert('LOA request submitted.')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-umbrella-beach"></i>
+                                <span>Manage LOA</span>
+                            </button>
+                            <button onclick="requestHigherUpAssistance()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Request Higher-Up</span>
+                            </button>
+                        </div>
 
-    } catch (err) {
-        res.redirect('/?auth=failed&reason=Exception');
-    }
-});
+                        <div class="pt-3 border-t border-slate-800 space-y-2">
+                            <span class="text-[11px] font-semibold text-slate-400 uppercase block mb-1">Customize View Layout</span>
+                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                <span>In-Game Commands</span>
+                                <input type="checkbox" id="toggleCmds" checked onchange="toggleSection('secCmds', this.checked)" class="accent-pink-500 cursor-pointer">
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                <span>Punishment System</span>
+                                <input type="checkbox" id="togglePunish" checked onchange="toggleSection('secPunish', this.checked)" class="accent-blue-500 cursor-pointer">
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                <span>Activity Feed</span>
+                                <input type="checkbox" id="toggleActivity" checked onchange="toggleSection('secActivity', this.checked)" class="accent-emerald-500 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
 
-app.post('/api/auth/verify-role', async (req, res) => {
-    if (!req.session || !req.session.user) {
-        return res.status(400).json({ success: false, error: "Please connect your Discord account first." });
-    }
+                    <div class="card p-5 rounded-2xl space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Players</h2>
+                            <span id="playerCountBadge" class="text-xs px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">0 Players</span>
+                        </div>
 
-    const check = await verifyUserRoleLive(req.session.user.id);
+                        <div id="livePlayersList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-500">Fetching server players...</p>
+                        </div>
+                    </div>
+                </div>
 
-    if (!check || !check.hasRole) {
-        return res.status(403).json({ success: false, error: `Role Check Failed: Missing Role (${REQUIRED_ROLE_ID}).` });
-    }
+                <div id="colMiddle" class="space-y-6">
+                    <div id="secCmds" class="card p-5 rounded-2xl space-y-4">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Commands</h2>
+                        <div class="flex space-x-2">
+                            <input type="text" id="erlcCmdInput" placeholder=":pm Username Check Discord" class="flex-1 rounded-lg px-3 py-2 text-xs">
+                            <button onclick="sendErlcCommand()" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition">Run</button>
+                        </div>
+                    </div>
 
-    if (check.nickname) req.session.user.displayName = check.nickname;
-    req.session.user.isManager = check.isManager;
+                    <div id="secPunish" class="card p-5 rounded-2xl space-y-4">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Create Punishment Log</h2>
 
-    req.session.verifiedRole = true;
-    req.session.save(() => {
-        res.json({ success: true, user: req.session.user });
-    });
-});
+                        <form onsubmit="submitInfraction(event)" class="space-y-3">
+                            <div class="relative">
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Player Name *</label>
+                                <input type="text" id="targetUser" required autocomplete="off" placeholder="Type username..." oninput="handlePlayerSearch(this.value)" onblur="autoFetchRobloxId(this.value)" class="w-full rounded-lg px-3 py-2 text-xs">
+                                <div id="playerSearchDropdown" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto hidden"></div>
+                            </div>
 
-app.get('/api/auth/user', async (req, res) => {
-    if (req.session && req.session.user) {
-        const check = await verifyUserRoleLive(req.session.user.id);
-        if (check && check.hasRole) {
-            req.session.verifiedRole = true;
-            if (check.nickname) req.session.user.displayName = check.nickname;
-            req.session.user.isManager = check.isManager;
-            return res.json({ success: true, user: req.session.user });
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Roblox Player ID</label>
+                                <div class="relative">
+                                    <input type="text" id="robloxId" placeholder="Auto-fetches upon entering username" class="w-full rounded-lg px-3 py-2 text-xs pr-8">
+                                    <span id="idLoadingSpinner" class="absolute right-2.5 top-2 text-xs text-slate-400 hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
+                                <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
+                                    <option value="Warning">Warning</option>
+                                    <option value="Kick">Kick</option>
+                                    <option value="Ban">Ban</option>
+                                    <option value="Staff Warning">Staff Warning</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
+                                <textarea id="infractionReason" required rows="3" placeholder="Reason for infraction" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                            </div>
+
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Submit Punishment Log</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="card p-5 rounded-2xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">Punishment Logs</h2>
+                            <button onclick="loadLogs()" class="text-xs text-blue-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                        </div>
+
+                        <div id="logsContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-500">No punishments logged yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="secActivity" class="card p-5 rounded-2xl space-y-4 mb-6">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity Feed</h2>
+                    <button onclick="fetchActivityFeed()" class="text-xs text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                </div>
+
+                <div id="activityContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-500">Loading server activity...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="donateModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl">
+                <i class="fa-solid fa-dollar-sign"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Support Planet Lenaris</h3>
+                <p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                <span class="text-xs text-slate-400 block">CashApp Username</span>
+                <strong class="text-emerald-400 font-mono text-sm">$PlanetLenarisRP</strong>
+            </div>
+            <button onclick="closeDonateModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs transition">Close</button>
+        </div>
+    </div>
+
+    <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400 m-6 mt-0">
+        <div class="flex items-center space-x-2">
+            <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="serverStatusText" class="font-semibold text-white">Planet Lenaris Server: Online</span>
+        </div>
+        <div>
+            <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
+        </div>
+    </footer>
+
+    <script>
+        let cachedPlayers = [];
+        let currentUserId = null;
+        let currentUserData = null;
+
+        function switchView(viewName) {
+            const hub = document.getElementById('viewHub');
+            const modPanel = document.getElementById('viewModPanel');
+            const navHub = document.getElementById('navHub');
+            const navMod = document.getElementById('navModPanel');
+
+            if (viewName === 'modPanel') {
+                hub.classList.add('hidden');
+                modPanel.classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
+            } else {
+                modPanel.classList.add('hidden');
+                hub.classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+            }
         }
-    }
-    
-    if (req.session && req.session.user) {
-        return res.json({ success: false, discordConnected: true, user: req.session.user });
-    }
 
-    res.json({ success: false });
-});
-
-app.get('/api/auth/logout', (req, res) => {
-    req.session.destroy(() => res.json({ success: true }));
-});
-
-// --- DASHBOARD ENDPOINTS ---
-app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
-    const formattedShifts = activeShifts.map(s => {
-        const durationMs = Date.now() - s.startTime;
-        const totalMinutes = Math.floor(durationMs / 60000);
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        return { ...s, duration: hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`, durationMs };
-    });
-
-    res.json({ success: true, activeShifts: formattedShifts, isManager: req.session.user.isManager });
-});
-
-app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
-    try {
-        const { action, department } = req.body || {};
-        const discordUser = req.session.user;
-
-        let staffRobloxName = discordUser.username;
-        if (discordUser.displayName && discordUser.displayName.includes('|')) {
-            const parts = discordUser.displayName.split('|');
-            staffRobloxName = parts[parts.length - 1].trim();
+        async function attemptModPanelAccess() {
+            // Live security re-check before entering mod panel
+            const checkRes = await fetch('/api/auth/verify-role', { method: 'POST' }).catch(() => null);
+            if (checkRes && checkRes.ok) {
+                // Instantly sync dashboard elements upon successful role check
+                await checkAuth();
+                switchView('modPanel');
+            } else {
+                // If role check failed, update live permissions immediately
+                await checkAuth();
+                document.getElementById('gateModalAvatar').src = currentUserData?.avatar || '';
+                document.getElementById('gateModalUsername').textContent = currentUserData?.username || 'User';
+                document.getElementById('gateErrorBox').textContent = "Role Check Failed: Missing Role (1427083014147407995).";
+                document.getElementById('gateErrorBox').classList.remove('hidden');
+                document.getElementById('modPanelGateModal').classList.remove('hidden');
+            }
         }
 
-        if (action === 'CLOCK_IN') {
-            activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
-            activeShifts.push({
-                userId: discordUser.id,
-                username: discordUser.username,
-                robloxName: staffRobloxName,
-                avatar: discordUser.avatar,
-                startTime: Date.now(),
-                department: department || "General Staff"
+        async function verifyRoleForModPanel() {
+            const btn = document.getElementById('btnGateVerify');
+            const errorBox = document.getElementById('gateErrorBox');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> <span>Checking Roles...</span>`;
+            errorBox.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/verify-role', { method: 'POST' });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    await checkAuth();
+                    document.getElementById('modPanelGateModal').classList.add('hidden');
+                    switchView('modPanel');
+                } else {
+                    await checkAuth();
+                    errorBox.textContent = data.error || "Role check failed.";
+                    errorBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorBox.textContent = "Connection error checking roles.";
+                errorBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
+            }
+        }
+
+        function closeModPanelGate() {
+            document.getElementById('modPanelGateModal').classList.add('hidden');
+            switchView('hub');
+        }
+
+        async function openDonateModal() {
+            await checkAuth(); // Fast dynamic role re-check on interaction
+            document.getElementById('donateModal').classList.remove('hidden');
+        }
+
+        function closeDonateModal() {
+            document.getElementById('donateModal').classList.add('hidden');
+        }
+
+        // Dynamic 4-Second Polling & Permission UI Sync Loop
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/user');
+                const data = await res.json();
+
+                if (data.success && data.user) {
+                    currentUserId = data.user.id;
+                    currentUserData = data.user;
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('userProfile').classList.remove('hidden');
+                    document.getElementById('userName').textContent = data.user.username;
+                    document.getElementById('userAvatar').src = data.user.avatar;
+
+                    if (data.user.isManager) {
+                        document.getElementById('btnEditDept').classList.remove('hidden');
+                        document.getElementById('btnNewResource').classList.remove('hidden');
+                        document.getElementById('resStaffHandbook').classList.remove('hidden');
+                        document.getElementById('userRoleBadge').textContent = 'Management Team';
+                    } else if (data.user.verifiedRole) {
+                        document.getElementById('btnEditDept').classList.add('hidden');
+                        document.getElementById('btnNewResource').classList.add('hidden');
+                        document.getElementById('resStaffHandbook').classList.remove('hidden');
+                        document.getElementById('userRoleBadge').textContent = 'Verified Staff';
+                    } else {
+                        document.getElementById('btnEditDept').classList.add('hidden');
+                        document.getElementById('btnNewResource').classList.add('hidden');
+                        document.getElementById('resStaffHandbook').classList.add('hidden');
+                        document.getElementById('userRoleBadge').textContent = 'Community Member';
+                        
+                        // Boot user to hub if they lost staff permissions while inside mod panel
+                        if (!document.getElementById('viewModPanel').classList.contains('hidden')) {
+                            switchView('hub');
+                        }
+                    }
+
+                    loadLogs();
+                    loadServerInfo();
+                    fetchActivityFeed();
+                    loadActiveShifts();
+                } else if (data.discordConnected) {
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('userProfile').classList.remove('hidden');
+                } else {
+                    document.getElementById('loginOverlay').classList.remove('hidden');
+                }
+            } catch (err) {}
+        }
+
+        // Dynamic refresh every 4 seconds
+        setInterval(checkAuth, 4000);
+
+        function toggleSection(secId, isChecked) {
+            const el = document.getElementById(secId);
+            if (el) el.classList.toggle('hidden', !isChecked);
+        }
+
+        async function loadActiveShifts() {
+            try {
+                const res = await fetch('/api/shifts/active');
+                const data = await res.json();
+                const container = document.getElementById('activeShiftsList');
+
+                if (data.success && data.activeShifts.length > 0) {
+                    container.innerHTML = '';
+                    let userIsOnShift = false;
+
+                    data.activeShifts.forEach(s => {
+                        if (s.userId === currentUserId) userIsOnShift = true;
+
+                        const endShiftBtn = (data.isManager || s.userId === currentUserId)
+                            ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>`
+                            : '';
+
+                        container.innerHTML += `
+                            <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                                    <div>
+                                        <span class="font-bold text-white block text-[11px]">${s.robloxName}</span>
+                                        <span class="text-[9px] text-slate-400 block">${s.department} • <strong class="text-emerald-400">${s.duration}</strong></span>
+                                    </div>
+                                </div>
+                                ${endShiftBtn}
+                            </div>
+                        `;
+                    });
+
+                    if (userIsOnShift) {
+                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.add('hidden');
+                        document.getElementById('btnEndShift').classList.remove('hidden');
+                    } else {
+                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.remove('hidden');
+                        document.getElementById('btnEndShift').classList.add('hidden');
+                    }
+                } else {
+                    container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
+                }
+            } catch (err) {}
+        }
+
+        async function forceEndShift(targetUserId) {
+            if (!confirm("End this staff member's shift?")) return;
+            try {
+                const res = await fetch('/api/shifts/force-end', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUserId })
+                });
+                if (res.ok) loadActiveShifts();
+            } catch (err) {}
+        }
+
+        async function loadServerInfo() {
+            try {
+                const res = await fetch('/api/erlc/server-info');
+                const data = await res.json();
+                if (data.success) {
+                    cachedPlayers = data.players || [];
+                    const pContainer = document.getElementById('livePlayersList');
+                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.length} Players`;
+
+                    if (cachedPlayers.length > 0) {
+                        pContainer.innerHTML = '';
+                        cachedPlayers.forEach(p => {
+                            const parsed = parseErlcPlayer(p);
+                            pContainer.innerHTML += `
+                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                                        <span class="font-bold text-white">${parsed.username}</span>
+                                    </div>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">In Discord</span>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+            } catch (err) {}
+        }
+
+        async function fetchActivityFeed() {
+            try {
+                const res = await fetch('/api/erlc/activity');
+                const data = await res.json();
+                const container = document.getElementById('activityContainer');
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = '';
+                    data.logs.slice(0, 10).forEach(log => {
+                        container.innerHTML += `
+                            <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs flex items-center space-x-2">
+                                <i class="fa-solid fa-terminal text-pink-400 text-xs"></i>
+                                <span class="text-slate-300"><strong class="text-white">${log.Player || 'Server'}:</strong> ${log.Command || 'Executed action'}</span>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (err) {}
+        }
+
+        function parseErlcPlayer(p) {
+            let rawName = p.Player || p.Name || p.username || '';
+            let rawId = p.UserId || p.id || '';
+            let cleanUsername = rawName;
+            let cleanRobloxId = '';
+
+            if (rawName.includes(':')) {
+                const parts = rawName.split(':');
+                cleanUsername = parts[0].trim();
+                cleanRobloxId = parts[1].trim();
+            } else if (rawId && !isNaN(rawId)) {
+                cleanRobloxId = String(rawId).trim();
+            }
+
+            return { username: cleanUsername, robloxId: cleanRobloxId };
+        }
+
+        function handlePlayerSearch(query) {
+            const dropdown = document.getElementById('playerSearchDropdown');
+            if (!query.trim()) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const matches = cachedPlayers.filter(p => {
+                const parsed = parseErlcPlayer(p);
+                return parsed.username.toLowerCase().includes(query.toLowerCase());
             });
-        } else {
-            activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
-        }
 
-        await fetch(botConfig.shiftWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: action === 'CLOCK_IN' ? "🟢 Shift Started" : "🔴 Shift Ended",
-                    color: action === 'CLOCK_IN' ? 5763719 : 15548997,
-                    fields: [
-                        { name: "Staff Member", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
-                        { name: "Department", value: department || "General Staff", inline: true },
-                        { name: "Time", value: new Date().toLocaleString(), inline: false }
-                    ],
-                    footer: { text: "Lenaris Staff Dashboard" }
-                }]
-            })
-        });
-
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
-    try {
-        const { targetUserId } = req.body || {};
-
-        if (!req.session.user.isManager) {
-            return res.status(403).json({ success: false, error: "Access Denied" });
-        }
-
-        const targetShift = activeShifts.find(s => s.userId === targetUserId);
-        if (!targetShift) return res.status(404).json({ success: false, error: "Staff member not on shift." });
-
-        activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
-
-        await fetch(botConfig.shiftWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: "🛑 Shift Forceibly Ended",
-                    color: 15548997,
-                    fields: [
-                        { name: "Staff Member", value: `${targetShift.robloxName} (<@${targetShift.userId}>)`, inline: true },
-                        { name: "Ended By Manager", value: `${req.session.user.displayName} (<@${req.session.user.id}>)`, inline: true }
-                    ]
-                }]
-            })
-        });
-
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
-    try {
-        const { reason } = req.body || {};
-        const discordUser = req.session.user;
-
-        let staffRobloxName = discordUser.username;
-        if (discordUser.displayName && discordUser.displayName.includes('|')) {
-            const parts = discordUser.displayName.split('|');
-            staffRobloxName = parts[parts.length - 1].trim();
-        }
-
-        await fetch(botConfig.assistanceWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: "@everyone 🚨 **HIGHER-UP ASSISTANCE REQUESTED!**",
-                embeds: [{
-                    title: "🚨 Staff Assistance Requested",
-                    color: 15548997,
-                    fields: [
-                        { name: "Requested By", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
-                        { name: "Reason", value: reason || "Higher-up assistance needed.", inline: false }
-                    ]
-                }]
-            })
-        });
-
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
-    try {
-        const { targetUser, robloxId, punishmentType, reason } = req.body || {};
-        const discordUser = req.session.user;
-
-        let staffRobloxName = discordUser.username;
-        if (discordUser.displayName && discordUser.displayName.includes('|')) {
-            const parts = discordUser.displayName.split('|');
-            staffRobloxName = parts[parts.length - 1].trim();
-        }
-
-        const existingWarnings = punishmentLogs.filter(
-            log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
-        ).length;
-
-        const currentWarningCount = existingWarnings + 1;
-
-        const logEntry = {
-            id: punishmentLogs.length + 1,
-            targetUser,
-            robloxId: robloxId || 'N/A',
-            punishmentType: punishmentType || 'Warning',
-            reason,
-            staffName: staffRobloxName,
-            removed: false,
-            createdAt: new Date().toLocaleString()
-        };
-
-        punishmentLogs.unshift(logEntry);
-
-        if (punishmentType === 'Warning' && ERLC_API_KEY) {
-            const pmCommand = `:pm ${targetUser} You have received a warning, you now have ${currentWarningCount} warnings. If you receive 3 warnings you will be kicked. Reason: ${reason} Staff: ${staffRobloxName}`;
-
-            await fetch('https://api.erlc.gg/v1/server/command', {
-                method: 'POST',
-                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: pmCommand })
-            }).catch(() => {});
-        }
-
-        await fetch(botConfig.punishmentWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: `⚠️ New Punishment Logged: ${logEntry.punishmentType}`,
-                    color: logEntry.punishmentType === 'Ban' ? 15548997 : (logEntry.punishmentType === 'Kick' ? 16744192 : 16776960),
-                    fields: [
-                        { name: "Target User", value: targetUser, inline: true },
-                        { name: "Roblox ID", value: logEntry.robloxId, inline: true },
-                        { name: "Punishment Type", value: logEntry.punishmentType, inline: true },
-                        { name: "Active Warning Count", value: `${currentWarningCount}/3`, inline: true },
-                        { name: "Reason", value: reason, inline: false },
-                        { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
-                    ]
-                }]
-            })
-        });
-
-        res.json({ success: true, log: logEntry });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) => {
-    try {
-        const { logId } = req.body || {};
-        const discordUser = req.session.user;
-
-        let staffRobloxName = discordUser.username;
-        if (discordUser.displayName && discordUser.displayName.includes('|')) {
-            const parts = discordUser.displayName.split('|');
-            staffRobloxName = parts[parts.length - 1].trim();
-        }
-
-        const logIndex = punishmentLogs.findIndex(l => l.id === logId);
-        if (logIndex === -1) return res.status(404).json({ success: false, error: "Warning log not found." });
-
-        punishmentLogs[logIndex].removed = true;
-        const targetUser = punishmentLogs[logIndex].targetUser;
-
-        const remainingWarnings = punishmentLogs.filter(
-            log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
-        ).length;
-
-        if (ERLC_API_KEY) {
-            const pmCommand = `:pm ${targetUser} A warning has been removed by Staff: ${staffRobloxName}. You now have ${remainingWarnings} warning(s).`;
-            await fetch('https://api.erlc.gg/v1/server/command', {
-                method: 'POST',
-                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: pmCommand })
-            }).catch(() => {});
-        }
-
-        await fetch(botConfig.punishmentWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: `🟢 Warning Removed`,
-                    color: 5763719,
-                    fields: [
-                        { name: "Target User", value: targetUser, inline: true },
-                        { name: "New Warning Count", value: `${remainingWarnings}/3`, inline: true },
-                        { name: "Removed By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
-                    ]
-                }]
-            })
-        });
-
-        res.json({ success: true, remainingWarnings });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
-    res.json({ success: true, logs: punishmentLogs });
-});
-
-app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
-    try {
-        const { command } = req.body || {};
-        if (!ERLC_API_KEY) return res.status(500).json({ success: false, error: "ERLC_API_KEY missing." });
-
-        const response = await fetch('https://api.erlc.gg/v1/server/command', {
-            method: 'POST',
-            headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command })
-        });
-
-        if (response.ok) {
-            res.json({ success: true, message: `Command sent: ${command}` });
-        } else {
-            const errData = await response.json().catch(() => ({}));
-            res.status(500).json({ success: false, error: errData.message || "Failed command." });
-        }
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => {
-    try {
-        if (!ERLC_API_KEY) return res.json({ success: false });
-
-        const [serverRes, playersRes] = await Promise.all([
-            fetch('https://api.erlc.gg/v1/server', { headers: { 'Server-Key': ERLC_API_KEY } }),
-            fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } })
-        ]);
-
-        const serverData = serverRes.ok ? await serverRes.json() : {};
-        const playersData = playersRes.ok ? await playersRes.json() : [];
-
-        res.json({
-            success: true,
-            server: serverData,
-            players: Array.isArray(playersData) ? playersData : []
-        });
-    } catch (err) {
-        res.json({ success: false, error: err.message });
-    }
-});
-
-app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
-    try {
-        if (!ERLC_API_KEY) return res.json({ success: false, logs: [] });
-
-        const resLogs = await fetch('https://api.erlc.gg/v1/server/commandlogs', {
-            headers: { 'Server-Key': ERLC_API_KEY }
-        });
-
-        if (!resLogs.ok) return res.json({ success: false, logs: [] });
-
-        const logs = await resLogs.json();
-        res.json({ success: true, logs: Array.isArray(logs) ? logs : [] });
-    } catch (err) {
-        res.json({ success: false, logs: [] });
-    }
-});
-
-app.get('/api/get-ip', async (req, res) => {
-    try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        res.json({ ip: data.ip });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// --- DISCORD BOT LOGIC EMBEDDED DIRECTLY ---
-if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
-    const discordClient = new Client({
-        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
-    });
-
-    const botCommands = [
-        new SlashCommandBuilder()
-            .setName('shift')
-            .setDescription('Clock in or out of your shift')
-            .addStringOption(option => 
-                option.setName('action')
-                    .setDescription('Start or End shift')
-                    .setRequired(true)
-                    .addChoices(
-                        { name: 'Start (Clock In)', value: 'CLOCK_IN' },
-                        { name: 'End (Clock Out)', value: 'CLOCK_OUT' }
-                    )
-            ),
-        new SlashCommandBuilder()
-            .setName('active-shifts')
-            .setDescription('View all currently clocked-in staff members'),
-        new SlashCommandBuilder()
-            .setName('set-webhook')
-            .setDescription('Change log webhook channels')
-            .addStringOption(option =>
-                option.setName('type')
-                    .setDescription('Which webhook to update')
-                    .setRequired(true)
-                    .addChoices(
-                        { name: 'Shifts', value: 'shift' },
-                        { name: 'Punishments', value: 'punishment' },
-                        { name: 'Assistance Requests', value: 'assistance' }
-                    )
-            )
-            .addStringOption(option =>
-                option.setName('url')
-                    .setDescription('The new Discord Webhook URL')
-                    .setRequired(true)
-            ),
-        new SlashCommandBuilder()
-            .setName('erlc-command')
-            .setDescription('Run an ER:LC in-game command')
-            .addStringOption(option =>
-                option.setName('command')
-                    .setDescription('e.g., :pm Username Message')
-                    .setRequired(true)
-            )
-    ];
-
-    const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-
-    (async () => {
-        try {
-            console.log('Registering Discord slash commands...');
-            await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: botCommands });
-            console.log('Discord slash commands registered!');
-        } catch (err) {
-            console.error('Error registering commands:', err);
-        }
-    })();
-
-    discordClient.on('interactionCreate', async interaction => {
-        if (!interaction.isChatInputCommand()) return;
-
-        const { commandName, options, user, member } = interaction;
-
-        const hasStaffRole = member.roles.cache.has(REQUIRED_ROLE_ID);
-        if (!hasStaffRole) {
-            return interaction.reply({ content: '❌ You do not have staff permissions.', ephemeral: true });
-        }
-
-        let robloxName = user.username;
-        if (member.nickname && member.nickname.includes('|')) {
-            const parts = member.nickname.split('|');
-            robloxName = parts[parts.length - 1].trim();
-        }
-
-        if (commandName === 'shift') {
-            const action = options.getString('action');
-            await interaction.deferReply({ ephemeral: true });
-
-            if (action === 'CLOCK_IN') {
-                activeShifts = activeShifts.filter(s => s.userId !== user.id);
-                activeShifts.push({ userId: user.id, username: user.username, robloxName, startTime: Date.now(), department: "General Staff" });
-            } else {
-                activeShifts = activeShifts.filter(s => s.userId !== user.id);
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching in-game players found</div>`;
+                dropdown.classList.remove('hidden');
+                return;
             }
 
-            await fetch(botConfig.shiftWebhook, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    embeds: [{
-                        title: action === 'CLOCK_IN' ? "🟢 Shift Started (Via Discord)" : "🔴 Shift Ended (Via Discord)",
-                        color: action === 'CLOCK_IN' ? 5763719 : 15548997,
-                        fields: [
-                            { name: "Staff Member", value: `${robloxName} (<@${user.id}>)`, inline: true },
-                            { name: "Time", value: new Date().toLocaleString(), inline: false }
-                        ]
-                    }]
-                })
-            }).catch(() => {});
-
-            interaction.editReply(`✅ Shift ${action === 'CLOCK_IN' ? 'Started' : 'Ended'} for **${robloxName}**!`);
-        }
-
-        if (commandName === 'active-shifts') {
-            await interaction.deferReply();
-            if (activeShifts.length > 0) {
-                const list = activeShifts.map(s => {
-                    const durationMs = Date.now() - s.startTime;
-                    const mins = Math.floor(durationMs / 60000);
-                    return `• **${s.robloxName}** (<@${s.userId}>) - On for ${mins}m`;
-                }).join('\n');
-                interaction.editReply(`🟢 **Current Active Staff on Shift:**\n${list}`);
-            } else {
-                interaction.editReply('🟢 **Active Staff:** No staff members are currently clocked in.');
-            }
-        }
-
-        if (commandName === 'set-webhook') {
-            const type = options.getString('type');
-            const url = options.getString('url');
-            
-            if (type === 'shift') botConfig.shiftWebhook = url;
-            if (type === 'punishment') botConfig.punishmentWebhook = url;
-            if (type === 'assistance') botConfig.assistanceWebhook = url;
-
-            interaction.reply({ content: `✅ Updated **${type}** webhook URL!`, ephemeral: true });
-        }
-
-        if (commandName === 'erlc-command') {
-            const cmd = options.getString('command');
-            await interaction.deferReply({ ephemeral: true });
-
-            if (!ERLC_API_KEY) {
-                return interaction.editReply('❌ ERLC_API_KEY missing.');
-            }
-
-            const res = await fetch('https://api.erlc.gg/v1/server/command', {
-                method: 'POST',
-                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: cmd })
+            dropdown.innerHTML = '';
+            matches.forEach(p => {
+                const parsed = parseErlcPlayer(p);
+                dropdown.innerHTML += `
+                    <div onclick="selectPlayer('${parsed.username}', '${parsed.robloxId}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
+                        <span class="text-xs font-bold text-white">${parsed.username}</span>
+                        <span class="text-[10px] text-slate-400">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
+                    </div>
+                `;
             });
+            dropdown.classList.remove('hidden');
+        }
 
-            if (res.ok) {
-                interaction.editReply(`⚡ Executed in-game command: \`${cmd}\``);
-            } else {
-                interaction.editReply('❌ Failed to execute command in ER:LC.');
+        function selectPlayer(name, id) {
+            document.getElementById('targetUser').value = name;
+            document.getElementById('playerSearchDropdown').classList.add('hidden');
+            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
+        }
+
+        async function autoFetchRobloxId(username) {
+            if (!username.trim() || document.getElementById('robloxId').value) return;
+            const spinner = document.getElementById('idLoadingSpinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false })
+                });
+                const data = await res.json();
+                if (data.data && data.data.length > 0) {
+                    document.getElementById('robloxId').value = data.data[0].id;
+                }
+            } catch (err) {
+            } finally {
+                spinner.classList.add('hidden');
             }
         }
-    });
 
-    discordClient.login(BOT_TOKEN);
-}
+        async function requestHigherUpAssistance() {
+            const reason = prompt("Enter reason for higher-up assistance:");
+            if (!reason) return;
 
-app.listen(PORT, () => {
-    console.log(`Lenaris Staff Dashboard & Discord Bot running on port ${PORT}`);
-});
+            try {
+                await fetch('/api/assistance/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                alert("Assistance requested!");
+            } catch (err) {}
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout');
+            window.location.href = '/';
+        }
+
+        async function toggleShift(action) {
+            try {
+                const res = await fetch('/api/shifts/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, department: 'Staff Moderation' })
+                });
+                if (res.ok) loadActiveShifts();
+            } catch (err) {}
+        }
+
+        async function sendErlcCommand() {
+            const command = document.getElementById('erlcCmdInput').value.trim();
+            if (!command) return;
+
+            try {
+                const res = await fetch('/api/erlc/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(`Command executed: ${command}`);
+                    document.getElementById('erlcCmdInput').value = '';
+                }
+            } catch (err) {}
+        }
+
+        async function submitInfraction(e) {
+            e.preventDefault();
+            const payload = {
+                targetUser: document.getElementById('targetUser').value,
+                robloxId: document.getElementById('robloxId').value,
+                punishmentType: document.getElementById('punishmentType').value,
+                reason: document.getElementById('infractionReason').value
+            };
+
+            try {
+                const res = await fetch('/api/punishments/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    alert('Punishment Logged!');
+                    document.getElementById('targetUser').value = '';
+                    document.getElementById('robloxId').value = '';
+                    document.getElementById('infractionReason').value = '';
+                    loadLogs();
+                }
+            } catch (err) {}
+        }
+
+        async function removeWarning(logId) {
+            if (!confirm("Remove this warning?")) return;
+            try {
+                const res = await fetch('/api/punishments/remove-warning', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logId })
+                });
+                if (res.ok) loadLogs();
+            } catch (err) {}
+        }
+
+        async function loadLogs() {
+            try {
+                const res = await fetch('/api/punishments/list');
+                const data = await res.json();
+                const container = document.getElementById('logsContainer');
+
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = '';
+                    data.logs.forEach(log => {
+                        const isRemoved = log.removed ? 'opacity-50 line-through' : '';
+                        const removeBtn = (log.punishmentType === 'Warning' && !log.removed) 
+                            ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">Remove</button>`
+                            : (log.removed ? `<span class="text-[10px] text-rose-400 font-semibold">[Removed]</span>` : '');
+
+                        container.innerHTML += `
+                            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-bold text-white text-xs">${log.targetUser}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">${log.punishmentType}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400"><strong>ID:</strong> ${log.robloxId} | <strong>Reason:</strong> ${log.reason}</p>
+                                <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
+                                    <span>By: ${log.staffName}</span>
+                                    ${removeBtn}
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (err) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>
