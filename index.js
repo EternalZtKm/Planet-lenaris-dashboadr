@@ -30,10 +30,16 @@ const SUPPORT_ROLE_IDS = [
     "1425618454337028116"
 ];
 
-// Server General Configuration (Defaults to Planet Lenaris)
+// Server General Configuration
 let serverConfig = {
     serverName: "Planet Lenaris",
     serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true"
+};
+
+// Panel Settings
+let panelSettings = {
+    autoBanBoloOnLogs: false,
+    allowUserViewLogs: false
 };
 
 // Custom Webhook Configuration
@@ -92,7 +98,8 @@ function scheduleMidnightReset() {
     const msToMidnight = night.getTime() - now.getTime();
 
     setTimeout(() => {
-        punishmentLogs = [];
+        // PERMANENT BAN BOLOs: Keep active Ban BOLOs, wipe daily warnings
+        punishmentLogs = punishmentLogs.filter(log => log.punishmentType === 'Ban BOLO' && !log.removed);
         scheduleMidnightReset();
     }, msToMidnight);
 }
@@ -128,6 +135,65 @@ app.get(['/Logo.png', '/logo.png', '/server-logo.png', '/api/logo'], (req, res) 
 
 // Serve Static Assets
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Helper: Parse ER:LC player name/ID
+function parseErlcPlayer(p) {
+    let rawName = p.Player || p.Name || p.username || '';
+    let rawId = p.UserId || p.id || '';
+    let cleanUsername = rawName;
+    let cleanRobloxId = '';
+
+    if (rawName.includes(':')) {
+        const parts = rawName.split(':');
+        cleanUsername = parts[0].trim();
+        cleanRobloxId = parts[1].trim();
+    } else if (rawId && !isNaN(rawId)) {
+        cleanRobloxId = String(rawId).trim();
+    }
+
+    return { username: cleanUsername, robloxId: cleanRobloxId };
+}
+
+// Watchdog: Cross-checks online players against active Ban BOLOs and auto-bans on rejoin
+async function checkAndEnforceBanBolos(players) {
+    if (!ERLC_API_KEY || !Array.isArray(players) || players.length === 0) return;
+
+    const activeBolos = punishmentLogs.filter(l => l.punishmentType === 'Ban BOLO' && !l.removed);
+    if (activeBolos.length === 0) return;
+
+    for (const player of players) {
+        const parsed = parseErlcPlayer(player);
+        if (!parsed.username) continue;
+
+        const matchedBolo = activeBolos.find(b => 
+            (b.targetUser && b.targetUser.toLowerCase() === parsed.username.toLowerCase()) ||
+            (b.robloxId && b.robloxId !== 'N/A' && String(b.robloxId) === String(parsed.robloxId))
+        );
+
+        if (matchedBolo) {
+            const banCmd = `:ban ${parsed.username} Active Ban BOLO on record (${matchedBolo.reason})`;
+            await fetch('https://api.erlc.gg/v1/server/command', {
+                method: 'POST',
+                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: banCmd })
+            }).catch(() => {});
+
+            addNotification("Ban BOLO Enforced", `Auto-banned ${parsed.username} upon rejoining due to active Ban BOLO.`);
+            
+            sendDiscordLog(botConfig.punishmentWebhook, {
+                title: "🚨 Ban BOLO Auto-Enforced",
+                color: 15548997,
+                fields: [
+                    { name: "Target Player", value: parsed.username, inline: true },
+                    { name: "Roblox ID", value: parsed.robloxId || matchedBolo.robloxId || 'N/A', inline: true },
+                    { name: "Original Reason", value: matchedBolo.reason, inline: false },
+                    { name: "Action", value: "Automatic ER:LC Ban Executed On Rejoin", inline: false }
+                ],
+                footer: { text: `${serverConfig.serverName} Ban BOLO Watchdog` }
+            });
+        }
+    }
+}
 
 // Live Role Verification Helper
 async function verifyUserRoleLive(userId) {
@@ -198,6 +264,20 @@ app.post('/api/settings/general', requireManagerAuth, (req, res) => {
 
     addNotification("General Settings Updated", `Server name changed to "${serverConfig.serverName}"`);
     res.json({ success: true, config: serverConfig });
+});
+
+// --- PANEL SETTINGS ENDPOINTS ---
+app.get('/api/settings/panel', requireManagerAuth, (req, res) => {
+    res.json({ success: true, panelSettings });
+});
+
+app.post('/api/settings/panel', requireManagerAuth, (req, res) => {
+    const { autoBanBoloOnLogs, allowUserViewLogs } = req.body || {};
+    if (autoBanBoloOnLogs !== undefined) panelSettings.autoBanBoloOnLogs = Boolean(autoBanBoloOnLogs);
+    if (allowUserViewLogs !== undefined) panelSettings.allowUserViewLogs = Boolean(allowUserViewLogs);
+
+    addNotification("Panel Settings Updated", "Moderation panel options were saved.");
+    res.json({ success: true, panelSettings });
 });
 
 // --- AUTH ROUTES ---
@@ -489,7 +569,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
         ).length;
 
-        const currentWarningCount = existingWarnings + 1;
+        const currentWarningCount = existingWarnings + (punishmentType === 'Warning' ? 1 : 0);
 
         const logEntry = {
             id: punishmentLogs.length + 1,
@@ -505,19 +585,28 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
         punishmentLogs.unshift(logEntry);
         addNotification("Punishment Logged", `${punishmentType} issued to ${targetUser} by ${staffRobloxName}.`);
 
-        if (punishmentType === 'Warning' && ERLC_API_KEY) {
-            const pmCommand = `:pm ${targetUser} You have received a warning, you now have ${currentWarningCount} warnings. If you receive 3 warnings you will be kicked. Reason: ${reason} Staff: ${staffRobloxName}`;
-
-            await fetch('https://api.erlc.gg/v1/server/command', {
-                method: 'POST',
-                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: pmCommand })
-            }).catch(() => {});
+        // IF BAN BOLO OR WARNING, EXECUTE IN-GAME ACTION
+        if (ERLC_API_KEY) {
+            if (punishmentType === 'Ban BOLO') {
+                const banCommand = `:ban ${targetUser} Active Ban BOLO Issued: ${reason} (Staff: ${staffRobloxName})`;
+                await fetch('https://api.erlc.gg/v1/server/command', {
+                    method: 'POST',
+                    headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: banCommand })
+                }).catch(() => {});
+            } else if (punishmentType === 'Warning') {
+                const pmCommand = `:pm ${targetUser} You have received a warning, you now have ${currentWarningCount} warnings. If you receive 3 warnings you will be kicked. Reason: ${reason} Staff: ${staffRobloxName}`;
+                await fetch('https://api.erlc.gg/v1/server/command', {
+                    method: 'POST',
+                    headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: pmCommand })
+                }).catch(() => {});
+            }
         }
 
         sendDiscordLog(botConfig.punishmentWebhook, {
             title: `⚠️ New Punishment Logged: ${logEntry.punishmentType}`,
-            color: logEntry.punishmentType === 'Ban' ? 15548997 : (logEntry.punishmentType === 'Kick' ? 16744192 : 16776960),
+            color: (logEntry.punishmentType === 'Ban' || logEntry.punishmentType === 'Ban BOLO') ? 15548997 : (logEntry.punishmentType === 'Kick' ? 16744192 : 16776960),
             fields: [
                 { name: "Target User", value: targetUser, inline: true },
                 { name: "Roblox ID", value: logEntry.robloxId, inline: true },
@@ -629,6 +718,10 @@ app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => {
 
         const serverData = serverRes.ok ? await serverRes.json() : {};
         const playersData = playersRes.ok ? await playersRes.json() : [];
+
+        if (Array.isArray(playersData) && playersData.length > 0) {
+            checkAndEnforceBanBolos(playersData);
+        }
 
         res.json({
             success: true,
