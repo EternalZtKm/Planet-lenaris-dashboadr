@@ -2,12 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const session = require('express-session');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
+// --- ENVIRONMENT VARIABLES ---
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
@@ -15,7 +17,8 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID;
 const REQUIRED_ROLE_ID = "1427083014147407995";
 const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.onrender.com/api/auth/discord/callback";
 
-// DYNAMIC BOT CONFIGURATION (Can be changed dynamically via Discord Bot commands!)
+const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
+
 let botConfig = {
     shiftWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
     punishmentWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
@@ -27,25 +30,16 @@ let botConfig = {
     ]
 };
 
-const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
-const DISCORD_BOT_API_KEY = process.env.DISCORD_BOT_API_KEY || "lenaris-secret-bot-key";
-
 let punishmentLogs = [];
-let activeShifts = []; // Array of active staff shifts
+let activeShifts = [];
 
-// Automated Daily Reset at 12:00 AM Midnight
+// Automated Daily Reset at Midnight
 function scheduleMidnightReset() {
     const now = new Date();
-    const night = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1,
-        0, 0, 0
-    );
+    const night = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
     const msToMidnight = night.getTime() - now.getTime();
 
     setTimeout(() => {
-        console.log("🕛 Midnight reached! Clearing daily punishment logs...");
         punishmentLogs = [];
         scheduleMidnightReset();
     }, msToMidnight);
@@ -68,7 +62,7 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: Live Role Check
+// Live Role Verification Helper
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -80,35 +74,28 @@ async function verifyUserRoleLive(userId) {
         const memberData = await memberRes.json();
         const userRoles = memberData.roles || [];
         
-        const hasStaffRole = userRoles.includes(REQUIRED_ROLE_ID);
-        const isManager = userRoles.some(r => botConfig.managerRoleIds.includes(r));
-
         return {
-            hasRole: hasStaffRole,
-            isManager: isManager,
+            hasRole: userRoles.includes(REQUIRED_ROLE_ID),
+            isManager: userRoles.some(r => botConfig.managerRoleIds.includes(r)),
             roles: userRoles,
             nickname: memberData.nick || null
         };
     } catch (err) {
-        console.error("Live role check error:", err);
         return false;
     }
 }
 
-// Middleware: Strict Live Role Protection
+// Middleware
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) {
-        return res.status(401).json({ success: false, error: "Unauthorized: Please log in with Discord." });
+        return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
     const check = await verifyUserRoleLive(req.session.user.id);
 
     if (!check || !check.hasRole) {
         req.session.verifiedRole = false;
-        return res.status(403).json({ 
-            success: false, 
-            error: "Access Denied: You do not currently possess the required Staff Role in Discord!" 
-        });
+        return res.status(403).json({ success: false, error: "Access Denied: Missing Staff Role" });
     }
 
     if (check.nickname) req.session.user.displayName = check.nickname;
@@ -117,8 +104,7 @@ async function requireStaffAuth(req, res, next) {
     next();
 }
 
-// --- AUTHENTICATION ROUTES ---
-
+// --- AUTH ROUTES ---
 app.get('/api/auth/discord/login', (req, res) => {
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
@@ -174,10 +160,7 @@ app.post('/api/auth/verify-role', async (req, res) => {
     const check = await verifyUserRoleLive(req.session.user.id);
 
     if (!check || !check.hasRole) {
-        return res.status(403).json({ 
-            success: false, 
-            error: `Role Check Failed: Your Discord profile is missing Staff Role ID (${REQUIRED_ROLE_ID}) or you are not in the server.` 
-        });
+        return res.status(403).json({ success: false, error: `Role Check Failed: Missing Role (${REQUIRED_ROLE_ID}).` });
     }
 
     if (check.nickname) req.session.user.displayName = check.nickname;
@@ -208,26 +191,17 @@ app.get('/api/auth/user', async (req, res) => {
 });
 
 app.get('/api/auth/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.json({ success: true });
-    });
+    req.session.destroy(() => res.json({ success: true }));
 });
 
-// --- SHIFT CONTROL ENDPOINTS ---
-
+// --- DASHBOARD ENDPOINTS ---
 app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
     const formattedShifts = activeShifts.map(s => {
         const durationMs = Date.now() - s.startTime;
         const totalMinutes = Math.floor(durationMs / 60000);
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        const durationStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-
-        return {
-            ...s,
-            duration: durationStr,
-            durationMs
-        };
+        return { ...s, duration: hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`, durationMs };
     });
 
     res.json({ success: true, activeShifts: formattedShifts, isManager: req.session.user.isManager });
@@ -243,8 +217,6 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
             const parts = discordUser.displayName.split('|');
             staffRobloxName = parts[parts.length - 1].trim();
         }
-
-        const timestamp = new Date().toLocaleString();
 
         if (action === 'CLOCK_IN') {
             activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
@@ -270,9 +242,9 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
                     fields: [
                         { name: "Staff Member", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
                         { name: "Department", value: department || "General Staff", inline: true },
-                        { name: "Time", value: timestamp, inline: false }
+                        { name: "Time", value: new Date().toLocaleString(), inline: false }
                     ],
-                    footer: { text: "Lenaris Staff Dashboard • Planet Lenaris" }
+                    footer: { text: "Lenaris Staff Dashboard" }
                 }]
             })
         });
@@ -288,16 +260,11 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
         const { targetUserId } = req.body || {};
 
         if (!req.session.user.isManager) {
-            return res.status(403).json({ 
-                success: false, 
-                error: "Access Denied: You must possess a Higher-Up / Manager role to end another staff member's shift." 
-            });
+            return res.status(403).json({ success: false, error: "Access Denied" });
         }
 
         const targetShift = activeShifts.find(s => s.userId === targetUserId);
-        if (!targetShift) {
-            return res.status(404).json({ success: false, error: "Staff member is not on an active shift." });
-        }
+        if (!targetShift) return res.status(404).json({ success: false, error: "Staff member not on shift." });
 
         activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
 
@@ -310,10 +277,8 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
                     color: 15548997,
                     fields: [
                         { name: "Staff Member", value: `${targetShift.robloxName} (<@${targetShift.userId}>)`, inline: true },
-                        { name: "Ended By Manager", value: `${req.session.user.displayName} (<@${req.session.user.id}>)`, inline: true },
-                        { name: "Timestamp", value: new Date().toLocaleString(), inline: false }
-                    ],
-                    footer: { text: "Lenaris Staff Dashboard • Management Action" }
+                        { name: "Ended By Manager", value: `${req.session.user.displayName} (<@${req.session.user.id}>)`, inline: true }
+                    ]
                 }]
             })
         });
@@ -323,8 +288,6 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
-
-// --- ASSISTANCE & PUNISHMENT ENDPOINTS ---
 
 app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
     try {
@@ -347,9 +310,8 @@ app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
                     color: 15548997,
                     fields: [
                         { name: "Requested By", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
-                        { name: "Reason / Situation", value: reason || "Immediate higher-up assistance needed in-game/discord.", inline: false }
-                    ],
-                    footer: { text: "Lenaris Staff Dashboard • Emergency System" }
+                        { name: "Reason", value: reason || "Higher-up assistance needed.", inline: false }
+                    ]
                 }]
             })
         });
@@ -397,7 +359,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
                 method: 'POST',
                 headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ command: pmCommand })
-            }).catch(err => console.error("Failed to send warning PM:", err));
+            }).catch(() => {});
         }
 
         await fetch(botConfig.punishmentWebhook, {
@@ -413,10 +375,8 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
                         { name: "Punishment Type", value: logEntry.punishmentType, inline: true },
                         { name: "Active Warning Count", value: `${currentWarningCount}/3`, inline: true },
                         { name: "Reason", value: reason, inline: false },
-                        { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
-                        { name: "Timestamp", value: logEntry.createdAt, inline: true }
-                    ],
-                    footer: { text: "Lenaris Punishment System • Planet Lenaris" }
+                        { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
+                    ]
                 }]
             })
         });
@@ -439,9 +399,7 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
         }
 
         const logIndex = punishmentLogs.findIndex(l => l.id === logId);
-        if (logIndex === -1) {
-            return res.status(404).json({ success: false, error: "Warning log not found." });
-        }
+        if (logIndex === -1) return res.status(404).json({ success: false, error: "Warning log not found." });
 
         punishmentLogs[logIndex].removed = true;
         const targetUser = punishmentLogs[logIndex].targetUser;
@@ -451,7 +409,7 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
         ).length;
 
         if (ERLC_API_KEY) {
-            const pmCommand = `:pm ${targetUser} A warning has been removed from your record by Staff: ${staffRobloxName}. You now have ${remainingWarnings} warning(s).`;
+            const pmCommand = `:pm ${targetUser} A warning has been removed by Staff: ${staffRobloxName}. You now have ${remainingWarnings} warning(s).`;
             await fetch('https://api.erlc.gg/v1/server/command', {
                 method: 'POST',
                 headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
@@ -468,10 +426,9 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
                     color: 5763719,
                     fields: [
                         { name: "Target User", value: targetUser, inline: true },
-                        { name: "New Active Warning Count", value: `${remainingWarnings}/3`, inline: true },
+                        { name: "New Warning Count", value: `${remainingWarnings}/3`, inline: true },
                         { name: "Removed By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
-                    ],
-                    footer: { text: "Lenaris Punishment System • Planet Lenaris" }
+                    ]
                 }]
             })
         });
@@ -485,8 +442,6 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
 app.get('/api/punishments/list', requireStaffAuth, (req, res) => {
     res.json({ success: true, logs: punishmentLogs });
 });
-
-// --- ER:LC INTEGRATION ROUTES ---
 
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
@@ -503,7 +458,7 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
             res.json({ success: true, message: `Command sent: ${command}` });
         } else {
             const errData = await response.json().catch(() => ({}));
-            res.status(500).json({ success: false, error: errData.message || "Failed to execute ER:LC command." });
+            res.status(500).json({ success: false, error: errData.message || "Failed command." });
         }
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -549,71 +504,6 @@ app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
     }
 });
 
-// --- DISCORD BOT BOT INTEGRATION & DYNAMIC CONFIG ENDPOINTS ---
-
-app.post('/api/discord/bot-action', async (req, res) => {
-    const apiKey = req.headers['x-bot-key'];
-    if (apiKey !== DISCORD_BOT_API_KEY) {
-        return res.status(401).json({ success: false, error: "Invalid Bot API Key" });
-    }
-
-    const { action, userId, robloxName, department, command, webhookType, webhookUrl, newManagerRoles } = req.body || {};
-
-    try {
-        if (action === 'GET_ACTIVE_SHIFTS') {
-            return res.json({ success: true, activeShifts });
-        }
-
-        if (action === 'CLOCK_IN') {
-            activeShifts = activeShifts.filter(s => s.userId !== userId);
-            activeShifts.push({
-                userId,
-                username: robloxName,
-                robloxName,
-                startTime: Date.now(),
-                department: department || "General Staff"
-            });
-            return res.json({ success: true, message: `Clocked in ${robloxName}` });
-        }
-
-        if (action === 'CLOCK_OUT') {
-            activeShifts = activeShifts.filter(s => s.userId !== userId);
-            return res.json({ success: true, message: `Clocked out ${robloxName}` });
-        }
-
-        if (action === 'RUN_COMMAND' && command) {
-            const response = await fetch('https://api.erlc.gg/v1/server/command', {
-                method: 'POST',
-                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command })
-            });
-            return res.json({ success: response.ok });
-        }
-
-        if (action === 'GET_PUNISHMENT_LOGS') {
-            return res.json({ success: true, logs: punishmentLogs });
-        }
-
-        if (action === 'SET_WEBHOOK' && webhookType && webhookUrl) {
-            if (webhookType === 'shift') botConfig.shiftWebhook = webhookUrl;
-            if (webhookType === 'punishment') botConfig.punishmentWebhook = webhookUrl;
-            if (webhookType === 'assistance') botConfig.assistanceWebhook = webhookUrl;
-
-            return res.json({ success: true, message: `Updated ${webhookType} webhook URL successfully!` });
-        }
-
-        if (action === 'SET_MANAGER_ROLES' && Array.isArray(newManagerRoles)) {
-            botConfig.managerRoleIds = newManagerRoles;
-            return res.json({ success: true, message: "Manager roles updated successfully!" });
-        }
-
-        res.status(400).json({ success: false, error: "Unknown action" });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-// Outbound IP Route for ER:LC Whitelisting
 app.get('/api/get-ip', async (req, res) => {
     try {
         const response = await fetch('https://api.ipify.org?format=json');
@@ -624,11 +514,167 @@ app.get('/api/get-ip', async (req, res) => {
     }
 });
 
-// Catch-All HTML Route
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// --- DISCORD BOT LOGIC EMBEDDED DIRECTLY ---
+if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
+    const discordClient = new Client({
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+    });
+
+    const botCommands = [
+        new SlashCommandBuilder()
+            .setName('shift')
+            .setDescription('Clock in or out of your shift')
+            .addStringOption(option => 
+                option.setName('action')
+                    .setDescription('Start or End shift')
+                    .setRequired(true)
+                    .addChoices(
+                        { name: 'Start (Clock In)', value: 'CLOCK_IN' },
+                        { name: 'End (Clock Out)', value: 'CLOCK_OUT' }
+                    )
+            ),
+        new SlashCommandBuilder()
+            .setName('active-shifts')
+            .setDescription('View all currently clocked-in staff members'),
+        new SlashCommandBuilder()
+            .setName('set-webhook')
+            .setDescription('Change log webhook channels')
+            .addStringOption(option =>
+                option.setName('type')
+                    .setDescription('Which webhook to update')
+                    .setRequired(true)
+                    .addChoices(
+                        { name: 'Shifts', value: 'shift' },
+                        { name: 'Punishments', value: 'punishment' },
+                        { name: 'Assistance Requests', value: 'assistance' }
+                    )
+            )
+            .addStringOption(option =>
+                option.setName('url')
+                    .setDescription('The new Discord Webhook URL')
+                    .setRequired(true)
+            ),
+        new SlashCommandBuilder()
+            .setName('erlc-command')
+            .setDescription('Run an ER:LC in-game command')
+            .addStringOption(option =>
+                option.setName('command')
+                    .setDescription('e.g., :pm Username Message')
+                    .setRequired(true)
+            )
+    ];
+
+    const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+
+    (async () => {
+        try {
+            console.log('Registering Discord slash commands...');
+            await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: botCommands });
+            console.log('Discord slash commands registered!');
+        } catch (err) {
+            console.error('Error registering commands:', err);
+        }
+    })();
+
+    discordClient.on('interactionCreate', async interaction => {
+        if (!interaction.isChatInputCommand()) return;
+
+        const { commandName, options, user, member } = interaction;
+
+        const hasStaffRole = member.roles.cache.has(REQUIRED_ROLE_ID);
+        if (!hasStaffRole) {
+            return interaction.reply({ content: '❌ You do not have staff permissions.', ephemeral: true });
+        }
+
+        let robloxName = user.username;
+        if (member.nickname && member.nickname.includes('|')) {
+            const parts = member.nickname.split('|');
+            robloxName = parts[parts.length - 1].trim();
+        }
+
+        if (commandName === 'shift') {
+            const action = options.getString('action');
+            await interaction.deferReply({ ephemeral: true });
+
+            if (action === 'CLOCK_IN') {
+                activeShifts = activeShifts.filter(s => s.userId !== user.id);
+                activeShifts.push({ userId: user.id, username: user.username, robloxName, startTime: Date.now(), department: "General Staff" });
+            } else {
+                activeShifts = activeShifts.filter(s => s.userId !== user.id);
+            }
+
+            await fetch(botConfig.shiftWebhook, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    embeds: [{
+                        title: action === 'CLOCK_IN' ? "🟢 Shift Started (Via Discord)" : "🔴 Shift Ended (Via Discord)",
+                        color: action === 'CLOCK_IN' ? 5763719 : 15548997,
+                        fields: [
+                            { name: "Staff Member", value: `${robloxName} (<@${user.id}>)`, inline: true },
+                            { name: "Time", value: new Date().toLocaleString(), inline: false }
+                        ]
+                    }]
+                })
+            }).catch(() => {});
+
+            interaction.editReply(`✅ Shift ${action === 'CLOCK_IN' ? 'Started' : 'Ended'} for **${robloxName}**!`);
+        }
+
+        if (commandName === 'active-shifts') {
+            await interaction.deferReply();
+            if (activeShifts.length > 0) {
+                const list = activeShifts.map(s => {
+                    const durationMs = Date.now() - s.startTime;
+                    const mins = Math.floor(durationMs / 60000);
+                    return `• **${s.robloxName}** (<@${s.userId}>) - On for ${mins}m`;
+                }).join('\n');
+                interaction.editReply(`🟢 **Current Active Staff on Shift:**\n${list}`);
+            } else {
+                interaction.editReply('🟢 **Active Staff:** No staff members are currently clocked in.');
+            }
+        }
+
+        if (commandName === 'set-webhook') {
+            const type = options.getString('type');
+            const url = options.getString('url');
+            
+            if (type === 'shift') botConfig.shiftWebhook = url;
+            if (type === 'punishment') botConfig.punishmentWebhook = url;
+            if (type === 'assistance') botConfig.assistanceWebhook = url;
+
+            interaction.reply({ content: `✅ Updated **${type}** webhook URL!`, ephemeral: true });
+        }
+
+        if (commandName === 'erlc-command') {
+            const cmd = options.getString('command');
+            await interaction.deferReply({ ephemeral: true });
+
+            if (!ERLC_API_KEY) {
+                return interaction.editReply('❌ ERLC_API_KEY missing.');
+            }
+
+            const res = await fetch('https://api.erlc.gg/v1/server/command', {
+                method: 'POST',
+                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd })
+            });
+
+            if (res.ok) {
+                interaction.editReply(`⚡ Executed in-game command: \`${cmd}\``);
+            } else {
+                interaction.editReply('❌ Failed to execute command in ER:LC.');
+            }
+        }
+    });
+
+    discordClient.login(BOT_TOKEN);
+}
+
 app.listen(PORT, () => {
-    console.log(`Lenaris Staff Dashboard running on port ${PORT}`);
+    console.log(`Lenaris Staff Dashboard & Discord Bot running on port ${PORT}`);
 });
