@@ -19,7 +19,7 @@
         <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
                 <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                    <img src="/Logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <img src="/Logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="if (this.src.endsWith('/Logo.png')) { this.src = '/logo.png'; } else { this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
                     <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
                 </div>
                 <div>
@@ -63,7 +63,7 @@
             <div class="flex items-center space-x-8">
                 <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('hub')">
                     <div class="w-9 h-9 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                        <img src="/Logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <img src="/Logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="if (this.src.endsWith('/Logo.png')) { this.src = '/logo.png'; } else { this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
                         <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-lg font-bold">L</div>
                     </div>
                     <span class="font-bold text-white text-base tracking-wide">Planet Lenaris</span>
@@ -77,9 +77,11 @@
                     <button id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">CAD</button>
                     <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
                     <button onclick="openSupportModal()" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
+                    
                     <button id="btnWebhookSettings" onclick="openWebhookModal()" class="px-3 py-2 rounded-lg text-amber-400 bg-amber-950/30 border border-amber-800/50 hover:bg-amber-900/40 transition hidden">
                         <i class="fa-solid fa-gear mr-1"></i> Webhooks
                     </button>
+                    
                     <button onclick="openDonateModal()" class="px-3 py-2 rounded-lg text-emerald-400 bg-emerald-950/40 border border-emerald-800 hover:bg-emerald-900/50 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-dollar-sign"></i> Donate
                     </button>
@@ -130,7 +132,7 @@
                 <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
-                            <img src="/Logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <img src="/Logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="if (this.src.endsWith('/Logo.png')) { this.src = '/logo.png'; } else { this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
                             <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-xl font-bold">L</div>
                         </div>
                         <div>
@@ -151,6 +153,10 @@
                             <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
+                        <button id="btnCadCustomize" onclick="alert('CAD Settings Panel')" class="w-full bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-amber-800/50 hidden">
+                            <span><i class="fa-solid fa-sliders mr-2"></i> CAD Customization</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -159,9 +165,9 @@
                         <h2 class="font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
                             <i class="fa-solid fa-building-shield text-indigo-400"></i> Server Departments
                         </h2>
-                        <span id="btnEditDept" class="text-xs bg-slate-800/80 text-amber-400 border border-amber-800/50 px-2.5 py-1 rounded-lg font-medium hidden">
-                            <i class="fa-solid fa-pen-to-square mr-1"></i> Management Customizable
-                        </span>
+                        <button id="btnEditDept" onclick="alert('Edit Departments')" class="text-xs bg-amber-950/50 hover:bg-amber-900/60 text-amber-300 border border-amber-800/60 px-2.5 py-1 rounded-lg font-bold transition hidden">
+                            <i class="fa-solid fa-pen-to-square mr-1"></i> Customize
+                        </button>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -191,9 +197,9 @@
                         <h2 class="font-bold text-white text-base">Resources & Applications</h2>
                         <p class="text-xs text-slate-400">Official forms, handbooks, and documentation.</p>
                     </div>
-                    <span id="btnNewResource" class="text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold hidden">
-                        <i class="fa-solid fa-plus mr-1"></i> Management + New Enabled
-                    </span>
+                    <button id="btnNewResource" onclick="alert('Add New Resource')" class="text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold transition hidden">
+                        <i class="fa-solid fa-plus mr-1"></i> + New Resource
+                    </button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -701,7 +707,7 @@
             }
         });
 
-        // Dynamic 4-Second Polling & UI Sync
+        // Dynamic 4-Second Polling & Permission UI Sync Loop
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -715,20 +721,28 @@
                     document.getElementById('userName').textContent = data.user.username;
                     document.getElementById('userAvatar').src = data.user.avatar;
 
+                    // STRICT MANAGEMENT ROLE CHECK
                     if (data.user.isManager) {
                         document.getElementById('btnWebhookSettings').classList.remove('hidden');
+                        document.getElementById('btnCadCustomize').classList.remove('hidden');
                         document.getElementById('btnEditDept').classList.remove('hidden');
                         document.getElementById('btnNewResource').classList.remove('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Management Team';
-                    } else if (data.user.verifiedRole) {
+                    } 
+                    // VERIFIED STAFF (CANNOT SEE ANY CUSTOMIZATION OPTIONS)
+                    else if (data.user.verifiedRole) {
                         document.getElementById('btnWebhookSettings').classList.add('hidden');
+                        document.getElementById('btnCadCustomize').classList.add('hidden');
                         document.getElementById('btnEditDept').classList.add('hidden');
                         document.getElementById('btnNewResource').classList.add('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Verified Staff';
-                    } else {
+                    } 
+                    // COMMUNITY MEMBER
+                    else {
                         document.getElementById('btnWebhookSettings').classList.add('hidden');
+                        document.getElementById('btnCadCustomize').classList.add('hidden');
                         document.getElementById('btnEditDept').classList.add('hidden');
                         document.getElementById('btnNewResource').classList.add('hidden');
                         document.getElementById('resStaffHandbook').classList.add('hidden');
