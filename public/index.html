@@ -338,7 +338,6 @@
             }
         }
 
-        // Fetch & Render Active Shifts
         async function loadActiveShifts() {
             try {
                 const res = await fetch('/api/shifts/active');
@@ -370,7 +369,6 @@
                         `;
                     });
 
-                    // Update local shift controls state
                     if (userIsOnShift) {
                         document.getElementById('shiftBadge').textContent = 'ON SHIFT';
                         document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
@@ -476,6 +474,7 @@
             }
         }
 
+        // Helper function to extract Username and Roblox ID from ER:LC response
         function parseErlcPlayer(p) {
             let rawName = p.Player || p.Name || p.username || '';
             let rawId = p.UserId || p.id || '';
