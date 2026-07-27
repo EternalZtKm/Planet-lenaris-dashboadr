@@ -30,6 +30,12 @@ const SUPPORT_ROLE_IDS = [
     "1425618454337028116"
 ];
 
+// Server General Configuration (Defaults to Planet Lenaris)
+let serverConfig = {
+    serverName: "Planet Lenaris",
+    serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true"
+};
+
 // Custom Webhook Configuration
 let botConfig = {
     shiftWebhook: process.env.SHIFT_WEBHOOK || "",
@@ -106,23 +112,18 @@ app.use(session({
     }
 }));
 
-// --- SMART LOGO ROUTE (PLACED BEFORE EXPRESS.STATIC) ---
+// --- SMART LOGO ROUTE ---
 app.get(['/Logo.png', '/logo.png', '/server-logo.png', '/api/logo'], (req, res) => {
+    if (serverConfig.serverIcon) {
+        return res.redirect(serverConfig.serverIcon);
+    }
     const publicDir = path.join(__dirname, 'public');
-    
     if (fs.existsSync(publicDir)) {
         const files = fs.readdirSync(publicDir);
-        console.log("Files found in public folder on disk:", files);
-
-        // Find any file that looks like a logo or image
-        const logoFile = files.find(f => f.toLowerCase().includes('logo') || f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.jpeg'));
-
-        if (logoFile) {
-            return res.sendFile(path.join(publicDir, logoFile));
-        }
+        const logoFile = files.find(f => f.toLowerCase().includes('logo') || f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg'));
+        if (logoFile) return res.sendFile(path.join(publicDir, logoFile));
     }
-
-    res.status(404).send('Logo file not found in public directory');
+    res.status(404).send('Logo file not found');
 });
 
 // Serve Static Assets
@@ -183,6 +184,21 @@ async function requireManagerAuth(req, res, next) {
 
     next();
 }
+
+// --- SERVER GENERAL SETTINGS ENDPOINTS ---
+app.get('/api/settings/general', (req, res) => {
+    res.json({ success: true, config: serverConfig });
+});
+
+app.post('/api/settings/general', requireManagerAuth, (req, res) => {
+    const { serverName, serverIcon } = req.body || {};
+
+    if (serverName && serverName.trim()) serverConfig.serverName = serverName.trim();
+    if (serverIcon !== undefined) serverConfig.serverIcon = serverIcon.trim();
+
+    addNotification("General Settings Updated", `Server name changed to "${serverConfig.serverName}"`);
+    res.json({ success: true, config: serverConfig });
+});
 
 // --- AUTH ROUTES ---
 app.get('/api/auth/discord/login', (req, res) => {
@@ -323,7 +339,7 @@ app.post('/api/support/create', async (req, res) => {
                 { name: "Subject", value: subject || "No Subject Specified", inline: false },
                 { name: "Message Details", value: message || "No Details Provided", inline: false }
             ],
-            footer: { text: "Planet Lenaris Support Desk" }
+            footer: { text: `${serverConfig.serverName} Support Desk` }
         }, `📩 **NEW SUPPORT TICKET SUBMITTED**\n${supportPingContent}`);
 
         res.json({ success: true });
@@ -390,7 +406,7 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
                 { name: "Department", value: department || "General Staff", inline: true },
                 { name: "Time", value: new Date().toLocaleString(), inline: false }
             ],
-            footer: { text: "Lenaris Dashboard Logging" }
+            footer: { text: `${serverConfig.serverName} Dashboard Logging` }
         });
 
         res.json({ success: true });
@@ -420,7 +436,7 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
                 { name: "Staff Member", value: `${targetShift.robloxName} (<@${targetShift.userId}>)`, inline: true },
                 { name: "Ended By Manager", value: `${req.session.user.displayName} (<@${req.session.user.id}>)`, inline: true }
             ],
-            footer: { text: "Lenaris Management Controls" }
+            footer: { text: `${serverConfig.serverName} Management Controls` }
         });
 
         res.json({ success: true });
@@ -449,7 +465,7 @@ app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
                 { name: "Requested By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
                 { name: "Details / Reason", value: reason || "Higher-up assistance requested.", inline: false }
             ],
-            footer: { text: "Planet Lenaris Staff Desk" }
+            footer: { text: `${serverConfig.serverName} Staff Desk` }
         }, `🚨 **STAFF ASSISTANCE NEEDED** <@&${REQUIRED_ROLE_ID}>`);
 
         res.json({ success: true });
@@ -510,7 +526,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
                 { name: "Reason", value: reason, inline: false },
                 { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
             ],
-            footer: { text: "Lenaris Staff Moderation Logs" }
+            footer: { text: `${serverConfig.serverName} Staff Moderation Logs` }
         });
 
         res.json({ success: true, log: logEntry });
@@ -559,7 +575,7 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
                 { name: "New Warning Count", value: `${remainingWarnings}/3`, inline: true },
                 { name: "Removed By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
             ],
-            footer: { text: "Lenaris Moderation System" }
+            footer: { text: `${serverConfig.serverName} Moderation System` }
         });
 
         res.json({ success: true, remainingWarnings });
@@ -655,7 +671,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- DISCORD BOT LOGIC EMBEDDED DIRECTLY ---
+// --- DISCORD BOT LOGIC ---
 if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
     const discordClient = new Client({
         intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
