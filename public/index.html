@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planet Lenaris | Official Staff & Community Hub</title>
+    <title>Planet Lenaris | Official Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -22,7 +22,7 @@
                 <div id="step1Container" class="space-y-6">
                     <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
                         <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="w-full h-full bg-blue-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
+                        <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-white">Planet Lenaris Hub</h2>
@@ -44,13 +44,13 @@
                     </div>
 
                     <div>
-                        <h3 class="text-base font-bold text-white">Verify Permissions</h3>
-                        <p class="text-xs text-slate-400 mt-1">Click below to check your server roles and enter.</p>
+                        <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
+                        <p class="text-xs text-slate-400 mt-1">Checking your Discord server roles and permissions...</p>
                     </div>
 
                     <button onclick="verifyRoleManually()" id="btnVerifyRole" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
                         <i class="fa-solid fa-shield-check text-lg"></i>
-                        <span>Verify Roles & Access Portal</span>
+                        <span>Check Server Roles & Enter</span>
                     </button>
                 </div>
 
@@ -75,12 +75,12 @@
                     <button onclick="switchView('modPanel')" id="navModPanel" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition hidden">
                         Moderator Panel
                     </button>
-                    <button onclick="openTab('cad')" id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                    <button id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
                         CAD
                     </button>
 
-                    <button onclick="openTab('departments')" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
-                    <button onclick="openTab('support')" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
+                    <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
+                    <button class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
                     <button onclick="openDonateModal()" class="px-3 py-2 rounded-lg text-emerald-400 bg-emerald-950/40 border border-emerald-800 hover:bg-emerald-900/50 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-dollar-sign"></i> Donate
                     </button>
@@ -90,14 +90,14 @@
             <div class="flex items-center space-x-4">
                 <button class="relative p-2 text-slate-400 hover:text-white transition">
                     <i class="fa-regular fa-bell text-lg"></i>
-                    <span class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+                    <span class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center">1</span>
                 </button>
 
                 <div id="userProfile" class="flex items-center space-x-3 hidden">
                     <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
                     <div class="hidden sm:block">
                         <span id="userName" class="text-xs font-bold text-white block"></span>
-                        <span id="userRoleBadge" class="text-[9px] text-emerald-400 font-semibold block">Community Member</span>
+                        <span id="userRoleBadge" class="text-[9px] text-slate-400 font-semibold block">Community Member</span>
                     </div>
                     <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-1">
                         <i class="fa-solid fa-right-from-bracket"></i>
@@ -107,7 +107,6 @@
         </nav>
 
         <main id="viewHub" class="p-6 max-w-7xl mx-auto space-y-8">
-            
             <div class="flex justify-between items-center border-b border-slate-800 pb-4">
                 <div>
                     <h1 class="text-xl font-bold text-white">My Servers & Departments</h1>
@@ -116,7 +115,6 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
                 <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
                     <div class="flex items-center space-x-3">
                         <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
@@ -135,12 +133,12 @@
                     <div class="space-y-2 pt-2 border-t border-slate-800/80">
                         <div id="cardFullLinks" class="space-y-2 hidden">
                             <button onclick="switchView('modPanel')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
-                                <span><i class="fa-solid fa-gauge mr-2"></i> Dashboard & Moderator Panel</span>
+                                <span><i class="fa-solid fa-gauge mr-2"></i> Moderator Panel</span>
                                 <i class="fa-solid fa-chevron-right text-[10px]"></i>
                             </button>
-                            <button onclick="openTab('resources')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-slate-800">
-                                <span><i class="fa-solid fa-folder-open mr-2 text-indigo-400"></i> Server Resources</span>
-                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
+                                <span><i class="fa-solid fa-sliders mr-2 text-indigo-400"></i> CAD Customization</span>
+                                <span class="text-[9px] text-amber-400">Manager Access</span>
                             </button>
                         </div>
 
@@ -152,7 +150,7 @@
                         </div>
 
                         <div id="cardGeneralLinks">
-                            <button onclick="openTab('cad')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-slate-800">
+                            <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
                                 <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
                                 <i class="fa-solid fa-chevron-right text-[10px]"></i>
                             </button>
@@ -165,9 +163,9 @@
                         <h2 class="font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
                             <i class="fa-solid fa-building-shield text-indigo-400"></i> Server Departments
                         </h2>
-                        <button id="btnEditDept" onclick="alert('Department Customization Panel (Management Only)')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition hidden">
-                            <i class="fa-solid fa-pen-to-square mr-1"></i> Customize
-                        </button>
+                        <span id="btnEditDept" class="text-xs bg-slate-800/80 text-amber-400 border border-amber-800/50 px-2.5 py-1 rounded-lg font-medium hidden">
+                            <i class="fa-solid fa-pen-to-square mr-1"></i> Management Customizable
+                        </span>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -189,53 +187,51 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <div class="card p-6 rounded-2xl space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-4">
                     <div>
                         <h2 class="font-bold text-white text-base">Resources & Applications</h2>
-                        <p class="text-xs text-slate-400">Access official forms, handbooks, and documentation.</p>
+                        <p class="text-xs text-slate-400">Official forms, handbooks, and documentation.</p>
                     </div>
-                    <button id="btnNewResource" onclick="alert('Create New Resource Form (Management Only)')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs transition hidden">
-                        <i class="fa-solid fa-plus mr-1"></i> New Resource
-                    </button>
+                    <span id="btnNewResource" class="text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold hidden">
+                        <i class="fa-solid fa-plus mr-1"></i> Management + New Enabled
+                    </span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
                         <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Staff Application</span>
                         <p class="text-xs text-slate-300">Apply to become a staff moderator for Planet Lenaris.</p>
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Open Form</button>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
                     </div>
 
                     <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
                         <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LHP Department Application</span>
                         <p class="text-xs text-slate-300">Apply for the Lenaris Highway Patrol division.</p>
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Open Form</button>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
                     </div>
 
                     <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
                         <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LFD Department Application</span>
                         <p class="text-xs text-slate-300">Apply for Fire & EMS response teams.</p>
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Open Form</button>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
                     </div>
 
                     <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
                         <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Server Rules Handbook</span>
                         <p class="text-xs text-slate-300">Official community rules and roleplay guidelines.</p>
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Read Handbook</button>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Read Handbook</button>
                     </div>
 
                     <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 hidden">
                         <span class="text-xs font-bold text-rose-400 uppercase tracking-wider block">Staff Handbook</span>
                         <p class="text-xs text-slate-300">Dept Comms restricted moderation guide.</p>
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Access Handbook</button>
+                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Staff Access Only</button>
                     </div>
                 </div>
             </div>
-
         </main>
 
         <main id="viewModPanel" class="p-6 max-w-7xl mx-auto hidden">
@@ -375,12 +371,12 @@
 
             <div id="secActivity" class="card p-5 rounded-2xl space-y-4 mb-6">
                 <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity & Command Feed</h2>
+                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity Feed</h2>
                     <button onclick="fetchActivityFeed()" class="text-xs text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
                 </div>
 
                 <div id="activityContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                    <p class="text-xs text-slate-500">Loading server activity logs...</p>
+                    <p class="text-xs text-slate-500">Loading server activity...</p>
                 </div>
             </div>
         </main>
@@ -393,7 +389,7 @@
             </div>
             <div>
                 <h3 class="text-lg font-bold text-white">Support Planet Lenaris</h3>
-                <p class="text-xs text-slate-400 mt-1">Donations help us keep server features online!</p>
+                <p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p>
             </div>
             <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
                 <span class="text-xs text-slate-400 block">CashApp Username</span>
@@ -409,7 +405,7 @@
             <span id="serverStatusText" class="font-semibold text-white">Planet Lenaris Server: Online</span>
         </div>
         <div>
-            <span>ER:LC API Status: <strong class="text-emerald-400">Connected</strong></span>
+            <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
         </div>
     </footer>
 
@@ -436,10 +432,6 @@
             }
         }
 
-        function openTab(tab) {
-            alert(`Opening ${tab.toUpperCase()} section...`);
-        }
-
         function openDonateModal() {
             document.getElementById('donateModal').classList.remove('hidden');
         }
@@ -460,7 +452,7 @@
                     document.getElementById('userName').textContent = data.user.username;
                     document.getElementById('userAvatar').src = data.user.avatar;
 
-                    // Role-adaptive visibility setup
+                    // Management Access Check
                     if (data.user.isManager) {
                         document.getElementById('navModPanel').classList.remove('hidden');
                         document.getElementById('navCad').classList.add('hidden');
@@ -470,13 +462,22 @@
                         document.getElementById('btnNewResource').classList.remove('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Management Team';
-                    } else if (data.user.verifiedRole) {
+                    } 
+                    // Staff Access Check
+                    else if (data.user.verifiedRole) {
                         document.getElementById('navModPanel').classList.remove('hidden');
                         document.getElementById('navCad').classList.add('hidden');
                         document.getElementById('cardStaffLinks').classList.remove('hidden');
                         document.getElementById('cardGeneralLinks').classList.add('hidden');
                         document.getElementById('resStaffHandbook').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Verified Staff';
+                    }
+                    // Non-Staff / Community Member Fallback
+                    else {
+                        document.getElementById('navModPanel').classList.add('hidden');
+                        document.getElementById('navCad').classList.remove('hidden');
+                        document.getElementById('cardGeneralLinks').classList.remove('hidden');
+                        document.getElementById('userRoleBadge').textContent = 'Community Member';
                     }
 
                     loadLogs();
@@ -516,7 +517,7 @@
                 } else {
                     btn.disabled = false;
                     btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
-                    statusBox.textContent = data.error || "Failed role check.";
+                    statusBox.textContent = data.error || "Role check failed.";
                     statusBox.classList.remove('hidden');
                 }
             } catch (err) {
@@ -577,13 +578,11 @@
                 } else {
                     container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
                 }
-            } catch (err) {
-                console.error("Shift error:", err);
-            }
+            } catch (err) {}
         }
 
         async function forceEndShift(targetUserId) {
-            if (!confirm("Are you sure you want to end this shift?")) return;
+            if (!confirm("End this staff member's shift?")) return;
             try {
                 const res = await fetch('/api/shifts/force-end', {
                     method: 'POST',
