@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lenaris Staff Panel | Planet Lenaris</title>
+    <title>Planet Lenaris | Official Staff & Community Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -13,7 +13,7 @@
         input:focus, select:focus, textarea:focus { border-color: #58a6ff; outline: none; }
     </style>
 </head>
-<body class="p-6 min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between">
 
     <div>
         <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -25,8 +25,8 @@
                         <div class="w-full h-full bg-blue-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-white">Lenaris Staff Dashboard</h2>
-                        <p class="text-xs text-slate-400 mt-1">Connect your Discord account to begin staff authorization.</p>
+                        <h2 class="text-xl font-bold text-white">Planet Lenaris Hub</h2>
+                        <p class="text-xs text-slate-400 mt-1">Connect your Discord account to begin authorization.</p>
                     </div>
                     <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
                         <i class="fa-brands fa-discord text-lg"></i>
@@ -44,13 +44,13 @@
                     </div>
 
                     <div>
-                        <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
-                        <p class="text-xs text-slate-400 mt-1">Click below to check if your account possesses the required Staff Role.</p>
+                        <h3 class="text-base font-bold text-white">Verify Permissions</h3>
+                        <p class="text-xs text-slate-400 mt-1">Click below to check your server roles and enter.</p>
                     </div>
 
                     <button onclick="verifyRoleManually()" id="btnVerifyRole" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
                         <i class="fa-solid fa-shield-check text-lg"></i>
-                        <span>Check Staff Role & Enter Dashboard</span>
+                        <span>Verify Roles & Access Portal</span>
                     </button>
                 </div>
 
@@ -59,194 +59,351 @@
             </div>
         </div>
 
-        <header class="flex justify-between items-center pb-6 border-b border-slate-800 mb-6">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                    <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="w-full h-full bg-blue-600 hidden items-center justify-center text-white text-xl font-bold">L</div>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold text-white tracking-wide">Lenaris Staff Dashboard</h1>
-                    <p class="text-xs text-slate-400">Planet Lenaris Roleplay | Staff Portal</p>
-                </div>
-            </div>
-
-            <div id="userProfile" class="flex items-center space-x-3 hidden">
-                <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
-                <div>
-                    <span id="userName" class="text-xs font-bold text-white block"></span>
-                    <span class="text-[10px] text-emerald-400 font-semibold">Verified Staff Member</span>
-                </div>
-                <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-2">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </button>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-
-            <div class="space-y-6">
-                <div class="card p-5 rounded-2xl space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Shift Controls</h2>
-                        <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
+        <nav class="bg-[#161b22] border-b border-slate-800 px-6 py-3 flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center space-x-8">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('hub')">
+                    <div class="w-9 h-9 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
+                        <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-lg font-bold">L</div>
                     </div>
-
-                    <div class="flex space-x-3">
-                        <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                            Start Shift
-                        </button>
-                        <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg hidden">
-                            End Shift
-                        </button>
-                    </div>
-
-                    <div class="pt-3 border-t border-slate-800 space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[11px] font-semibold text-slate-400 uppercase">Active Staff On Shift</span>
-                            <button onclick="loadActiveShifts()" class="text-[10px] text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i></button>
-                        </div>
-                        <div id="activeShiftsList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-                            <p class="text-[11px] text-slate-500">No staff currently on shift.</p>
-                        </div>
-                    </div>
+                    <span class="font-bold text-white text-base tracking-wide">Planet Lenaris</span>
                 </div>
 
-                <div class="card p-5 rounded-2xl space-y-4">
-                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">Toolbox</h2>
+                <div class="hidden md:flex items-center space-x-2 text-xs font-semibold">
+                    <button onclick="switchView('hub')" id="navHub" class="px-3 py-2 rounded-lg bg-slate-800 text-white transition">Main Dashboard</button>
                     
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="alert('LOA request submitted.')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-umbrella-beach"></i>
-                            <span>Manage LOA</span>
-                        </button>
-                        <button onclick="requestHigherUpAssistance()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
-                            <i class="fa-solid fa-triangle-exclamation"></i>
-                            <span>Request Higher-Up</span>
-                        </button>
+                    <button onclick="switchView('modPanel')" id="navModPanel" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition hidden">
+                        Moderator Panel
+                    </button>
+                    <button onclick="openTab('cad')" id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
+                        CAD
+                    </button>
+
+                    <button onclick="openTab('departments')" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
+                    <button onclick="openTab('support')" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
+                    <button onclick="openDonateModal()" class="px-3 py-2 rounded-lg text-emerald-400 bg-emerald-950/40 border border-emerald-800 hover:bg-emerald-900/50 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-dollar-sign"></i> Donate
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button class="relative p-2 text-slate-400 hover:text-white transition">
+                    <i class="fa-regular fa-bell text-lg"></i>
+                    <span class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+                </button>
+
+                <div id="userProfile" class="flex items-center space-x-3 hidden">
+                    <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
+                    <div class="hidden sm:block">
+                        <span id="userName" class="text-xs font-bold text-white block"></span>
+                        <span id="userRoleBadge" class="text-[9px] text-emerald-400 font-semibold block">Community Member</span>
+                    </div>
+                    <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-1">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main id="viewHub" class="p-6 max-w-7xl mx-auto space-y-8">
+            
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div>
+                    <h1 class="text-xl font-bold text-white">My Servers & Departments</h1>
+                    <p class="text-xs text-slate-400">Select an active panel or department to proceed.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+                            <img src="/logo.png" alt="Lenaris Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-xl font-bold">L</div>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="font-bold text-white text-base">Planet Lenaris</h2>
+                                <i class="fa-solid fa-crown text-amber-400 text-xs" title="Official Server"></i>
+                            </div>
+                            <span class="text-[11px] text-slate-400"><i class="fa-solid fa-users text-[10px] text-emerald-400"></i> Active Private Server</span>
+                        </div>
                     </div>
 
-                    <div class="pt-3 border-t border-slate-800 space-y-2">
-                        <span class="text-[11px] font-semibold text-slate-400 uppercase block mb-1">Customize View Layout</span>
-                        <div class="flex items-center justify-between text-xs text-slate-300">
-                            <span>In-Game Commands</span>
-                            <input type="checkbox" id="toggleCmds" checked onchange="toggleSection('secCmds', this.checked)" class="accent-pink-500 cursor-pointer">
+                    <div class="space-y-2 pt-2 border-t border-slate-800/80">
+                        <div id="cardFullLinks" class="space-y-2 hidden">
+                            <button onclick="switchView('modPanel')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
+                                <span><i class="fa-solid fa-gauge mr-2"></i> Dashboard & Moderator Panel</span>
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </button>
+                            <button onclick="openTab('resources')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-slate-800">
+                                <span><i class="fa-solid fa-folder-open mr-2 text-indigo-400"></i> Server Resources</span>
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </button>
                         </div>
-                        <div class="flex items-center justify-between text-xs text-slate-300">
-                            <span>Punishment System</span>
-                            <input type="checkbox" id="togglePunish" checked onchange="toggleSection('secPunish', this.checked)" class="accent-blue-500 cursor-pointer">
+
+                        <div id="cardStaffLinks" class="hidden">
+                            <button onclick="switchView('modPanel')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
+                                <span><i class="fa-solid fa-shield-halved mr-2"></i> Moderator Panel</span>
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </button>
                         </div>
-                        <div class="flex items-center justify-between text-xs text-slate-300">
-                            <span>Activity Feed</span>
-                            <input type="checkbox" id="toggleActivity" checked onchange="toggleSection('secActivity', this.checked)" class="accent-emerald-500 cursor-pointer">
+
+                        <div id="cardGeneralLinks">
+                            <button onclick="openTab('cad')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-slate-800">
+                                <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
+                                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="card p-5 rounded-2xl space-y-3">
+                <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 lg:col-span-2">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Players</h2>
-                        <span id="playerCountBadge" class="text-xs px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">0 Players</span>
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-building-shield text-indigo-400"></i> Server Departments
+                        </h2>
+                        <button id="btnEditDept" onclick="alert('Department Customization Panel (Management Only)')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition hidden">
+                            <i class="fa-solid fa-pen-to-square mr-1"></i> Customize
+                        </button>
                     </div>
 
-                    <div id="livePlayersList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
-                        <p class="text-xs text-slate-500">Fetching server players...</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Lenaris Highway Patrol (LHP)</span>
+                            <p class="text-[11px] text-slate-400">Primary state law enforcement division.</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Lenaris Fire Dept. (LFD)</span>
+                            <p class="text-[11px] text-slate-400">Emergency fire & medical service response.</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Lenaris Dept. of Transportation (LDOT)</span>
+                            <p class="text-[11px] text-slate-400">Roadway maintenance and traffic safety.</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
+                            <span class="font-bold text-xs text-white block">Civilian Operations</span>
+                            <p class="text-[11px] text-slate-400">General RP and civilian registration.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="card p-6 rounded-2xl space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="font-bold text-white text-base">Resources & Applications</h2>
+                        <p class="text-xs text-slate-400">Access official forms, handbooks, and documentation.</p>
+                    </div>
+                    <button id="btnNewResource" onclick="alert('Create New Resource Form (Management Only)')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs transition hidden">
+                        <i class="fa-solid fa-plus mr-1"></i> New Resource
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Staff Application</span>
+                        <p class="text-xs text-slate-300">Apply to become a staff moderator for Planet Lenaris.</p>
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Open Form</button>
+                    </div>
+
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LHP Department Application</span>
+                        <p class="text-xs text-slate-300">Apply for the Lenaris Highway Patrol division.</p>
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Open Form</button>
+                    </div>
+
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LFD Department Application</span>
+                        <p class="text-xs text-slate-300">Apply for Fire & EMS response teams.</p>
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Open Form</button>
+                    </div>
+
+                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
+                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Server Rules Handbook</span>
+                        <p class="text-xs text-slate-300">Official community rules and roleplay guidelines.</p>
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Read Handbook</button>
+                    </div>
+
+                    <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 hidden">
+                        <span class="text-xs font-bold text-rose-400 uppercase tracking-wider block">Staff Handbook</span>
+                        <p class="text-xs text-slate-300">Dept Comms restricted moderation guide.</p>
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-1.5 rounded-lg text-xs transition">Access Handbook</button>
                     </div>
                 </div>
             </div>
 
-            <div id="colMiddle" class="space-y-6">
-                <div id="secCmds" class="card p-5 rounded-2xl space-y-4">
-                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Commands</h2>
-                    <div class="flex space-x-2">
-                        <input type="text" id="erlcCmdInput" placeholder=":pm EternalZtKm Check Discord" class="flex-1 rounded-lg px-3 py-2 text-xs">
-                        <button onclick="sendErlcCommand()" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition">
-                            Run
-                        </button>
+        </main>
+
+        <main id="viewModPanel" class="p-6 max-w-7xl mx-auto hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+                <div class="space-y-6">
+                    <div class="card p-5 rounded-2xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">Shift Controls</h2>
+                            <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
+                        </div>
+
+                        <div class="flex space-x-3">
+                            <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
+                                Start Shift
+                            </button>
+                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg hidden">
+                                End Shift
+                            </button>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-semibold text-slate-400 uppercase">Active Staff On Shift</span>
+                                <button onclick="loadActiveShifts()" class="text-[10px] text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+                            <div id="activeShiftsList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                                <p class="text-[11px] text-slate-500">No staff currently on shift.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-5 rounded-2xl space-y-4">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Toolbox</h2>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="alert('LOA request submitted.')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-umbrella-beach"></i>
+                                <span>Manage LOA</span>
+                            </button>
+                            <button onclick="requestHigherUpAssistance()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>Request Higher-Up</span>
+                            </button>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800 space-y-2">
+                            <span class="text-[11px] font-semibold text-slate-400 uppercase block mb-1">Customize View Layout</span>
+                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                <span>In-Game Commands</span>
+                                <input type="checkbox" id="toggleCmds" checked onchange="toggleSection('secCmds', this.checked)" class="accent-pink-500 cursor-pointer">
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                <span>Punishment System</span>
+                                <input type="checkbox" id="togglePunish" checked onchange="toggleSection('secPunish', this.checked)" class="accent-blue-500 cursor-pointer">
+                            </div>
+                            <div class="flex items-center justify-between text-xs text-slate-300">
+                                <span>Activity Feed</span>
+                                <input type="checkbox" id="toggleActivity" checked onchange="toggleSection('secActivity', this.checked)" class="accent-emerald-500 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-5 rounded-2xl space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Players</h2>
+                            <span id="playerCountBadge" class="text-xs px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">0 Players</span>
+                        </div>
+
+                        <div id="livePlayersList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-500">Fetching server players...</p>
+                        </div>
                     </div>
                 </div>
 
-                <div id="secPunish" class="card p-5 rounded-2xl space-y-4">
-                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">Create Punishment Log</h2>
-
-                    <form onsubmit="submitInfraction(event)" class="space-y-3">
-                        <div class="relative">
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Player Name *</label>
-                            <input 
-                                type="text" 
-                                id="targetUser" 
-                                required 
-                                autocomplete="off"
-                                placeholder="Type username..." 
-                                oninput="handlePlayerSearch(this.value)"
-                                onblur="autoFetchRobloxId(this.value)"
-                                class="w-full rounded-lg px-3 py-2 text-xs"
-                            >
-
-                            <div id="playerSearchDropdown" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto hidden">
-                            </div>
+                <div id="colMiddle" class="space-y-6">
+                    <div id="secCmds" class="card p-5 rounded-2xl space-y-4">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Commands</h2>
+                        <div class="flex space-x-2">
+                            <input type="text" id="erlcCmdInput" placeholder=":pm Username Check Discord" class="flex-1 rounded-lg px-3 py-2 text-xs">
+                            <button onclick="sendErlcCommand()" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition">Run</button>
                         </div>
+                    </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Roblox Player ID</label>
+                    <div id="secPunish" class="card p-5 rounded-2xl space-y-4">
+                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Create Punishment Log</h2>
+
+                        <form onsubmit="submitInfraction(event)" class="space-y-3">
                             <div class="relative">
-                                <input type="text" id="robloxId" placeholder="Auto-fetches upon entering username" class="w-full rounded-lg px-3 py-2 text-xs pr-8">
-                                <span id="idLoadingSpinner" class="absolute right-2.5 top-2 text-xs text-slate-400 hidden">
-                                    <i class="fa-solid fa-spinner fa-spin"></i>
-                                </span>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Player Name *</label>
+                                <input type="text" id="targetUser" required autocomplete="off" placeholder="Type username..." oninput="handlePlayerSearch(this.value)" onblur="autoFetchRobloxId(this.value)" class="w-full rounded-lg px-3 py-2 text-xs">
+                                <div id="playerSearchDropdown" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto hidden"></div>
                             </div>
-                        </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
-                            <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
-                                <option value="Warning">Warning</option>
-                                <option value="Kick">Kick</option>
-                                <option value="Ban">Ban</option>
-                                <option value="Staff Warning">Staff Warning</option>
-                            </select>
-                        </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Roblox Player ID</label>
+                                <div class="relative">
+                                    <input type="text" id="robloxId" placeholder="Auto-fetches upon entering username" class="w-full rounded-lg px-3 py-2 text-xs pr-8">
+                                    <span id="idLoadingSpinner" class="absolute right-2.5 top-2 text-xs text-slate-400 hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                                </div>
+                            </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
-                            <textarea id="infractionReason" required rows="3" placeholder="Reason for infraction" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
-                        </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
+                                <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
+                                    <option value="Warning">Warning</option>
+                                    <option value="Kick">Kick</option>
+                                    <option value="Ban">Ban</option>
+                                    <option value="Staff Warning">Staff Warning</option>
+                                </select>
+                            </div>
 
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
-                            Submit Punishment Log
-                        </button>
-                    </form>
-                </div>
-            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
+                                <textarea id="infractionReason" required rows="3" placeholder="Reason for infraction" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                            </div>
 
-            <div class="space-y-6">
-                <div class="card p-5 rounded-2xl space-y-4">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Punishment Logs</h2>
-                        <button onclick="loadLogs()" class="text-xs text-blue-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
-                    </div>
-
-                    <div id="logsContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                        <p class="text-xs text-slate-500">No punishments logged yet.</p>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Submit Punishment Log</button>
+                        </form>
                     </div>
                 </div>
+
+                <div class="space-y-6">
+                    <div class="card p-5 rounded-2xl space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">Punishment Logs</h2>
+                            <button onclick="loadLogs()" class="text-xs text-blue-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                        </div>
+
+                        <div id="logsContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                            <p class="text-xs text-slate-500">No punishments logged yet.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-        </div>
+            <div id="secActivity" class="card p-5 rounded-2xl space-y-4 mb-6">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity & Command Feed</h2>
+                    <button onclick="fetchActivityFeed()" class="text-xs text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                </div>
 
-        <div id="secActivity" class="card p-5 rounded-2xl space-y-4 mb-6">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity & Command Feed</h2>
-                <button onclick="fetchActivityFeed()" class="text-xs text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                <div id="activityContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-500">Loading server activity logs...</p>
+                </div>
             </div>
+        </main>
+    </div>
 
-            <div id="activityContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                <p class="text-xs text-slate-500">Loading server activity logs...</p>
+    <div id="donateModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl">
+                <i class="fa-solid fa-dollar-sign"></i>
             </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Support Planet Lenaris</h3>
+                <p class="text-xs text-slate-400 mt-1">Donations help us keep server features online!</p>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                <span class="text-xs text-slate-400 block">CashApp Username</span>
+                <strong class="text-emerald-400 font-mono text-sm">$PlanetLenarisRP</strong>
+            </div>
+            <button onclick="closeDonateModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs transition">Close</button>
         </div>
     </div>
 
-    <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400">
+    <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400 m-6 mt-0">
         <div class="flex items-center space-x-2">
             <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="serverStatusText" class="font-semibold text-white">Planet Lenaris Server: Online</span>
@@ -260,6 +417,37 @@
         let cachedPlayers = [];
         let currentUserId = null;
 
+        function switchView(viewName) {
+            const hub = document.getElementById('viewHub');
+            const modPanel = document.getElementById('viewModPanel');
+            const navHub = document.getElementById('navHub');
+            const navMod = document.getElementById('navModPanel');
+
+            if (viewName === 'modPanel') {
+                hub.classList.add('hidden');
+                modPanel.classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
+            } else {
+                modPanel.classList.add('hidden');
+                hub.classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+            }
+        }
+
+        function openTab(tab) {
+            alert(`Opening ${tab.toUpperCase()} section...`);
+        }
+
+        function openDonateModal() {
+            document.getElementById('donateModal').classList.remove('hidden');
+        }
+
+        function closeDonateModal() {
+            document.getElementById('donateModal').classList.add('hidden');
+        }
+
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -271,6 +459,26 @@
                     document.getElementById('userProfile').classList.remove('hidden');
                     document.getElementById('userName').textContent = data.user.username;
                     document.getElementById('userAvatar').src = data.user.avatar;
+
+                    // Role-adaptive visibility setup
+                    if (data.user.isManager) {
+                        document.getElementById('navModPanel').classList.remove('hidden');
+                        document.getElementById('navCad').classList.add('hidden');
+                        document.getElementById('cardFullLinks').classList.remove('hidden');
+                        document.getElementById('cardGeneralLinks').classList.add('hidden');
+                        document.getElementById('btnEditDept').classList.remove('hidden');
+                        document.getElementById('btnNewResource').classList.remove('hidden');
+                        document.getElementById('resStaffHandbook').classList.remove('hidden');
+                        document.getElementById('userRoleBadge').textContent = 'Management Team';
+                    } else if (data.user.verifiedRole) {
+                        document.getElementById('navModPanel').classList.remove('hidden');
+                        document.getElementById('navCad').classList.add('hidden');
+                        document.getElementById('cardStaffLinks').classList.remove('hidden');
+                        document.getElementById('cardGeneralLinks').classList.add('hidden');
+                        document.getElementById('resStaffHandbook').classList.remove('hidden');
+                        document.getElementById('userRoleBadge').textContent = 'Verified Staff';
+                    }
+
                     loadLogs();
                     loadServerInfo();
                     fetchActivityFeed();
@@ -296,7 +504,7 @@
             const statusBox = document.getElementById('authStatusBox');
             
             btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> <span>Checking Discord Server & Roles...</span>`;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> <span>Checking Roles...</span>`;
             statusBox.classList.add('hidden');
 
             try {
@@ -304,38 +512,24 @@
                 const data = await res.json();
 
                 if (res.ok && data.success) {
-                    currentUserId = data.user.id;
-                    document.getElementById('loginOverlay').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('hidden');
-                    document.getElementById('userName').textContent = data.user.username;
-                    document.getElementById('userAvatar').src = data.user.avatar;
-                    loadLogs();
-                    loadServerInfo();
-                    fetchActivityFeed();
-                    loadActiveShifts();
+                    location.reload();
                 } else {
                     btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Verification</span>`;
-                    statusBox.textContent = data.error || "Failed to verify role.";
+                    btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
+                    statusBox.textContent = data.error || "Failed role check.";
                     statusBox.classList.remove('hidden');
                 }
             } catch (err) {
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Verification</span>`;
-                statusBox.textContent = "Connection error verifying role.";
+                btn.innerHTML = `<i class="fa-solid fa-shield-check text-lg"></i> <span>Retry Role Check</span>`;
+                statusBox.textContent = "Connection error.";
                 statusBox.classList.remove('hidden');
             }
         }
 
         function toggleSection(secId, isChecked) {
             const el = document.getElementById(secId);
-            if (el) {
-                if (isChecked) {
-                    el.classList.remove('hidden');
-                } else {
-                    el.classList.add('hidden');
-                }
-            }
+            if (el) el.classList.toggle('hidden', !isChecked);
         }
 
         async function loadActiveShifts() {
@@ -380,52 +574,34 @@
                         document.getElementById('btnStartShift').classList.remove('hidden');
                         document.getElementById('btnEndShift').classList.add('hidden');
                     }
-
                 } else {
                     container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
-                    document.getElementById('shiftBadge').textContent = 'OFFLINE';
-                    document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
-                    document.getElementById('btnStartShift').classList.remove('hidden');
-                    document.getElementById('btnEndShift').classList.add('hidden');
                 }
             } catch (err) {
-                console.error("Failed loading active shifts", err);
+                console.error("Shift error:", err);
             }
         }
 
         async function forceEndShift(targetUserId) {
-            if (!confirm("Are you sure you want to end this staff member's shift?")) return;
-
+            if (!confirm("Are you sure you want to end this shift?")) return;
             try {
                 const res = await fetch('/api/shifts/force-end', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ targetUserId })
                 });
-
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    alert("Shift successfully ended!");
-                    loadActiveShifts();
-                } else {
-                    alert(`Error: ${data.error || 'Failed to end shift'}`);
-                }
-            } catch (err) {
-                alert("Connection error ending shift.");
-            }
+                if (res.ok) loadActiveShifts();
+            } catch (err) {}
         }
 
         async function loadServerInfo() {
             try {
                 const res = await fetch('/api/erlc/server-info');
                 const data = await res.json();
-
                 if (data.success) {
                     cachedPlayers = data.players || [];
                     const pContainer = document.getElementById('livePlayersList');
-                    const badge = document.getElementById('playerCountBadge');
-
-                    badge.textContent = `${cachedPlayers.length} Players`;
+                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.length} Players`;
 
                     if (cachedPlayers.length > 0) {
                         pContainer.innerHTML = '';
@@ -441,13 +617,9 @@
                                 </div>
                             `;
                         });
-                    } else {
-                        pContainer.innerHTML = `<p class="text-xs text-slate-500">No active players online.</p>`;
                     }
                 }
-            } catch (err) {
-                console.error("Failed loading server info", err);
-            }
+            } catch (err) {}
         }
 
         async function fetchActivityFeed() {
@@ -455,7 +627,6 @@
                 const res = await fetch('/api/erlc/activity');
                 const data = await res.json();
                 const container = document.getElementById('activityContainer');
-
                 if (data.success && data.logs.length > 0) {
                     container.innerHTML = '';
                     data.logs.slice(0, 10).forEach(log => {
@@ -466,15 +637,10 @@
                             </div>
                         `;
                     });
-                } else {
-                    container.innerHTML = `<p class="text-xs text-slate-500">No recent activity logged.</p>`;
                 }
-            } catch (err) {
-                console.error("Failed loading activity feed", err);
-            }
+            } catch (err) {}
         }
 
-        // Helper function to extract Username and Roblox ID from ER:LC response
         function parseErlcPlayer(p) {
             let rawName = p.Player || p.Name || p.username || '';
             let rawId = p.UserId || p.id || '';
@@ -513,53 +679,25 @@
             dropdown.innerHTML = '';
             matches.forEach(p => {
                 const parsed = parseErlcPlayer(p);
-
                 dropdown.innerHTML += `
                     <div onclick="selectPlayer('${parsed.username}', '${parsed.robloxId}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-7 h-7 rounded-lg bg-emerald-900/60 border border-emerald-700 flex items-center justify-center text-emerald-400 text-xs">
-                                <i class="fa-solid fa-user"></i>
-                            </div>
-                            <div>
-                                <span class="text-xs font-bold text-white block">${parsed.username}</span>
-                                <span class="text-[10px] text-emerald-400 flex items-center gap-1">
-                                    <i class="fa-solid fa-hammer text-[8px]"></i> Active In-Game
-                                </span>
-                            </div>
-                        </div>
-                        <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
+                        <span class="text-xs font-bold text-white">${parsed.username}</span>
+                        <span class="text-[10px] text-slate-400">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
                     </div>
                 `;
             });
-
             dropdown.classList.remove('hidden');
         }
 
         function selectPlayer(name, id) {
             document.getElementById('targetUser').value = name;
             document.getElementById('playerSearchDropdown').classList.add('hidden');
-
-            if (id && id !== 'N/A' && id !== 'undefined' && !isNaN(id)) {
-                document.getElementById('robloxId').value = id;
-            } else {
-                autoFetchRobloxId(name);
-            }
+            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
         }
 
         async function autoFetchRobloxId(username) {
-            const robloxIdInput = document.getElementById('robloxId');
+            if (!username.trim() || document.getElementById('robloxId').value) return;
             const spinner = document.getElementById('idLoadingSpinner');
-            
-            if (username.includes(':')) {
-                const parts = username.split(':');
-                document.getElementById('targetUser').value = parts[0].trim();
-                robloxIdInput.value = parts[1].trim();
-                return;
-            }
-
-            if (!username.trim()) return;
-            if (robloxIdInput.value.trim() && !isNaN(robloxIdInput.value)) return;
-
             spinner.classList.remove('hidden');
 
             try {
@@ -568,15 +706,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false })
                 });
-
                 const data = await res.json();
                 if (data.data && data.data.length > 0) {
-                    robloxIdInput.value = data.data[0].id;
-                } else {
-                    robloxIdInput.placeholder = "ID not found automatically";
+                    document.getElementById('robloxId').value = data.data[0].id;
                 }
             } catch (err) {
-                console.error("Failed to fetch Roblox ID:", err);
             } finally {
                 spinner.classList.add('hidden');
             }
@@ -587,27 +721,14 @@
             if (!reason) return;
 
             try {
-                const res = await fetch('/api/assistance/request', {
+                await fetch('/api/assistance/request', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reason })
                 });
-
-                if (res.ok) {
-                    alert("Higher-Up Assistance Requested! Notification sent to Discord.");
-                } else {
-                    alert("Failed to send request.");
-                }
-            } catch (err) {
-                alert("Connection error requesting assistance.");
-            }
+                alert("Assistance requested!");
+            } catch (err) {}
         }
-
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#targetUser') && !e.target.closest('#playerSearchDropdown')) {
-                document.getElementById('playerSearchDropdown')?.classList.add('hidden');
-            }
-        });
 
         async function logout() {
             await fetch('/api/auth/logout');
@@ -621,21 +742,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, department: 'Staff Moderation' })
                 });
-
-                if (res.ok) {
-                    loadActiveShifts();
-                    alert(`Shift ${action === 'CLOCK_IN' ? 'Started' : 'Ended'} successfully! Logged to Discord.`);
-                } else {
-                    alert('Error toggling shift.');
-                }
-            } catch (err) {
-                alert('Connection error logging shift.');
-            }
+                if (res.ok) loadActiveShifts();
+            } catch (err) {}
         }
 
         async function sendErlcCommand() {
             const command = document.getElementById('erlcCmdInput').value.trim();
-            if (!command) return alert('Enter a command (e.g. :pm EternalZtKm Check Discord)');
+            if (!command) return;
 
             try {
                 const res = await fetch('/api/erlc/command', {
@@ -643,17 +756,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command })
                 });
-
                 const data = await res.json();
                 if (res.ok && data.success) {
                     alert(`Command executed: ${command}`);
                     document.getElementById('erlcCmdInput').value = '';
-                } else {
-                    alert(`Command Error: ${data.error || 'Failed to execute command'}`);
                 }
-            } catch (err) {
-                alert('Error executing command.');
-            }
+            } catch (err) {}
         }
 
         async function submitInfraction(e) {
@@ -669,43 +777,28 @@
                 const res = await fetch('/api/punishments/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...payload })
+                    body: JSON.stringify(payload)
                 });
-
                 if (res.ok) {
-                    alert('Punishment Logged & Sent to Discord!');
+                    alert('Punishment Logged!');
                     document.getElementById('targetUser').value = '';
                     document.getElementById('robloxId').value = '';
                     document.getElementById('infractionReason').value = '';
                     loadLogs();
-                } else {
-                    alert('Error logging punishment.');
                 }
-            } catch (err) {
-                alert('Error submitting infraction.');
-            }
+            } catch (err) {}
         }
 
         async function removeWarning(logId) {
-            if (!confirm("Are you sure you want to remove this warning?")) return;
-
+            if (!confirm("Remove this warning?")) return;
             try {
                 const res = await fetch('/api/punishments/remove-warning', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ logId })
                 });
-
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    alert(`Warning removed! Target player now has ${data.remainingWarnings} active warning(s).`);
-                    loadLogs();
-                } else {
-                    alert(`Error removing warning: ${data.error || 'Failed to remove'}`);
-                }
-            } catch (err) {
-                alert('Connection error removing warning.');
-            }
+                if (res.ok) loadLogs();
+            } catch (err) {}
         }
 
         async function loadLogs() {
@@ -719,7 +812,7 @@
                     data.logs.forEach(log => {
                         const isRemoved = log.removed ? 'opacity-50 line-through' : '';
                         const removeBtn = (log.punishmentType === 'Warning' && !log.removed) 
-                            ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">Remove Warning</button>`
+                            ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">Remove</button>`
                             : (log.removed ? `<span class="text-[10px] text-rose-400 font-semibold">[Removed]</span>` : '');
 
                         container.innerHTML += `
@@ -728,19 +821,16 @@
                                     <span class="font-bold text-white text-xs">${log.targetUser}</span>
                                     <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">${log.punishmentType}</span>
                                 </div>
-                                <p class="text-[11px] text-slate-400"><strong class="text-slate-300">Roblox ID:</strong> ${log.robloxId}</p>
-                                <p class="text-[11px] text-slate-400"><strong class="text-slate-300">Reason:</strong> ${log.reason}</p>
+                                <p class="text-[11px] text-slate-400"><strong>ID:</strong> ${log.robloxId} | <strong>Reason:</strong> ${log.reason}</p>
                                 <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
-                                    <span>By: ${log.staffName} • ${log.createdAt}</span>
+                                    <span>By: ${log.staffName}</span>
                                     ${removeBtn}
                                 </div>
                             </div>
                         `;
                     });
                 }
-            } catch (err) {
-                console.error("Failed loading logs", err);
-            }
+            } catch (err) {}
         }
 
         document.addEventListener('DOMContentLoaded', checkAuth);
