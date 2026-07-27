@@ -19,10 +19,22 @@ const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboa
 
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 
+// Support Role IDs for Webhook Notifications
+const SUPPORT_ROLE_IDS = [
+    "1425618034214699078",
+    "1425618073917853796",
+    "1425618356912001135",
+    "1425618591637835797",
+    "1425632069479960686",
+    "1425618454337028116"
+];
+
+// Custom Webhook Configuration (Modifiable by Managers)
 let botConfig = {
-    shiftWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
-    punishmentWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
-    assistanceWebhook: "https://discord.com/api/v10/webhooks/1521283484021162146/4M4gKnNPOUGKL-d-FEE02pbnno3PwkKWvUgIs0LODYxOVwSx6uZ6Qfk-K641-SmDhApg",
+    shiftWebhook: process.env.SHIFT_WEBHOOK || "",
+    punishmentWebhook: process.env.PUNISHMENT_WEBHOOK || "",
+    assistanceWebhook: process.env.ASSISTANCE_WEBHOOK || "",
+    activityWebhook: process.env.ACTIVITY_WEBHOOK || "",
     managerRoleIds: [
         "1425618356912001135",
         "1425618591637835797",
@@ -53,6 +65,20 @@ function addNotification(title, message) {
         read: false
     });
     if (notificationsList.length > 20) notificationsList.pop();
+}
+
+// Helper to send Discord Webhooks with Content / Role Pings
+async function sendDiscordLog(webhookUrl, embed, content = "") {
+    if (!webhookUrl) return;
+    try {
+        await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content, embeds: [embed] })
+        });
+    } catch (err) {
+        console.error("Webhook Send Error:", err.message);
+    }
 }
 
 // Automated Daily Reset at Midnight
@@ -122,6 +148,20 @@ async function requireStaffAuth(req, res, next) {
 
     if (check.nickname) req.session.user.displayName = check.nickname;
     req.session.user.isManager = check.isManager;
+
+    next();
+}
+
+async function requireManagerAuth(req, res, next) {
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const check = await verifyUserRoleLive(req.session.user.id);
+
+    if (!check || !check.isManager) {
+        return res.status(403).json({ success: false, error: "Access Denied: Management Role Required" });
+    }
 
     next();
 }
@@ -216,6 +256,64 @@ app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
 });
 
+// --- WEBHOOK & SETTINGS ENDPOINTS ---
+app.get('/api/settings/webhooks', requireManagerAuth, (req, res) => {
+    res.json({
+        success: true,
+        webhooks: {
+            shiftWebhook: botConfig.shiftWebhook,
+            punishmentWebhook: botConfig.punishmentWebhook,
+            assistanceWebhook: botConfig.assistanceWebhook,
+            activityWebhook: botConfig.activityWebhook
+        }
+    });
+});
+
+app.post('/api/settings/webhooks', requireManagerAuth, (req, res) => {
+    const { shiftWebhook, punishmentWebhook, assistanceWebhook, activityWebhook } = req.body || {};
+    
+    if (shiftWebhook !== undefined) botConfig.shiftWebhook = shiftWebhook.trim();
+    if (punishmentWebhook !== undefined) botConfig.punishmentWebhook = punishmentWebhook.trim();
+    if (assistanceWebhook !== undefined) botConfig.assistanceWebhook = assistanceWebhook.trim();
+    if (activityWebhook !== undefined) botConfig.activityWebhook = activityWebhook.trim();
+
+    addNotification("Settings Updated", "Discord webhook configuration updated by Management.");
+    res.json({ success: true, webhooks: botConfig });
+});
+
+// --- SUPPORT TICKET ENDPOINT (AVAILABLE TO ALL LOGGED IN USERS) ---
+app.post('/api/support/create', async (req, res) => {
+    if (!req.session || !req.session.user) {
+        return res.status(401).json({ success: false, error: "Please log in with Discord first." });
+    }
+
+    try {
+        const { subject, message } = req.body || {};
+        const discordUser = req.session.user;
+
+        const supportPingContent = SUPPORT_ROLE_IDS.map(id => `<@&${id}>`).join(' ');
+
+        addNotification("Support Ticket Created", `Submitted by ${discordUser.username}: ${subject}`);
+
+        sendDiscordLog(botConfig.assistanceWebhook, {
+            title: `🎧 Support Ticket: ${subject || "General Inquiry"}`,
+            color: 5814783,
+            fields: [
+                { name: "Submitted By User", value: `${discordUser.displayName || discordUser.username} (<@${discordUser.id}>)`, inline: true },
+                { name: "Discord Account", value: `@${discordUser.username}`, inline: true },
+                { name: "User ID", value: `${discordUser.id}`, inline: true },
+                { name: "Subject", value: subject || "No Subject Specified", inline: false },
+                { name: "Message Details", value: message || "No Details Provided", inline: false }
+            ],
+            footer: { text: "Planet Lenaris Support Desk" }
+        }, `📩 **NEW SUPPORT TICKET SUBMITTED**\n${supportPingContent}`);
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // --- NOTIFICATION ENDPOINTS ---
 app.get('/api/notifications/list', (req, res) => {
     res.json({ success: true, notifications: notificationsList });
@@ -266,21 +364,15 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
             addNotification("Shift Update", `${staffRobloxName} clocked out.`);
         }
 
-        await fetch(botConfig.shiftWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: action === 'CLOCK_IN' ? "🟢 Shift Started" : "🔴 Shift Ended",
-                    color: action === 'CLOCK_IN' ? 5763719 : 15548997,
-                    fields: [
-                        { name: "Staff Member", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
-                        { name: "Department", value: department || "General Staff", inline: true },
-                        { name: "Time", value: new Date().toLocaleString(), inline: false }
-                    ],
-                    footer: { text: "Lenaris Staff Dashboard" }
-                }]
-            })
+        sendDiscordLog(botConfig.shiftWebhook, {
+            title: action === 'CLOCK_IN' ? "🟢 Shift Clocked In" : "🔴 Shift Clocked Out",
+            color: action === 'CLOCK_IN' ? 5763719 : 15548997,
+            fields: [
+                { name: "Staff Member", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
+                { name: "Department", value: department || "General Staff", inline: true },
+                { name: "Time", value: new Date().toLocaleString(), inline: false }
+            ],
+            footer: { text: "Lenaris Dashboard Logging" }
         });
 
         res.json({ success: true });
@@ -303,19 +395,14 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
         activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
         addNotification("Shift Alert", `${targetShift.robloxName}'s shift was force-ended by management.`);
 
-        await fetch(botConfig.shiftWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: "🛑 Shift Forceibly Ended",
-                    color: 15548997,
-                    fields: [
-                        { name: "Staff Member", value: `${targetShift.robloxName} (<@${targetShift.userId}>)`, inline: true },
-                        { name: "Ended By Manager", value: `${req.session.user.displayName} (<@${req.session.user.id}>)`, inline: true }
-                    ]
-                }]
-            })
+        sendDiscordLog(botConfig.shiftWebhook, {
+            title: "🛑 Shift Forceibly Ended",
+            color: 15548997,
+            fields: [
+                { name: "Staff Member", value: `${targetShift.robloxName} (<@${targetShift.userId}>)`, inline: true },
+                { name: "Ended By Manager", value: `${req.session.user.displayName} (<@${req.session.user.id}>)`, inline: true }
+            ],
+            footer: { text: "Lenaris Management Controls" }
         });
 
         res.json({ success: true });
@@ -335,23 +422,17 @@ app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
             staffRobloxName = parts[parts.length - 1].trim();
         }
 
-        addNotification("Higher-Up Request", `${staffRobloxName} requested assistance: ${reason || 'Immediate help needed'}`);
+        addNotification("Higher-Up Request", `${staffRobloxName} requested staff assistance: ${reason || 'Help needed'}`);
 
-        await fetch(botConfig.assistanceWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: "@everyone 🚨 **HIGHER-UP ASSISTANCE REQUESTED!**",
-                embeds: [{
-                    title: "🚨 Staff Assistance Requested",
-                    color: 15548997,
-                    fields: [
-                        { name: "Requested By", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
-                        { name: "Reason", value: reason || "Higher-up assistance needed.", inline: false }
-                    ]
-                }]
-            })
-        });
+        sendDiscordLog(botConfig.assistanceWebhook, {
+            title: "🚨 Staff Assistance Requested",
+            color: 15548997,
+            fields: [
+                { name: "Requested By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true },
+                { name: "Details / Reason", value: reason || "Higher-up assistance requested.", inline: false }
+            ],
+            footer: { text: "Planet Lenaris Staff Desk" }
+        }, `🚨 **STAFF ASSISTANCE NEEDED** <@&${REQUIRED_ROLE_ID}>`);
 
         res.json({ success: true });
     } catch (err) {
@@ -400,23 +481,18 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
             }).catch(() => {});
         }
 
-        await fetch(botConfig.punishmentWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: `⚠️ New Punishment Logged: ${logEntry.punishmentType}`,
-                    color: logEntry.punishmentType === 'Ban' ? 15548997 : (logEntry.punishmentType === 'Kick' ? 16744192 : 16776960),
-                    fields: [
-                        { name: "Target User", value: targetUser, inline: true },
-                        { name: "Roblox ID", value: logEntry.robloxId, inline: true },
-                        { name: "Punishment Type", value: logEntry.punishmentType, inline: true },
-                        { name: "Active Warning Count", value: `${currentWarningCount}/3`, inline: true },
-                        { name: "Reason", value: reason, inline: false },
-                        { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
-                    ]
-                }]
-            })
+        sendDiscordLog(botConfig.punishmentWebhook, {
+            title: `⚠️ New Punishment Logged: ${logEntry.punishmentType}`,
+            color: logEntry.punishmentType === 'Ban' ? 15548997 : (logEntry.punishmentType === 'Kick' ? 16744192 : 16776960),
+            fields: [
+                { name: "Target User", value: targetUser, inline: true },
+                { name: "Roblox ID", value: logEntry.robloxId, inline: true },
+                { name: "Punishment Type", value: logEntry.punishmentType, inline: true },
+                { name: "Active Warning Count", value: `${currentWarningCount}/3`, inline: true },
+                { name: "Reason", value: reason, inline: false },
+                { name: "Logged By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
+            ],
+            footer: { text: "Lenaris Staff Moderation Logs" }
         });
 
         res.json({ success: true, log: logEntry });
@@ -457,20 +533,15 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
             }).catch(() => {});
         }
 
-        await fetch(botConfig.punishmentWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                embeds: [{
-                    title: `🟢 Warning Removed`,
-                    color: 5763719,
-                    fields: [
-                        { name: "Target User", value: targetUser, inline: true },
-                        { name: "New Warning Count", value: `${remainingWarnings}/3`, inline: true },
-                        { name: "Removed By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
-                    ]
-                }]
-            })
+        sendDiscordLog(botConfig.punishmentWebhook, {
+            title: `🟢 Warning Removed`,
+            color: 5763719,
+            fields: [
+                { name: "Target User", value: targetUser, inline: true },
+                { name: "New Warning Count", value: `${remainingWarnings}/3`, inline: true },
+                { name: "Removed By Staff", value: `${staffRobloxName} (<@${discordUser.id}>)`, inline: true }
+            ],
+            footer: { text: "Lenaris Moderation System" }
         });
 
         res.json({ success: true, remainingWarnings });
@@ -495,6 +566,14 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
         });
 
         if (response.ok) {
+            sendDiscordLog(botConfig.activityWebhook, {
+                title: "⚡ Dashboard In-Game Command Executed",
+                color: 16738740,
+                fields: [
+                    { name: "Executed Command", value: `\`${command}\``, inline: true },
+                    { name: "Executed By", value: `${req.session.user.username} (<@${req.session.user.id}>)`, inline: true }
+                ]
+            });
             res.json({ success: true, message: `Command sent: ${command}` });
         } else {
             const errData = await response.json().catch(() => ({}));
@@ -590,7 +669,8 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
                     .addChoices(
                         { name: 'Shifts', value: 'shift' },
                         { name: 'Punishments', value: 'punishment' },
-                        { name: 'Assistance Requests', value: 'assistance' }
+                        { name: 'Assistance Requests', value: 'assistance' },
+                        { name: 'In-Game Activity', value: 'activity' }
                     )
             )
             .addStringOption(option =>
@@ -649,20 +729,14 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
                 addNotification("Shift Update", `${robloxName} clocked out via Discord command.`);
             }
 
-            await fetch(botConfig.shiftWebhook, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    embeds: [{
-                        title: action === 'CLOCK_IN' ? "🟢 Shift Started (Via Discord)" : "🔴 Shift Ended (Via Discord)",
-                        color: action === 'CLOCK_IN' ? 5763719 : 15548997,
-                        fields: [
-                            { name: "Staff Member", value: `${robloxName} (<@${user.id}>)`, inline: true },
-                            { name: "Time", value: new Date().toLocaleString(), inline: false }
-                        ]
-                    }]
-                })
-            }).catch(() => {});
+            sendDiscordLog(botConfig.shiftWebhook, {
+                title: action === 'CLOCK_IN' ? "🟢 Shift Started (Via Discord)" : "🔴 Shift Ended (Via Discord)",
+                color: action === 'CLOCK_IN' ? 5763719 : 15548997,
+                fields: [
+                    { name: "Staff Member", value: `${robloxName} (<@${user.id}>)`, inline: true },
+                    { name: "Time", value: new Date().toLocaleString(), inline: false }
+                ]
+            });
 
             interaction.editReply(`✅ Shift ${action === 'CLOCK_IN' ? 'Started' : 'Ended'} for **${robloxName}**!`);
         }
@@ -688,6 +762,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             if (type === 'shift') botConfig.shiftWebhook = url;
             if (type === 'punishment') botConfig.punishmentWebhook = url;
             if (type === 'assistance') botConfig.assistanceWebhook = url;
+            if (type === 'activity') botConfig.activityWebhook = url;
 
             interaction.reply({ content: `✅ Updated **${type}** webhook URL!`, ephemeral: true });
         }
