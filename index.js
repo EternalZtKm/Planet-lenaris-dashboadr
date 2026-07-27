@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const session = require('express-session');
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 
@@ -107,9 +108,19 @@ app.use(session({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// DIRECT LOGO ROUTE SERVING (Guarantees image loads regardless of case sensitivity)
+// SMART LOGO SERVING ROUTE (Checks disk dynamically to prevent ENOENT errors)
 app.get(['/Logo.png', '/logo.png', '/server-logo.png'], (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'Logo.png'));
+    const publicPath = path.join(__dirname, 'public');
+    const possibleFiles = ['Logo.png', 'logo.png', 'server-logo.png', 'Logo.jpg', 'logo.jpg'];
+
+    for (const file of possibleFiles) {
+        const fullPath = path.join(publicPath, file);
+        if (fs.existsSync(fullPath)) {
+            return res.sendFile(fullPath);
+        }
+    }
+
+    res.status(404).send('Logo file not found');
 });
 
 // Live Role Verification Helper
