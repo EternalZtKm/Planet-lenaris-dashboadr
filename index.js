@@ -106,22 +106,27 @@ app.use(session({
     }
 }));
 
-app.use(express.static(path.join(__dirname, 'public')));
+// --- SMART LOGO ROUTE (PLACED BEFORE EXPRESS.STATIC) ---
+app.get(['/Logo.png', '/logo.png', '/server-logo.png', '/api/logo'], (req, res) => {
+    const publicDir = path.join(__dirname, 'public');
+    
+    if (fs.existsSync(publicDir)) {
+        const files = fs.readdirSync(publicDir);
+        console.log("Files found in public folder on disk:", files);
 
-// SMART LOGO SERVING ROUTE (Checks disk dynamically to prevent ENOENT errors)
-app.get(['/Logo.png', '/logo.png', '/server-logo.png'], (req, res) => {
-    const publicPath = path.join(__dirname, 'public');
-    const possibleFiles = ['Logo.png', 'logo.png', 'server-logo.png', 'Logo.jpg', 'logo.jpg'];
+        // Find any file that looks like a logo or image
+        const logoFile = files.find(f => f.toLowerCase().includes('logo') || f.toLowerCase().endsWith('.png') || f.toLowerCase().endsWith('.jpg') || f.toLowerCase().endsWith('.jpeg'));
 
-    for (const file of possibleFiles) {
-        const fullPath = path.join(publicPath, file);
-        if (fs.existsSync(fullPath)) {
-            return res.sendFile(fullPath);
+        if (logoFile) {
+            return res.sendFile(path.join(publicDir, logoFile));
         }
     }
 
-    res.status(404).send('Logo file not found');
+    res.status(404).send('Logo file not found in public directory');
 });
+
+// Serve Static Assets
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Live Role Verification Helper
 async function verifyUserRoleLive(userId) {
