@@ -33,6 +33,28 @@ let botConfig = {
 let punishmentLogs = [];
 let activeShifts = [];
 
+// In-Memory Notification System
+let notificationsList = [
+    {
+        id: 1,
+        title: "Planet Lenaris Hub",
+        message: "Welcome to the official staff and community dashboard!",
+        time: "Just now",
+        read: false
+    }
+];
+
+function addNotification(title, message) {
+    notificationsList.unshift({
+        id: Date.now(),
+        title,
+        message,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        read: false
+    });
+    if (notificationsList.length > 20) notificationsList.pop();
+}
+
 // Automated Daily Reset at Midnight
 function scheduleMidnightReset() {
     const now = new Date();
@@ -194,6 +216,16 @@ app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
 });
 
+// --- NOTIFICATION ENDPOINTS ---
+app.get('/api/notifications/list', (req, res) => {
+    res.json({ success: true, notifications: notificationsList });
+});
+
+app.post('/api/notifications/read', (req, res) => {
+    notificationsList.forEach(n => n.read = true);
+    res.json({ success: true });
+});
+
 // --- DASHBOARD ENDPOINTS ---
 app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
     const formattedShifts = activeShifts.map(s => {
@@ -228,8 +260,10 @@ app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
                 startTime: Date.now(),
                 department: department || "General Staff"
             });
+            addNotification("Shift Update", `${staffRobloxName} clocked in for ${department || "General Staff"}.`);
         } else {
             activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
+            addNotification("Shift Update", `${staffRobloxName} clocked out.`);
         }
 
         await fetch(botConfig.shiftWebhook, {
@@ -267,6 +301,7 @@ app.post('/api/shifts/force-end', requireStaffAuth, async (req, res) => {
         if (!targetShift) return res.status(404).json({ success: false, error: "Staff member not on shift." });
 
         activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
+        addNotification("Shift Alert", `${targetShift.robloxName}'s shift was force-ended by management.`);
 
         await fetch(botConfig.shiftWebhook, {
             method: 'POST',
@@ -299,6 +334,8 @@ app.post('/api/assistance/request', requireStaffAuth, async (req, res) => {
             const parts = discordUser.displayName.split('|');
             staffRobloxName = parts[parts.length - 1].trim();
         }
+
+        addNotification("Higher-Up Request", `${staffRobloxName} requested assistance: ${reason || 'Immediate help needed'}`);
 
         await fetch(botConfig.assistanceWebhook, {
             method: 'POST',
@@ -351,6 +388,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
         };
 
         punishmentLogs.unshift(logEntry);
+        addNotification("Punishment Logged", `${punishmentType} issued to ${targetUser} by ${staffRobloxName}.`);
 
         if (punishmentType === 'Warning' && ERLC_API_KEY) {
             const pmCommand = `:pm ${targetUser} You have received a warning, you now have ${currentWarningCount} warnings. If you receive 3 warnings you will be kicked. Reason: ${reason} Staff: ${staffRobloxName}`;
@@ -407,6 +445,8 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, async (req, res) =
         const remainingWarnings = punishmentLogs.filter(
             log => log.targetUser.toLowerCase() === targetUser.toLowerCase() && log.punishmentType === 'Warning' && !log.removed
         ).length;
+
+        addNotification("Warning Removed", `Warning for ${targetUser} removed by ${staffRobloxName}.`);
 
         if (ERLC_API_KEY) {
             const pmCommand = `:pm ${targetUser} A warning has been removed by Staff: ${staffRobloxName}. You now have ${remainingWarnings} warning(s).`;
@@ -603,8 +643,10 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             if (action === 'CLOCK_IN') {
                 activeShifts = activeShifts.filter(s => s.userId !== user.id);
                 activeShifts.push({ userId: user.id, username: user.username, robloxName, startTime: Date.now(), department: "General Staff" });
+                addNotification("Shift Update", `${robloxName} clocked in via Discord command.`);
             } else {
                 activeShifts = activeShifts.filter(s => s.userId !== user.id);
+                addNotification("Shift Update", `${robloxName} clocked out via Discord command.`);
             }
 
             await fetch(botConfig.shiftWebhook, {
