@@ -347,12 +347,7 @@
                             <div>
                                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
                                 <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
-                                    <option value="Warning">Warning</option>
-                                    <option value="Kick">Kick</option>
-                                    <option value="Ban">Ban</option>
-                                    <option value="Ban BOLO">Ban BOLO (Auto Ban On Rejoin)</option>
-                                    <option value="Staff Warning">Staff Warning</option>
-                                </select>
+                                    </select>
                             </div>
 
                             <div>
@@ -700,7 +695,8 @@
             serverName: "Planet Lenaris",
             serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true",
             autoBanBolo: true,
-            userSeeLogs: false
+            userSeeLogs: false,
+            punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
         };
 
         async function fetchGeneralSettings() {
@@ -710,6 +706,7 @@
                 if (data.success && data.config) {
                     currentServerConfig = data.config;
                     applyServerBranding();
+                    updatePunishmentDropdown();
                 }
             } catch (err) {}
         }
@@ -722,6 +719,17 @@
                 img.src = currentServerConfig.serverIcon;
             });
             document.getElementById('docTitle').textContent = `${currentServerConfig.serverName} | Official Hub`;
+        }
+
+        function updatePunishmentDropdown() {
+            const selectEl = document.getElementById('punishmentType');
+            if (!selectEl) return;
+
+            const presets = currentServerConfig.punishmentPresets || ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"];
+            selectEl.innerHTML = '';
+            presets.forEach(p => {
+                selectEl.innerHTML += `<option value="${p}">${p}</option>`;
+            });
         }
 
         function switchView(viewName) {
@@ -809,6 +817,16 @@
 
                 const autoBanChecked = currentServerConfig.autoBanBolo ? 'checked' : '';
                 const userSeeLogsChecked = currentServerConfig.userSeeLogs ? 'checked' : '';
+                const presetsList = currentServerConfig.punishmentPresets || ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"];
+
+                let presetsChipsHTML = presetsList.map((preset, index) => `
+                    <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
+                        <span class="font-bold text-white">${preset}</span>
+                        <button onclick="removePunishmentPreset(${index})" class="text-rose-400 hover:text-rose-300 transition text-xs">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `).join('');
 
                 container.innerHTML = `
                     <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -859,12 +877,20 @@
                                 <span>Punishment Presets</span>
                                 <i class="fa-solid fa-wand-magic-sparkles text-pink-400 text-xs"></i>
                             </h3>
-                            <p class="text-xs text-slate-400">Create and manage quick punishment presets for staff moderators.</p>
+                            <p class="text-xs text-slate-400">Add or remove punishment preset types used in the Moderator Panel.</p>
                         </div>
-                        <button onclick="alert('Preset manager coming next!')" class="bg-slate-800 text-slate-400 font-semibold px-4 py-2 rounded-xl text-xs cursor-not-allowed border border-slate-700 flex items-center space-x-2">
-                            <i class="fa-solid fa-file-pen"></i>
-                            <span>Manage Punishment Presets</span>
-                        </button>
+
+                        <div class="flex space-x-2">
+                            <input type="text" id="inputNewPreset" placeholder="Enter new punishment type name (e.g. Temp Ban)..." class="flex-1 rounded-xl px-3 py-2 text-xs">
+                            <button onclick="addPunishmentPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Add Preset</span>
+                            </button>
+                        </div>
+
+                        <div id="presetsListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                            ${presetsChipsHTML}
+                        </div>
                     </div>
 
                     <div class="flex justify-end">
@@ -886,6 +912,25 @@
                     </div>
                 `;
             }
+        }
+
+        function addPunishmentPreset() {
+            const input = document.getElementById('inputNewPreset');
+            const val = input.value.trim();
+            if (!val) return alert("Please enter a valid punishment preset name.");
+
+            if (!currentServerConfig.punishmentPresets) currentServerConfig.punishmentPresets = [];
+            if (currentServerConfig.punishmentPresets.includes(val)) return alert("Preset already exists.");
+
+            currentServerConfig.punishmentPresets.push(val);
+            input.value = '';
+            selectSidebarItem('panel');
+        }
+
+        function removePunishmentPreset(index) {
+            if (!currentServerConfig.punishmentPresets) return;
+            currentServerConfig.punishmentPresets.splice(index, 1);
+            selectSidebarItem('panel');
         }
 
         async function saveGeneralSettings() {
@@ -919,12 +964,17 @@
                 const res = await fetch('/api/settings/general', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ autoBanBolo, userSeeLogs })
+                    body: JSON.stringify({
+                        autoBanBolo,
+                        userSeeLogs,
+                        punishmentPresets: currentServerConfig.punishmentPresets
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
                     currentServerConfig = data.config;
-                    alert("Panel moderation settings saved!");
+                    updatePunishmentDropdown();
+                    alert("Panel moderation settings & presets saved!");
                 }
             } catch (err) {
                 alert("Connection error.");
