@@ -695,16 +695,24 @@
             serverName: "Planet Lenaris",
             serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true",
             autoBanBolo: true,
-            userSeeLogs: false,
-            punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
-        };
+} else if (tabKey === 'members-list' || tabKey === 'members') {
+                titleEl.textContent = "Staff Members";
+                descEl.textContent = "View and manage staff team members and their ranks.";
 
-        async function fetchGeneralSettings() {
-            try {
-                const res = await fetch('/api/settings/general');
-                const data = await res.json();
-                if (data.success && data.config) {
-                    currentServerConfig = data.config;
+                fetchStaffMembers();
+            } else {
+                const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                titleEl.textContent = formattedTitle;
+                descEl.textContent = `Manage and view ${formattedTitle} details for ${currentServerConfig.serverName}.`;
+
+                container.innerHTML = `
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3>
+                        <p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized next.</p>
+                    </div>
+                `;
+            }
+        }
                     applyServerBranding();
                     updatePunishmentDropdown();
                 }
@@ -1566,7 +1574,71 @@
                 }
             } catch (err) {}
         }
+async function fetchStaffMembers() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `<p class="text-xs text-slate-400 p-4">Loading staff team members...</p>`;
 
+            try {
+                const res = await fetch('/api/members/staff');
+                const data = await res.json();
+
+                if (data.success && data.staff) {
+                    let rows = data.staff.map(m => {
+                        let badgeColor = "bg-indigo-950 text-indigo-400 border-indigo-800";
+                        if (m.role === "Director") badgeColor = "bg-rose-950 text-rose-400 border-rose-800";
+                        else if (m.role === "Senior Moderator" || m.role === "Administrator") badgeColor = "bg-amber-950 text-amber-400 border-amber-800";
+
+                        return `
+                            <tr class="border-b border-slate-800/60 hover:bg-slate-900/40 transition">
+                                <td class="py-3 px-4 flex items-center space-x-3">
+                                    <img src="${m.avatar}" class="w-8 h-8 rounded-full border border-slate-700 object-cover" alt="Staff Avatar">
+                                    <span class="font-bold text-white text-xs">${m.username}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[10px] px-2.5 py-1 rounded-full border font-bold ${badgeColor}">
+                                        ${m.role}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-xs text-slate-400">${m.joinedDate}</td>
+                                <td class="py-3 px-4">
+                                    <span class="text-[10px] text-emerald-400 font-semibold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>${m.status}</span>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    container.innerHTML = `
+                        <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                                <div>
+                                    <h3 class="text-sm font-bold text-white">Staff Roster</h3>
+                                    <p class="text-xs text-slate-400">List of verified staff members from Junior Moderator to Director.</p>
+                                </div>
+                                <span class="text-xs px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold rounded-lg">${data.staff.length} Active Staff</span>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800">
+                                            <th class="py-2 px-4">Member</th>
+                                            <th class="py-2 px-4">Staff Rank</th>
+                                            <th class="py-2 px-4">Joined</th>
+                                            <th class="py-2 px-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/40">
+                                        ${rows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                container.innerHTML = `<p class="text-xs text-rose-400 p-4">Error loading staff list.</p>`;
+            }
+        }
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
