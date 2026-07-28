@@ -32,7 +32,7 @@ let departmentsData = [
         verifiedRoleId: "1531761795402829945",
         active: true,
         webhookUrl: process.env.LDOT_WEBHOOK || "",
-        discordInvite: "https://discord.gg/kFBhvJUzBc",
+        discordInvite: "https://discord.gg/your-ldot-invite",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "Roadway maintenance, traffic infrastructure, and vehicle safety operations."
@@ -45,7 +45,7 @@ let departmentsData = [
         verifiedRoleId: "1531763587687645195",
         active: true,
         webhookUrl: process.env.STAFF_DEPT_WEBHOOK || "",
-        discordInvite: "https://discord.gg/XkewZuAuY8",
+        discordInvite: "https://discord.gg/your-staff-invite",
         inGameReq: false,
         autoClockOutHours: 6,
         description: "Official community moderation, support desk, and internal server staff."
@@ -58,7 +58,7 @@ let departmentsData = [
         verifiedRoleId: "1531763499582361600",
         active: true,
         webhookUrl: process.env.LHP_WEBHOOK || "",
-        discordInvite: "https://discord.gg/6vfkS8fQzh",
+        discordInvite: "https://discord.gg/your-lhp-invite",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "State traffic enforcement, highway safety, and high-speed interdictions."
@@ -71,7 +71,7 @@ let departmentsData = [
         verifiedRoleId: "1531763395919872132",
         active: true,
         webhookUrl: process.env.LFD_WEBHOOK || "",
-        discordInvite: "https://discord.gg/jt9dfBBbWw",
+        discordInvite: "https://discord.gg/your-lfd-invite",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "Emergency medical response, fire suppression, and rescue operations."
@@ -84,7 +84,7 @@ let departmentsData = [
         verifiedRoleId: "1531763322175619152",
         active: true,
         webhookUrl: process.env.LLEDP_WEBHOOK || "",
-        discordInvite: "https://discord.gg/ExxuN8EwkE",
+        discordInvite: "https://discord.gg/your-lledp-invite",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "Primary municipal law enforcement and city patrol operations."
@@ -171,7 +171,9 @@ async function sendDiscordLog(webhookUrl, embed, content = "") {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content, embeds: [embed] })
         });
-    } catch (err) {}
+    } catch (err) {
+        console.error("Webhook Error:", err.message);
+    }
 }
 
 async function verifyUserRoleLive(userId) {
@@ -292,6 +294,126 @@ app.get('/api/auth/user', async (req, res) => {
 
 app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
+});
+
+// --- DEPARTMENTS API ENDPOINTS ---
+app.get('/api/departments/list', async (req, res) => {
+    res.json({ success: true, departments: departmentsData });
+});
+
+app.get('/api/departments/my-status', async (req, res) => {
+    if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized" });
+
+    const userId = req.session.user.id;
+    const userDeptStatuses = [];
+
+    for (const dept of departmentsData) {
+        const isVerified = await checkUserDepartmentRole(userId, dept.guildId, dept.verifiedRoleId);
+        const isOnShift = activeShifts.some(s => s.userId === userId && s.deptId === dept.id);
+
+        userDeptStatuses.push({
+            deptId: dept.id,
+            deptName: dept.name,
+            shortName: dept.shortName,
+            active: dept.active,
+            discordInvite: dept.discordInvite,
+            isVerifiedWorker: isVerified,
+            isOnShift
+        });
+    }
+
+    res.json({ success: true, userDepartments: userDeptStatuses });
+});
+
+app.post('/api/departments/update', requireManagerAuth, (req, res) => {
+    const { deptId, active, webhookUrl, discordInvite, description, autoClockOutHours, inGameReq } = req.body || {};
+    const dept = departmentsData.find(d => d.id === deptId);
+
+    if (!dept) return res.status(404).json({ success: false, error: "Department not found" });
+
+    if (active !== undefined) dept.active = !!active;
+    if (webhookUrl !== undefined) dept.webhookUrl = webhookUrl.trim();
+    if (discordInvite !== undefined) dept.discordInvite = discordInvite.trim();
+    if (description !== undefined) dept.description = description.trim();
+    if (autoClockOutHours !== undefined) dept.autoClockOutHours = parseInt(autoClockOutHours) || 4;
+    if (inGameReq !== undefined) dept.inGameReq = !!inGameReq;
+
+    addNotification("Department Updated", `${dept.shortName} settings updated by Management.`);
+    res.json({ success: true, department: dept });
+});
+
+app.post('/api/departments/shift/toggle', async (req, res) => {
+    if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized" });
+    const { deptId, action } = req.body || {};
+    const user = req.session.user;
+
+    const dept = departmentsData.find(d => d.id === deptId);
+    if (!dept || !dept.active) return res.status(400).json({ success: false, error: "Department is inactive or invalid." });
+
+    const isVerified = await checkUserDepartmentRole(user.id, dept.guildId, dept.verifiedRoleId);
+    if (!isVerified && !user.isManager) {
+        return res.status(403).json({ success: false, error: "Missing Verified Worker Role for this Department Server!" });
+    }
+
+    if (action === 'CLOCK_IN') {
+        activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
+        activeShifts.push({
+            userId: user.id,
+            username: user.username,
+            robloxName: user.displayName || user.username,
+            avatar: user.avatar,
+            startTime: Date.now(),
+            department: dept.shortName,
+            deptId: dept.id
+        });
+
+        const logEmbed = new EmbedBuilder()
+            .setTitle(`🟢 Department Shift Clocked In: ${dept.shortName}`)
+            .setColor(0x57f287)
+            .addFields(
+                { name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true },
+                { name: "Department", value: dept.name, inline: true },
+                { name: "Clock-In Time", value: new Date().toLocaleString(), inline: false }
+            )
+            .setFooter({ text: `${serverConfig.serverName} Department Duty System` });
+
+        // Send to Department Specific Webhook AND General Shift Webhook
+        if (dept.webhookUrl) sendDiscordLog(dept.webhookUrl, logEmbed.toJSON());
+        if (botConfig.shiftWebhook) sendDiscordLog(botConfig.shiftWebhook, logEmbed.toJSON());
+
+    } else {
+        const existing = activeShifts.find(s => s.userId === user.id && s.deptId === deptId);
+        if (existing) {
+            completedShifts.unshift({
+                id: `shift_${Date.now()}`,
+                userId: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarUrl: user.avatar,
+                startTime: existing.startTime,
+                endTime: Date.now(),
+                durationMinutes: Math.floor((Date.now() - existing.startTime) / 60000),
+                shiftType: dept.shortName,
+                waveId: "wave_1"
+            });
+        }
+        activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
+
+        const logEmbed = new EmbedBuilder()
+            .setTitle(`🔴 Department Shift Clocked Out: ${dept.shortName}`)
+            .setColor(0xed4245)
+            .addFields(
+                { name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true },
+                { name: "Department", value: dept.name, inline: true },
+                { name: "Clock-Out Time", value: new Date().toLocaleString(), inline: false }
+            )
+            .setFooter({ text: `${serverConfig.serverName} Department Duty System` });
+
+        if (dept.webhookUrl) sendDiscordLog(dept.webhookUrl, logEmbed.toJSON());
+        if (botConfig.shiftWebhook) sendDiscordLog(botConfig.shiftWebhook, logEmbed.toJSON());
+    }
+
+    res.json({ success: true });
 });
 
 // --- SESSIONS API ENDPOINTS ---
@@ -415,189 +537,3 @@ app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
     }
     res.json({ success: true, activeSession: activeServerSession });
 });
-
-// --- DEPARTMENTS API ---
-app.get('/api/departments/list', (req, res) => res.json({ success: true, departments: departmentsData }));
-app.get('/api/departments/my-status', async (req, res) => {
-    if (!req.session || !req.session.user) return res.status(401).json({ success: false });
-    const userId = req.session.user.id;
-    const userDeptStatuses = [];
-
-    for (const dept of departmentsData) {
-        const isVerified = await checkUserDepartmentRole(userId, dept.guildId, dept.verifiedRoleId);
-        const isOnShift = activeShifts.some(s => s.userId === userId && s.deptId === dept.id);
-        userDeptStatuses.push({
-            deptId: dept.id, deptName: dept.name, shortName: dept.shortName, active: dept.active, discordInvite: dept.discordInvite, isVerifiedWorker: isVerified, isOnShift
-        });
-    }
-    res.json({ success: true, userDepartments: userDeptStatuses });
-});
-
-app.post('/api/departments/update', requireManagerAuth, (req, res) => {
-    const { deptId, active, webhookUrl, discordInvite, description, autoClockOutHours, inGameReq } = req.body || {};
-    const dept = departmentsData.find(d => d.id === deptId);
-    if (!dept) return res.status(404).json({ success: false });
-
-    if (active !== undefined) dept.active = !!active;
-    if (webhookUrl !== undefined) dept.webhookUrl = webhookUrl.trim();
-    if (discordInvite !== undefined) dept.discordInvite = discordInvite.trim();
-    if (description !== undefined) dept.description = description.trim();
-    if (autoClockOutHours !== undefined) dept.autoClockOutHours = parseInt(autoClockOutHours) || 4;
-    if (inGameReq !== undefined) dept.inGameReq = !!inGameReq;
-
-    res.json({ success: true, department: dept });
-});
-
-app.post('/api/departments/shift/toggle', async (req, res) => {
-    if (!req.session || !req.session.user) return res.status(401).json({ success: false });
-    const { deptId, action } = req.body;
-    const user = req.session.user;
-    const dept = departmentsData.find(d => d.id === deptId);
-
-    if (!dept || !dept.active) return res.status(400).json({ success: false });
-    const isVerified = await checkUserDepartmentRole(user.id, dept.guildId, dept.verifiedRoleId);
-    if (!isVerified && !user.isManager) return res.status(403).json({ success: false, error: "Missing Verified Worker Role!" });
-
-    if (action === 'CLOCK_IN') {
-        activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
-        activeShifts.push({ userId: user.id, username: user.username, robloxName: user.displayName || user.username, avatar: user.avatar, startTime: Date.now(), department: dept.shortName, deptId: dept.id });
-    } else {
-        const existing = activeShifts.find(s => s.userId === user.id && s.deptId === deptId);
-        if (existing) {
-            completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, durationMinutes: Math.floor((Date.now() - existing.startTime) / 60000), shiftType: dept.shortName, waveId: "wave_1" });
-        }
-        activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
-    }
-    res.json({ success: true });
-});
-
-// --- SHIFTS & ACTIVITY ENDPOINTS ---
-app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
-    const formatted = activeShifts.map(s => {
-        const m = Math.floor((Date.now() - s.startTime) / 60000);
-        return { ...s, duration: `${Math.floor(m / 60)}h ${m % 60}m` };
-    });
-    res.json({ success: true, activeShifts: formatted, isManager: req.session.user.isManager });
-});
-
-app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
-    const { action, department } = req.body;
-    const user = req.session.user;
-    if (action === 'CLOCK_IN') {
-        activeShifts = activeShifts.filter(s => s.userId !== user.id);
-        activeShifts.push({ userId: user.id, username: user.username, robloxName: user.displayName, avatar: user.avatar, startTime: Date.now(), department: department || "General Staff" });
-    } else {
-        const existing = activeShifts.find(s => s.userId === user.id);
-        if (existing) {
-            completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, durationMinutes: Math.floor((Date.now() - existing.startTime) / 60000), shiftType: "Default", waveId: "wave_1" });
-        }
-        activeShifts = activeShifts.filter(s => s.userId !== user.id);
-    }
-    res.json({ success: true });
-});
-
-app.post('/api/shifts/force-end', requireManagerAuth, (req, res) => {
-    activeShifts = activeShifts.filter(s => s.userId !== req.body.targetUserId);
-    res.json({ success: true });
-});
-
-// --- OTHER EXISTING ENDPOINTS (MEMBERS, INFRACTIONS, SETTINGS, ER:LC, ETC.) ---
-app.get('/api/settings/general', (req, res) => res.json({ success: true, config: serverConfig }));
-app.get('/api/settings/webhooks', requireManagerAuth, (req, res) => res.json({ success: true, webhooks: botConfig }));
-app.post('/api/settings/general', requireManagerAuth, (req, res) => { Object.assign(serverConfig, req.body); res.json({ success: true, config: serverConfig }); });
-app.post('/api/settings/webhooks', requireManagerAuth, (req, res) => { Object.assign(botConfig, req.body); res.json({ success: true, webhooks: botConfig }); });
-app.get('/api/members', async (req, res) => {
-    if (!discordClient || !discordClient.isReady()) return res.json({ success: true, members: [] });
-    try {
-        const guild = await discordClient.guilds.fetch(GUILD_ID);
-        const members = await guild.members.fetch();
-        const staff = [];
-        members.forEach(m => {
-            if (m.user.bot) return;
-            const idxs = m.roles.cache.map(r => STAFF_ROLE_IDS_ASC.indexOf(r.id)).filter(i => i !== -1);
-            if (idxs.length > 0) {
-                const highIdx = Math.max(...idxs);
-                staff.push({ id: m.id, username: m.user.username, displayName: m.displayName, avatarUrl: m.user.displayAvatarURL(), roleName: guild.roles.cache.get(STAFF_ROLE_IDS_ASC[highIdx])?.name || "Staff", rankIndex: highIdx, activeStrikes: staffInfractionLogs.filter(i => i.targetUserId === m.id && !i.removed).length });
-            }
-        });
-        res.json({ success: true, members: staff.sort((a, b) => b.rankIndex - a.rankIndex) });
-    } catch (e) { res.json({ success: false }); }
-});
-
-app.get('/api/infractions/levels', (req, res) => res.json({ success: true, levels: staffInfractionLevels }));
-app.get('/api/notifications/list', (req, res) => res.json({ success: true, notifications: notificationsList }));
-app.post('/api/notifications/read', (req, res) => { notificationsList.forEach(n => n.read = true); res.json({ success: true }); });
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-// --- DISCORD BOT BOT INITIALIZATION & COMMAND REGISTRATION ---
-let discordClient;
-
-if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
-    discordClient = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
-
-    const commands = [
-        new SlashCommandBuilder()
-            .setName('review')
-            .setDescription('Submit an official staff member review')
-            .addUserOption(opt => opt.setName('staff').setDescription('The staff member to review').setRequired(true))
-            .addIntegerOption(opt => opt.setName('rating').setDescription('Star rating (1 to 5)').setRequired(true).addChoices({ name: '⭐ (1 Star)', value: 1 }, { name: '⭐⭐ (2 Stars)', value: 2 }, { name: '⭐⭐⭐ (3 Stars)', value: 3 }, { name: '⭐⭐⭐⭐ (4 Stars)', value: 4 }, { name: '⭐⭐⭐⭐⭐ (5 Stars)', value: 5 }))
-            .addStringOption(opt => opt.setName('note').setDescription('Your review note/feedback').setRequired(true)),
-        new SlashCommandBuilder().setName('shift').setDescription('Clock in or clock out of a staff shift').addStringOption(opt => opt.setName('action').setDescription('Clock In or Clock Out').setRequired(true).addChoices({ name: 'Clock In', value: 'CLOCK_IN' }, { name: 'Clock Out', value: 'CLOCK_OUT' })),
-        new SlashCommandBuilder().setName('active-shifts').setDescription('View all staff members currently on shift'),
-        new SlashCommandBuilder().setName('erlc-command').setDescription('Execute an in-game command').addStringOption(opt => opt.setName('command').setDescription('The exact in-game command text').setRequired(true)),
-        new SlashCommandBuilder().setName('log-punishment').setDescription('Log an in-game player punishment').addStringOption(opt => opt.setName('player').setDescription('Target player username').setRequired(true)).addStringOption(opt => opt.setName('type').setDescription('Type of punishment').setRequired(true)).addStringOption(opt => opt.setName('reason').setDescription('Reason for punishment').setRequired(true)).addStringOption(opt => opt.setName('roblox_id').setDescription('Roblox player User ID').setRequired(false)),
-        new SlashCommandBuilder().setName('assistance').setDescription('Request higher-up staff assistance').addStringOption(opt => opt.setName('reason').setDescription('Details for assistance request').setRequired(true)),
-        new SlashCommandBuilder().setName('infract').setDescription('Issue an official staff infraction (Management Only)').addUserOption(opt => opt.setName('staff').setDescription('The staff member to infract').setRequired(true)).addStringOption(opt => opt.setName('level').setDescription('Infraction level').setRequired(true)).addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(true)).addStringOption(opt => opt.setName('proof').setDescription('Evidence').setRequired(false)),
-        new SlashCommandBuilder().setName('promote').setDescription('Promote or update a staff member rank (Management Only)').addUserOption(opt => opt.setName('staff').setDescription('The staff member').setRequired(true)).addStringOption(opt => opt.setName('new_role').setDescription('The new staff role name').setRequired(true)).addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(true)),
-        new SlashCommandBuilder().setName('force-end-shift').setDescription('Forcefully end an active staff shift (Management Only)').addUserOption(opt => opt.setName('staff').setDescription('The staff member whose shift to end').setRequired(true))
-    ];
-
-    const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-
-    (async () => {
-        try {
-            await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-        } catch (err) {}
-    })();
-
-    discordClient.on('interactionCreate', async interaction => {
-        if (!interaction.isChatInputCommand()) return;
-
-        const { commandName, options, channelId, member, user } = interaction;
-        const isStaff = member.roles.cache.has(REQUIRED_ROLE_ID);
-        const isManager = member.roles.cache.some(r => botConfig.managerRoleIds.includes(r.id));
-
-        if (commandName === 'review') {
-            if (channelId !== REVIEW_CHANNEL_ID) return interaction.reply({ content: `❌ Command restricted to <#${REVIEW_CHANNEL_ID}>!`, ephemeral: true });
-            const targetUser = options.getUser('staff');
-            const rating = options.getInteger('rating');
-            const note = options.getString('note');
-
-            const reviewEmbed = new EmbedBuilder()
-                .setTitle("Lenaris Staff Reviews")
-                .setColor(0x3498db)
-                .setThumbnail(serverConfig.serverIcon)
-                .setDescription(`Your feedback helps... \n\n**Staff member:**\n<@${targetUser.id}>\n\n**Rating:**\n${"⭐".repeat(rating)}\n\n**Note:** ${note}`);
-
-            await interaction.reply({ embeds: [reviewEmbed] });
-            if (botConfig.reviewWebhook) sendDiscordLog(botConfig.reviewWebhook, reviewEmbed.toJSON());
-            return;
-        }
-
-        if (['shift', 'active-shifts', 'erlc-command', 'log-punishment', 'assistance'].includes(commandName)) {
-            if (!isStaff && !isManager) return interaction.reply({ content: '❌ Staff Role required.', ephemeral: true });
-        }
-
-        if (['infract', 'promote', 'force-end-shift'].includes(commandName)) {
-            if (!isManager) return interaction.reply({ content: '❌ Management permissions required.', ephemeral: true });
-        }
-        
-        if (commandName === 'active-shifts') return interaction.reply({ content: `Currently tracking ${activeShifts.length} active shifts.`, ephemeral: true });
-        if (commandName === 'erlc-command') return interaction.reply({ content: `ER:LC Commands execution sent!`, ephemeral: true });
-    });
-
-    discordClient.once('ready', () => console.log(`[DISCORD] Ready as ${discordClient.user.tag}`));
-    discordClient.login(BOT_TOKEN);
-}
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
