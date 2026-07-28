@@ -35,7 +35,8 @@ let serverConfig = {
     serverName: "Planet Lenaris",
     serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true",
     autoBanBolo: true,
-    userSeeLogs: false
+    userSeeLogs: false,
+    punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
 };
 
 // Custom Webhook Configuration
@@ -95,7 +96,6 @@ function scheduleMidnightReset() {
     const msToMidnight = night.getTime() - now.getTime();
 
     setTimeout(() => {
-        // Keep Ban BOLOs, filter out regular warnings/kicks/bans
         punishmentLogs = punishmentLogs.filter(log => log.punishmentType === 'Ban BOLO');
         scheduleMidnightReset();
     }, msToMidnight);
@@ -195,12 +195,13 @@ app.get('/api/settings/general', (req, res) => {
 });
 
 app.post('/api/settings/general', requireManagerAuth, (req, res) => {
-    const { serverName, serverIcon, autoBanBolo, userSeeLogs } = req.body || {};
+    const { serverName, serverIcon, autoBanBolo, userSeeLogs, punishmentPresets } = req.body || {};
 
     if (serverName && serverName.trim()) serverConfig.serverName = serverName.trim();
     if (serverIcon !== undefined) serverConfig.serverIcon = serverIcon.trim();
     if (autoBanBolo !== undefined) serverConfig.autoBanBolo = autoBanBolo;
     if (userSeeLogs !== undefined) serverConfig.userSeeLogs = userSeeLogs;
+    if (Array.isArray(punishmentPresets)) serverConfig.punishmentPresets = punishmentPresets;
 
     addNotification("Settings Updated", "Server configuration updated by Management.");
     res.json({ success: true, config: serverConfig });
@@ -505,7 +506,6 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
         punishmentLogs.unshift(logEntry);
         addNotification("Punishment Logged", `${punishmentType} issued to ${targetUser} by ${staffRobloxName}.`);
 
-        // IF BAN BOLO OR REGULAR BAN, TRIGGER ER:LC IN-GAME BAN COMMAND IMMEDIATELY
         if ((punishmentType === 'Ban' || punishmentType === 'Ban BOLO') && ERLC_API_KEY) {
             const banCommand = `:ban ${targetUser} Active ${punishmentType}. Reason: ${reason}`;
             await fetch('https://api.erlc.gg/v1/server/command', {
@@ -615,7 +615,7 @@ app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => {
         const serverData = serverRes.ok ? await serverRes.json() : {};
         const playersData = playersRes.ok ? await playersRes.json() : [];
 
-        // AUTOMATIC BAN BOLO ENFORCER (WATCHDOG)
+        // AUTOMATIC BAN BOLO ENFORCER
         if (serverConfig.autoBanBolo && Array.isArray(playersData) && playersData.length > 0) {
             const activeBanBolos = punishmentLogs.filter(log => log.punishmentType === 'Ban BOLO' && !log.removed);
 
