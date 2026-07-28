@@ -579,6 +579,80 @@
         </main>
     </div>
 
+    <div id="issueInfractionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-rose-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Issue Staff Infraction
+                </h3>
+                <button onclick="closeIssueInfractionModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitStaffInfraction(event)" class="space-y-3">
+                <input type="hidden" id="infractionTargetUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Staff Member</label>
+                    <input type="text" id="infractionTargetUser" readonly class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-slate-300">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Infraction Level</label>
+                    <select id="infractionLevelSelect" class="w-full rounded-lg px-3 py-2 text-xs">
+                        </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
+                    <textarea id="infractionReasonText" required rows="3" placeholder="Reason for staff infraction..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Proof / Evidence Link</label>
+                    <input type="text" id="infractionProofText" placeholder="https://..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeIssueInfractionModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Issue Infraction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="promoteStaffModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-angles-up text-emerald-400"></i> Promote / Update Staff
+                </h3>
+                <button onclick="closePromoteStaffModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitStaffPromotion(event)" class="space-y-3">
+                <input type="hidden" id="promoteTargetUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Staff Member</label>
+                    <input type="text" id="promoteTargetUser" readonly class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-slate-300">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">New Role / Rank Title *</label>
+                    <input type="text" id="promoteNewRole" required placeholder="e.g. Senior Moderator, Administrator..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason / Notes</label>
+                    <textarea id="promoteReason" rows="3" placeholder="Notes for rank change..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closePromoteStaffModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Rank Change</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="customReqModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-xl w-full space-y-4 border border-emerald-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -680,8 +754,16 @@
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">In-Game Activity Webhook</label>
                     <input type="text" id="webhookActivity" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Infraction Logging Webhook</label>
+                    <input type="text" id="webhookInfraction" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Promotions & Rank Changes Webhook</label>
+                    <input type="text" id="webhookPromotion" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
 
-                <div class="flex space-x-2 pt-2">
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
                     <button type="button" onclick="closeWebhookModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
                     <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Changes</button>
                 </div>
@@ -870,6 +952,27 @@
                 return;
             }
 
+            if (tabKey === 'infractions-members') {
+                titleEl.textContent = "Staff Infractions & Members";
+                descEl.textContent = "Review staff infraction records, issue strikes, and log promotions.";
+                renderInfractionsMembersTab();
+                return;
+            }
+
+            if (tabKey === 'infractions-appeals') {
+                titleEl.textContent = "Infraction Appeals";
+                descEl.textContent = "Review and process submitted staff infraction appeals.";
+                renderInfractionsAppealsTab();
+                return;
+            }
+
+            if (tabKey === 'infractions-settings') {
+                titleEl.textContent = "Infraction Settings & Levels";
+                descEl.textContent = "Configure infraction levels, auto-escalation rules, and expiration times.";
+                renderInfractionsSettingsTab();
+                return;
+            }
+
             if (tabKey === 'general') {
                 titleEl.textContent = "General";
                 descEl.textContent = "Configure general server branding and display settings.";
@@ -985,7 +1088,7 @@
                     <p class="text-xs text-slate-400">Configure when members should be flagged as inactive</p>
                     <div>
                         <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Inactivity Flag Period</label>
-                        <input type="number" placeholder="How many days should it take for a user to be flagged as inactive if they have not done any shifts?" class="w-full rounded-xl px-3 py-2 text-xs">
+                        <input type="number" placeholder="How many days should it take for a user to be flagged as inactive?" class="w-full rounded-xl px-3 py-2 text-xs">
                     </div>
                 </div>
 
@@ -1123,7 +1226,7 @@
 
                         <div>
                             <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Max On Shift</label>
-                            <input type="number" id="shiftMaxOnShift" placeholder="How many people should be allowed on shift at once? Leave empty for none." onchange="updateShiftSettings()" class="w-full rounded-xl px-3 py-2 text-xs">
+                            <input type="number" id="shiftMaxOnShift" placeholder="How many people should be allowed on shift at once?" onchange="updateShiftSettings()" class="w-full rounded-xl px-3 py-2 text-xs">
                         </div>
                     </div>
                 </div>
@@ -1380,9 +1483,7 @@
                             </div>
                             <div class="flex items-center space-x-2">
                                 <button onclick="alert('Viewing raw logs')" class="bg-emerald-950/80 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-lg text-xs font-bold">View Logs</button>
-                                <select class="rounded-lg px-2 py-1 text-xs">
-                                    <option value="overall">Overall</option>
-                                </select>
+                                <select class="rounded-lg px-2 py-1 text-xs"><option value="overall">Overall</option></select>
                             </div>
                         </div>
 
@@ -1410,9 +1511,7 @@
                     <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
                         <div class="flex justify-between items-center border-b border-slate-800 pb-3">
                             <h3 class="text-sm font-bold text-white">Shift History</h3>
-                            <select class="rounded-lg px-2 py-1 text-xs">
-                                <option value="">Filter by type</option>
-                            </select>
+                            <select class="rounded-lg px-2 py-1 text-xs"><option value="">Filter by type</option></select>
                         </div>
 
                         <div class="space-y-1 text-xs divide-y divide-slate-800/60">
@@ -1421,8 +1520,7 @@
                             <div class="flex justify-between py-1.5"><span>Time on Break</span><strong id="statTimeBreak" class="text-slate-400">0 seconds</strong></div>
                         </div>
 
-                        <div id="memberShiftsTable" class="space-y-2 pt-2">
-                            </div>
+                        <div id="memberShiftsTable" class="space-y-2 pt-2"></div>
                     </div>
                 </div>
             `;
@@ -1563,7 +1661,7 @@
                                 <span class="font-bold text-slate-500 w-4">#${idx + 1}</span>
                                 <img src="${escapeHtml(item.avatarUrl)}" class="w-8 h-8 rounded-full border border-slate-700 object-cover" alt="Avatar">
                                 <div>
-                                    <span class="font-bold text-white block">${escapeHtml(item.displayName)} <span class="text-[10px] text-amber-400 font-normal">OWNERSHIP/FOUNDERSHIP</span></span>
+                                    <span class="font-bold text-white block">${escapeHtml(item.displayName)}</span>
                                     <span class="text-[10px] text-slate-400">@${escapeHtml(item.username)}</span>
                                 </div>
                             </div>
@@ -1574,6 +1672,244 @@
             } catch (err) {
                 if (container) container.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Failed to load leaderboard.</p>`;
             }
+        }
+
+        // --- INFRACTIONS: MEMBERS TAB ---
+        async function renderInfractionsMembersTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions
+                        </h3>
+                        <span id="infStaffCount" class="text-xs text-slate-400 font-semibold">Loading...</span>
+                    </div>
+
+                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1">
+                        <p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch('/api/members');
+                const data = await res.json();
+                const list = document.getElementById('infStaffList');
+                const count = document.getElementById('infStaffCount');
+
+                if (data.success && data.members) {
+                    count.textContent = `${data.members.length} Staff Members`;
+
+                    list.innerHTML = data.members.map(m => `
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                            <div class="flex items-center space-x-3">
+                                <img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover" alt="Avatar">
+                                <div>
+                                    <span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span>
+                                    <span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-3">
+                                <span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">
+                                    ${m.activeStrikes || 0} Active Strikes
+                                </span>
+                                <button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">
+                                    Issue Infraction
+                                </button>
+                                <button onclick="openPromoteStaffModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-lg font-bold transition">
+                                    Promote / Rank
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function openIssueInfractionModal(userId, displayName) {
+            document.getElementById('infractionTargetUserId').value = userId;
+            document.getElementById('infractionTargetUser').value = displayName;
+            
+            const select = document.getElementById('infractionLevelSelect');
+            try {
+                const res = await fetch('/api/infractions/levels');
+                const data = await res.json();
+                if (data.success && data.levels) {
+                    select.innerHTML = data.levels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+                }
+            } catch (err) {}
+
+            document.getElementById('issueInfractionModal').classList.remove('hidden');
+        }
+
+        function closeIssueInfractionModal() {
+            document.getElementById('issueInfractionModal').classList.add('hidden');
+        }
+
+        async function submitStaffInfraction(e) {
+            e.preventDefault();
+            const payload = {
+                targetUserId: document.getElementById('infractionTargetUserId').value,
+                targetUser: document.getElementById('infractionTargetUser').value,
+                level: document.getElementById('infractionLevelSelect').value,
+                reason: document.getElementById('infractionReasonText').value,
+                proof: document.getElementById('infractionProofText').value
+            };
+
+            try {
+                const res = await fetch('/api/infractions/issue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('Staff Infraction Issued Successfully!');
+                    closeIssueInfractionModal();
+                    renderInfractionsMembersTab();
+                }
+            } catch (err) { alert('Error issuing infraction.'); }
+        }
+
+        function openPromoteStaffModal(userId, displayName) {
+            document.getElementById('promoteTargetUserId').value = userId;
+            document.getElementById('promoteTargetUser').value = displayName;
+            document.getElementById('promoteStaffModal').classList.remove('hidden');
+        }
+
+        function closePromoteStaffModal() {
+            document.getElementById('promoteStaffModal').classList.add('hidden');
+        }
+
+        async function submitStaffPromotion(e) {
+            e.preventDefault();
+            const payload = {
+                targetUserId: document.getElementById('promoteTargetUserId').value,
+                targetUser: document.getElementById('promoteTargetUser').value,
+                newRole: document.getElementById('promoteNewRole').value,
+                reason: document.getElementById('promoteReason').value
+            };
+
+            try {
+                const res = await fetch('/api/infractions/promote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('Staff Rank Updated Successfully!');
+                    closePromoteStaffModal();
+                }
+            } catch (err) { alert('Error processing promotion.'); }
+        }
+
+        // --- INFRACTIONS: APPEALS TAB ---
+        async function renderInfractionsAppealsTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Infraction Appeals</h3>
+                    <p class="text-xs text-slate-400">Review staff member submitted appeals for active warnings or strikes.</p>
+
+                    <div id="appealsListContainer" class="space-y-2">
+                        <p class="text-xs text-slate-500 text-center py-4">No pending appeals.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- INFRACTIONS: SETTINGS TAB (CUSTOM INFRACTION LEVELS MANAGER) ---
+        async function renderInfractionsSettingsTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
+                    <p class="text-xs text-slate-400">Add or remove infraction level tags used in the staff moderation system.</p>
+
+                    <div class="flex space-x-2">
+                        <input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level (e.g., Notice, Strike 1)..." class="flex-1 rounded-xl px-3 py-2 text-xs">
+                        <button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
+                            + Add Level
+                        </button>
+                    </div>
+
+                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                        <p class="text-xs text-slate-500">Loading levels...</p>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Auto-Escalation & Expiration Rules</h3>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="chkAutoEscalations" checked class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            <div>
+                                <label class="text-xs font-bold text-white block">Enable Automatic Escalation</label>
+                                <span class="text-[11px] text-slate-400 block">Automatically convert warnings into official strikes upon reaching configured limit.</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Expiration Period (Days)</label>
+                            <input type="number" id="infractionExpireDays" value="30" class="w-full rounded-xl px-3 py-2 text-xs">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            loadInfractionLevelsUI();
+        }
+
+        async function loadInfractionLevelsUI() {
+            try {
+                const res = await fetch('/api/infractions/levels');
+                const data = await res.json();
+                const container = document.getElementById('infractionLevelsContainer');
+
+                if (data.success && data.levels) {
+                    container.innerHTML = data.levels.map((level, idx) => `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
+                            <span class="font-bold text-white">${escapeHtml(level)}</span>
+                            <button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function addCustomInfractionLevel() {
+            const input = document.getElementById('inputNewInfractionLevel');
+            const name = input.value.trim();
+            if (!name) return alert("Please enter a valid level name.");
+
+            try {
+                const res = await fetch('/api/infractions/levels/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    loadInfractionLevelsUI();
+                }
+            } catch (err) {}
+        }
+
+        async function removeCustomInfractionLevel(index) {
+            try {
+                const res = await fetch('/api/infractions/levels/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index })
+                });
+                if (res.ok) loadInfractionLevelsUI();
+            } catch (err) {}
         }
 
         // --- GENERAL & PANEL RENDERING ---
@@ -1813,6 +2149,8 @@
                     document.getElementById('webhookPunish').value = data.webhooks.punishmentWebhook || '';
                     document.getElementById('webhookAssistance').value = data.webhooks.assistanceWebhook || '';
                     document.getElementById('webhookActivity').value = data.webhooks.activityWebhook || '';
+                    document.getElementById('webhookInfraction').value = data.webhooks.infractionWebhook || '';
+                    document.getElementById('webhookPromotion').value = data.webhooks.promotionWebhook || '';
                     document.getElementById('webhookModal').classList.remove('hidden');
                 }
             } catch (err) { alert("Failed to load settings."); }
@@ -1828,7 +2166,9 @@
                 shiftWebhook: document.getElementById('webhookShift').value,
                 punishmentWebhook: document.getElementById('webhookPunish').value,
                 assistanceWebhook: document.getElementById('webhookAssistance').value,
-                activityWebhook: document.getElementById('webhookActivity').value
+                activityWebhook: document.getElementById('webhookActivity').value,
+                infractionWebhook: document.getElementById('webhookInfraction').value,
+                promotionWebhook: document.getElementById('webhookPromotion').value
             };
             try {
                 const res = await fetch('/api/settings/webhooks', {
