@@ -22,6 +22,70 @@ const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboa
 
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 
+// --- REGISTERED DEPARTMENTS CONFIGURATION ---
+let departmentsData = [
+    {
+        id: "dept_ldot",
+        name: "Lenaris Dept. of Transportation (LDOT)",
+        shortName: "LDOT",
+        guildId: "1530625507857662062",
+        verifiedRoleId: "1531761795402829945",
+        active: true,
+        webhookUrl: process.env.LDOT_WEBHOOK || "",
+        inGameReq: true,
+        autoClockOutHours: 4,
+        description: "Roadway maintenance, traffic infrastructure, and vehicle safety operations."
+    },
+    {
+        id: "dept_staff",
+        name: "Lenaris Staff Dept.",
+        shortName: "Staff Dept",
+        guildId: "1530626035148919045",
+        verifiedRoleId: "1531763587687645195",
+        active: true,
+        webhookUrl: process.env.STAFF_DEPT_WEBHOOK || "",
+        inGameReq: false,
+        autoClockOutHours: 6,
+        description: "Official community moderation, support desk, and internal server staff."
+    },
+    {
+        id: "dept_lhp",
+        name: "Lenaris Highway Patrol (LHP)",
+        shortName: "LHP",
+        guildId: "1530625253405884507",
+        verifiedRoleId: "1531763499582361600",
+        active: true,
+        webhookUrl: process.env.LHP_WEBHOOK || "",
+        inGameReq: true,
+        autoClockOutHours: 4,
+        description: "State traffic enforcement, highway safety, and high-speed interdictions."
+    },
+    {
+        id: "dept_lfd",
+        name: "Lenaris Fire Dept. (LFD)",
+        shortName: "LFD",
+        guildId: "1530624317220585773",
+        verifiedRoleId: "1531763395919872132",
+        active: true,
+        webhookUrl: process.env.LFD_WEBHOOK || "",
+        inGameReq: true,
+        autoClockOutHours: 4,
+        description: "Emergency medical response, fire suppression, and rescue operations."
+    },
+    {
+        id: "dept_lledp",
+        name: "Lenaris Law Enforcement Dept. (LLEDP)",
+        shortName: "LLEDP",
+        guildId: "1530623381156659401",
+        verifiedRoleId: "1531763322175619152",
+        active: true,
+        webhookUrl: process.env.LLEDP_WEBHOOK || "",
+        inGameReq: true,
+        autoClockOutHours: 4,
+        description: "Primary municipal law enforcement and city patrol operations."
+    }
+];
+
 // Support Role IDs
 const SUPPORT_ROLE_IDS = [
     "1425618034214699078",
@@ -69,7 +133,7 @@ let serverConfig = {
     punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
 };
 
-// Webhook Configuration
+// Global Webhooks Config
 let botConfig = {
     shiftWebhook: process.env.SHIFT_WEBHOOK || "",
     punishmentWebhook: process.env.PUNISHMENT_WEBHOOK || "",
@@ -167,6 +231,20 @@ async function verifyUserRoleLive(userId) {
     }
 }
 
+// Check worker role in a specific department Discord server
+async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
+    try {
+        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${deptGuildId}/members/${userId}`, {
+            headers: { Authorization: `Bot ${BOT_TOKEN}` }
+        });
+        if (!memberRes.ok) return false;
+        const memberData = await memberRes.json();
+        return (memberData.roles || []).includes(verifiedRoleId);
+    } catch (err) {
+        return false;
+    }
+}
+
 // Middleware Guards
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized" });
@@ -255,6 +333,124 @@ app.get('/api/auth/user', async (req, res) => {
 
 app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
+});
+
+// --- DEPARTMENTS API ENDPOINTS ---
+app.get('/api/departments/list', async (req, res) => {
+    res.json({ success: true, departments: departmentsData });
+});
+
+app.get('/api/departments/my-status', async (req, res) => {
+    if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized" });
+
+    const userId = req.session.user.id;
+    const userDeptStatuses = [];
+
+    for (const dept of departmentsData) {
+        const isVerified = await checkUserDepartmentRole(userId, dept.guildId, dept.verifiedRoleId);
+        const isOnShift = activeShifts.some(s => s.userId === userId && s.deptId === dept.id);
+
+        userDeptStatuses.push({
+            deptId: dept.id,
+            deptName: dept.name,
+            shortName: dept.shortName,
+            active: dept.active,
+            isVerifiedWorker: isVerified,
+            isOnShift
+        });
+    }
+
+    res.json({ success: true, userDepartments: userDeptStatuses });
+});
+
+app.post('/api/departments/update', requireManagerAuth, (req, res) => {
+    const { deptId, active, webhookUrl, description, autoClockOutHours, inGameReq } = req.body || {};
+    const dept = departmentsData.find(d => d.id === deptId);
+
+    if (!dept) return res.status(404).json({ success: false, error: "Department not found" });
+
+    if (active !== undefined) dept.active = !!active;
+    if (webhookUrl !== undefined) dept.webhookUrl = webhookUrl.trim();
+    if (description !== undefined) dept.description = description.trim();
+    if (autoClockOutHours !== undefined) dept.autoClockOutHours = parseInt(autoClockOutHours) || 4;
+    if (inGameReq !== undefined) dept.inGameReq = !!inGameReq;
+
+    addNotification("Department Updated", `${dept.shortName} settings updated by Management.`);
+    res.json({ success: true, department: dept });
+});
+
+app.post('/api/departments/shift/toggle', async (req, res) => {
+    if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized" });
+    const { deptId, action } = req.body || {};
+    const user = req.session.user;
+
+    const dept = departmentsData.find(d => d.id === deptId);
+    if (!dept || !dept.active) return res.status(400).json({ success: false, error: "Department is inactive or invalid." });
+
+    const isVerified = await checkUserDepartmentRole(user.id, dept.guildId, dept.verifiedRoleId);
+    if (!isVerified && !user.isManager) {
+        return res.status(403).json({ success: false, error: "Missing Verified Worker Role for this Department Server!" });
+    }
+
+    if (action === 'CLOCK_IN') {
+        activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
+        activeShifts.push({
+            userId: user.id,
+            username: user.username,
+            robloxName: user.displayName || user.username,
+            avatar: user.avatar,
+            startTime: Date.now(),
+            department: dept.shortName,
+            deptId: dept.id
+        });
+
+        const logEmbed = new EmbedBuilder()
+            .setTitle(`🟢 Department Shift Clocked In: ${dept.shortName}`)
+            .setColor(0x57f287)
+            .addFields(
+                { name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true },
+                { name: "Department", value: dept.name, inline: true },
+                { name: "Clock-In Time", value: new Date().toLocaleString(), inline: false }
+            )
+            .setFooter({ text: `${serverConfig.serverName} Department Duty System` });
+
+        // Send to Department Specific Webhook AND General Shift Webhook
+        if (dept.webhookUrl) sendDiscordLog(dept.webhookUrl, logEmbed.toJSON());
+        if (botConfig.shiftWebhook) sendDiscordLog(botConfig.shiftWebhook, logEmbed.toJSON());
+
+    } else {
+        const existing = activeShifts.find(s => s.userId === user.id && s.deptId === deptId);
+        if (existing) {
+            completedShifts.unshift({
+                id: `shift_${Date.now()}`,
+                userId: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarUrl: user.avatar,
+                startTime: existing.startTime,
+                endTime: Date.now(),
+                durationMinutes: Math.floor((Date.now() - existing.startTime) / 60000),
+                shiftType: dept.shortName,
+                waveId: "wave_1"
+            });
+        }
+        activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
+
+        const logEmbed = new EmbedBuilder()
+            .setTitle(`🔴 Department Shift Clocked Out: ${dept.shortName}`)
+            .setColor(0xed4245)
+            .addFields(
+                { name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true },
+                { name: "Department", value: dept.name, inline: true },
+                { name: "Clock-Out Time", value: new Date().toLocaleString(), inline: false }
+            )
+            .setFooter({ text: `${serverConfig.serverName} Department Duty System` });
+
+        if (dept.webhookUrl) sendDiscordLog(dept.webhookUrl, logEmbed.toJSON());
+        if (botConfig.shiftWebhook) sendDiscordLog(botConfig.shiftWebhook, logEmbed.toJSON());
+    }
+
+    res.json({ success: true });
 });
 
 // --- MEMBERS DIRECTORY ---
@@ -508,7 +704,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- DISCORD BOT BOT INITIALIZATION & FULL COMMAND REGISTRATION ---
+// --- DISCORD BOT BOT INITIALIZATION & COMMAND REGISTRATION ---
 let discordClient;
 
 if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
@@ -516,9 +712,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
         intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
     });
 
-    // ALL DASHBOARD & MODERATOR SLASH COMMANDS
     const commands = [
-        // --- 1. MODERATOR PANEL COMMANDS (STAFF ROLE REQUIRED) ---
         new SlashCommandBuilder()
             .setName('review')
             .setDescription('Submit an official staff member review')
@@ -572,7 +766,6 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             .setDescription('Request higher-up staff assistance')
             .addStringOption(opt => opt.setName('reason').setDescription('Details for assistance request').setRequired(true)),
 
-        // --- 2. SERVER DASHBOARD COMMANDS (MANAGEMENT ROLES REQUIRED) ---
         new SlashCommandBuilder()
             .setName('infract')
             .setDescription('Issue an official staff infraction (Management Only)')
@@ -611,11 +804,9 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
 
         const { commandName, options, channelId, member, user } = interaction;
 
-        // HELPER CHECKS
         const isStaff = member.roles.cache.has(REQUIRED_ROLE_ID);
         const isManager = member.roles.cache.some(r => botConfig.managerRoleIds.includes(r.id));
 
-        // --- 1. MODERATOR PANEL COMMANDS HANDLERS ---
         if (commandName === 'review') {
             if (channelId !== REVIEW_CHANNEL_ID) {
                 return interaction.reply({
@@ -665,7 +856,6 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             return;
         }
 
-        // REQUIRES STAFF ROLE FOR OTHER MOD PANEL COMMANDS
         if (['shift', 'active-shifts', 'erlc-command', 'log-punishment', 'assistance'].includes(commandName)) {
             if (!isStaff && !isManager) {
                 return interaction.reply({ content: '❌ Access Denied: You must possess the Staff Role to use this command.', ephemeral: true });
@@ -783,7 +973,6 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             return interaction.reply({ content: '🚨 Assistance request sent to higher-ups!', ephemeral: true });
         }
 
-        // --- 2. SERVER DASHBOARD COMMANDS HANDLERS (MANAGEMENT ONLY) ---
         if (['infract', 'promote', 'force-end-shift'].includes(commandName)) {
             if (!isManager) {
                 return interaction.reply({ content: '❌ Access Denied: Management permissions required.', ephemeral: true });
