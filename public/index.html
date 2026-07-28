@@ -350,6 +350,7 @@
                                     <option value="Warning">Warning</option>
                                     <option value="Kick">Kick</option>
                                     <option value="Ban">Ban</option>
+                                    <option value="Ban BOLO">Ban BOLO (Auto Ban On Rejoin)</option>
                                     <option value="Staff Warning">Staff Warning</option>
                                 </select>
                             </div>
@@ -697,7 +698,9 @@
         let currentUserData = null;
         let currentServerConfig = {
             serverName: "Planet Lenaris",
-            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true"
+            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png?ex=6a690d5c&is=6a67bbdc&hm=037a4139f745e4f4814981e12642ac81316d80934ebf660dcb2bade9c68ed6b2&animated=true",
+            autoBanBolo: true,
+            userSeeLogs: false
         };
 
         async function fetchGeneralSettings() {
@@ -800,6 +803,77 @@
                         </button>
                     </div>
                 `;
+            } else if (tabKey === 'panel') {
+                titleEl.textContent = "Panel";
+                descEl.textContent = "Configure moderator panel access, automation settings, and punishment presets.";
+
+                const autoBanChecked = currentServerConfig.autoBanBolo ? 'checked' : '';
+                const userSeeLogsChecked = currentServerConfig.userSeeLogs ? 'checked' : '';
+
+                container.innerHTML = `
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Moderator Panel Access</h3>
+                            <p class="text-xs text-slate-400">Access and share the moderator panel for this server.</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="attemptModPanelAccess()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                <span>Open Moderator Panel</span>
+                            </button>
+                            <button onclick="copyPanelLink()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2 border border-slate-700">
+                                <i class="fa-solid fa-copy"></i>
+                                <span>Copy Link</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Moderation Settings</h3>
+                            <p class="text-xs text-slate-400">Configure automatic moderation and BOLO enforcement features.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" id="chkAutoBanBolo" ${autoBanChecked} class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                                <div>
+                                    <label for="chkAutoBanBolo" class="text-xs font-bold text-white block cursor-pointer">Create Ban BOLO after Punishment Logs Count Reached</label>
+                                    <span class="text-[11px] text-slate-400 block">Automatically bans rejoining players with active Ban BOLO logs in-game.</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" id="chkUserSeeLogs" ${userSeeLogsChecked} class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                                <div>
+                                    <label for="chkUserSeeLogs" class="text-xs font-bold text-white block cursor-pointer">Allow Users to see their own Logs</label>
+                                    <span class="text-[11px] text-slate-400 block">Members can view warning details issued to them.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <span>Punishment Presets</span>
+                                <i class="fa-solid fa-wand-magic-sparkles text-pink-400 text-xs"></i>
+                            </h3>
+                            <p class="text-xs text-slate-400">Create and manage quick punishment presets for staff moderators.</p>
+                        </div>
+                        <button onclick="alert('Preset manager coming next!')" class="bg-slate-800 text-slate-400 font-semibold px-4 py-2 rounded-xl text-xs cursor-not-allowed border border-slate-700 flex items-center space-x-2">
+                            <i class="fa-solid fa-file-pen"></i>
+                            <span>Manage Punishment Presets</span>
+                        </button>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="savePanelSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>Save Panel Settings</span>
+                        </button>
+                    </div>
+                `;
             } else {
                 const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
                 titleEl.textContent = formattedTitle;
@@ -808,7 +882,7 @@
                 container.innerHTML = `
                     <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3>
-                        <p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized here next.</p>
+                        <p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized next.</p>
                     </div>
                 `;
             }
@@ -831,12 +905,35 @@
                     currentServerConfig = data.config;
                     applyServerBranding();
                     alert("General server settings saved!");
-                } else {
-                    alert("Failed to save settings.");
                 }
             } catch (err) {
-                alert("Connection error saving settings.");
+                alert("Connection error.");
             }
+        }
+
+        async function savePanelSettings() {
+            const autoBanBolo = document.getElementById('chkAutoBanBolo').checked;
+            const userSeeLogs = document.getElementById('chkUserSeeLogs').checked;
+
+            try {
+                const res = await fetch('/api/settings/general', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoBanBolo, userSeeLogs })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentServerConfig = data.config;
+                    alert("Panel moderation settings saved!");
+                }
+            } catch (err) {
+                alert("Connection error.");
+            }
+        }
+
+        function copyPanelLink() {
+            navigator.clipboard.writeText(window.location.origin);
+            alert("Moderator Panel link copied to clipboard!");
         }
 
         async function attemptModPanelAccess() {
@@ -1373,7 +1470,7 @@
         }
 
         async function removeWarning(logId) {
-            if (!confirm("Remove this warning?")) return;
+            if (!confirm("Remove this log entry?")) return;
             try {
                 const res = await fetch('/api/punishments/remove-warning', {
                     method: 'POST',
@@ -1394,15 +1491,19 @@
                     container.innerHTML = '';
                     data.logs.forEach(log => {
                         const isRemoved = log.removed ? 'opacity-50 line-through' : '';
-                        const removeBtn = (log.punishmentType === 'Warning' && !log.removed) 
+                        const removeBtn = !log.removed 
                             ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">Remove</button>`
-                            : (log.removed ? `<span class="text-[10px] text-rose-400 font-semibold">[Removed]</span>` : '');
+                            : `<span class="text-[10px] text-rose-400 font-semibold">[Removed]</span>`;
+
+                        const typeBadgeColor = log.punishmentType === 'Ban BOLO' 
+                            ? 'bg-rose-950 text-rose-300 border-rose-800' 
+                            : 'bg-blue-950 text-blue-400 border-blue-800';
 
                         container.innerHTML += `
                             <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}">
                                 <div class="flex justify-between items-center">
                                     <span class="font-bold text-white text-xs">${log.targetUser}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">${log.punishmentType}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded border ${typeBadgeColor}">${log.punishmentType}</span>
                                 </div>
                                 <p class="text-[11px] text-slate-400"><strong>ID:</strong> ${log.robloxId} | <strong>Reason:</strong> ${log.reason}</p>
                                 <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
