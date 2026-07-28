@@ -32,7 +32,7 @@ let departmentsData = [
         verifiedRoleId: "1531761795402829945",
         active: true,
         webhookUrl: process.env.LDOT_WEBHOOK || "",
-        discordInvite: "https://discord.gg/your-ldot-invite",
+        discordInvite: "https://discord.gg/kFBhvJUzBc",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "Roadway maintenance, traffic infrastructure, and vehicle safety operations."
@@ -45,7 +45,7 @@ let departmentsData = [
         verifiedRoleId: "1531763587687645195",
         active: true,
         webhookUrl: process.env.STAFF_DEPT_WEBHOOK || "",
-        discordInvite: "https://discord.gg/your-staff-invite",
+        discordInvite: "https://discord.gg/XkewZuAuY8",
         inGameReq: false,
         autoClockOutHours: 6,
         description: "Official community moderation, support desk, and internal server staff."
@@ -58,7 +58,7 @@ let departmentsData = [
         verifiedRoleId: "1531763499582361600",
         active: true,
         webhookUrl: process.env.LHP_WEBHOOK || "",
-        discordInvite: "https://discord.gg/your-lhp-invite",
+        discordInvite: "https://discord.gg/6vfkS8fQzh",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "State traffic enforcement, highway safety, and high-speed interdictions."
@@ -71,7 +71,7 @@ let departmentsData = [
         verifiedRoleId: "1531763395919872132",
         active: true,
         webhookUrl: process.env.LFD_WEBHOOK || "",
-        discordInvite: "https://discord.gg/your-lfd-invite",
+        discordInvite: "https://discord.gg/jt9dfBBbWw",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "Emergency medical response, fire suppression, and rescue operations."
@@ -84,7 +84,7 @@ let departmentsData = [
         verifiedRoleId: "1531763322175619152",
         active: true,
         webhookUrl: process.env.LLEDP_WEBHOOK || "",
-        discordInvite: "https://discord.gg/your-lledp-invite",
+        discordInvite: "https://discord.gg/ExxuN8EwkE",
         inGameReq: true,
         autoClockOutHours: 4,
         description: "Primary municipal law enforcement and city patrol operations."
