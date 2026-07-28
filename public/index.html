@@ -560,6 +560,35 @@
         </main>
     </div>
 
+    <div id="createPollModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-blue-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-square-poll-horizontal text-blue-400"></i> Create Session Poll
+                </h3>
+                <button onclick="closeCreatePollModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitSessionPoll(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Poll Question *</label>
+                    <input type="text" id="pollQuestion" required placeholder="e.g., Should we start a session?" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Poll Options (One per line) *</label>
+                    <textarea id="pollOptions" required rows="4" placeholder="Yes&#10;No&#10;Maybe later" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                    <p class="text-[10px] text-slate-500 mt-1">Maximum 9 options.</p>
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeCreatePollModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Send Poll</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="editDepartmentModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -575,7 +604,12 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Department Webhook URL</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Discord Server Invite Link</label>
+                    <input type="text" id="editDeptInvite" placeholder="https://discord.gg/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Department Shift Webhook URL</label>
                     <input type="text" id="editDeptWebhook" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
                 </div>
 
@@ -997,7 +1031,22 @@
             if (tabKey === 'dept-settings') {
                 titleEl.textContent = "Departments Settings";
                 descEl.textContent = "Configure global settings and rules for server departments.";
+                // In a real app this might have a separate render function, fallback to overview for now
                 renderDepartmentsOverviewTab();
+                return;
+            }
+
+            if (tabKey === 'sessions-overview') {
+                titleEl.textContent = "Sessions Overview";
+                descEl.textContent = "View session analytics, active statuses, and historical records.";
+                renderSessionsOverviewTab();
+                return;
+            }
+
+            if (tabKey === 'sessions-settings') {
+                titleEl.textContent = "Sessions Settings";
+                descEl.textContent = "Configure announcements, shutdown actions, and session polling behaviors.";
+                renderSessionsSettingsTab();
                 return;
             }
 
@@ -1026,6 +1075,318 @@
             `;
         }
 
+        // --- SESSIONS OVERVIEW & POLLS ---
+        async function renderSessionsOverviewTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-5 rounded-2xl border border-slate-800 lg:col-span-2 space-y-4 relative">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h3 class="text-base font-bold text-white">Analytics Overview</h3>
+                            <button class="text-xs text-emerald-400 hover:underline">See More Analytics &rarr;</button>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-slate-400">
+                            <div class="space-x-3 font-semibold">
+                                <button class="text-emerald-400">24 Hours</button>
+                                <button class="hover:text-white">7 days</button>
+                                <button class="hover:text-white">30 days</button>
+                                <button class="hover:text-white">90 days</button>
+                            </div>
+                            <span>${new Date().toLocaleString([], {day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit'})}</span>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-4 h-24 relative overflow-hidden flex flex-col justify-center">
+                                <span class="text-[10px] text-slate-400 font-semibold uppercase relative z-10">Unique Players</span>
+                                <span id="sessStatPlayers" class="text-xl font-bold text-white relative z-10">...</span>
+                                <div class="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-emerald-500/20 to-transparent"></div>
+                                <svg class="absolute bottom-0 w-full h-12" preserveAspectRatio="none" viewBox="0 0 100 100"><polyline fill="none" stroke="#10b981" stroke-width="2" points="0,100 80,100 85,20 90,100 100,100"/></svg>
+                            </div>
+                            <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-4 h-24 flex items-center justify-center relative">
+                                <div class="absolute top-4 left-4 z-10">
+                                    <span class="text-[10px] text-slate-400 font-semibold uppercase block">Mod Calls</span>
+                                    <span id="sessStatCalls" class="text-xl font-bold text-white">...</span>
+                                </div>
+                                <span class="text-xs text-slate-500">No data here yet.</span>
+                            </div>
+                            <div class="bg-slate-900/40 border border-slate-800 rounded-xl p-4 h-24 relative overflow-hidden flex flex-col justify-center">
+                                <span class="text-[10px] text-slate-400 font-semibold uppercase relative z-10">Mod Commands</span>
+                                <span id="sessStatCmds" class="text-xl font-bold text-white relative z-10">...</span>
+                                <div class="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-emerald-500/20 to-transparent"></div>
+                                <svg class="absolute bottom-0 w-full h-12" preserveAspectRatio="none" viewBox="0 0 100 100"><polyline fill="none" stroke="#10b981" stroke-width="2" points="0,100 80,100 85,20 90,100 100,100"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card p-5 rounded-2xl border border-slate-800 space-y-4">
+                        <div id="sessionStatusBox">
+                            <h3 class="text-base font-bold text-white" id="sessStatusTitle">Loading...</h3>
+                            <p class="text-xs text-slate-400 mt-1" id="sessStatusDesc">Checking session status...</p>
+                        </div>
+
+                        <div class="flex space-x-2 pt-2">
+                            <button id="btnToggleSession" onclick="toggleSessionAction()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+                                Start Session
+                            </button>
+                            <button class="bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-emerald-600/50">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                        </div>
+                        <button onclick="openCreatePollModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+                            Create Poll
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4 mt-6">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Session History</h3>
+                    <div id="sessionHistoryList" class="space-y-2">
+                        <p class="text-xs text-slate-500 text-center py-4">Loading history...</p>
+                    </div>
+                </div>
+            `;
+            fetchSessionsOverviewData();
+        }
+
+        async function fetchSessionsOverviewData() {
+            try {
+                const res = await fetch('/api/sessions/overview');
+                const data = await res.json();
+                if (data.success) {
+                    const btn = document.getElementById('btnToggleSession');
+                    const title = document.getElementById('sessStatusTitle');
+                    const desc = document.getElementById('sessStatusDesc');
+
+                    if (data.activeSession) {
+                        title.textContent = "Active session in progress";
+                        title.className = "text-base font-bold text-emerald-400";
+                        desc.textContent = "A server roleplay session is currently running.";
+                        btn.textContent = "End Session";
+                        btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg";
+                        btn.onclick = () => toggleSessionAction('END');
+                    } else {
+                        title.textContent = "No active session";
+                        title.className = "text-base font-bold text-white";
+                        desc.textContent = "Start a session or create a poll below.";
+                        btn.textContent = "Start Session";
+                        btn.className = "flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg";
+                        btn.onclick = () => toggleSessionAction('START');
+                    }
+
+                    document.getElementById('sessStatPlayers').textContent = data.analytics.uniquePlayers;
+                    document.getElementById('sessStatCalls').textContent = data.analytics.modCalls;
+                    document.getElementById('sessStatCmds').textContent = data.analytics.modCommands;
+
+                    const histContainer = document.getElementById('sessionHistoryList');
+                    if (data.history.length === 0) {
+                        histContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No past sessions.</p>`;
+                    } else {
+                        histContainer.innerHTML = data.history.map(h => {
+                            const start = new Date(h.startTime).toLocaleString([], {month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'});
+                            const end = new Date(h.endTime).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+                            return `
+                                <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center space-x-3 text-xs">
+                                    <img src="${escapeHtml(currentServerConfig.serverIcon)}" class="w-6 h-6 rounded-full border border-slate-700">
+                                    <span class="font-bold text-white">${start} - ${end}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (err) {}
+        }
+
+        async function toggleSessionAction(action) {
+            try {
+                const res = await fetch('/api/sessions/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                if (res.ok) {
+                    fetchSessionsOverviewData();
+                }
+            } catch (err) {}
+        }
+
+        function openCreatePollModal() {
+            document.getElementById('createPollModal').classList.remove('hidden');
+        }
+
+        function closeCreatePollModal() {
+            document.getElementById('createPollModal').classList.add('hidden');
+        }
+
+        async function submitSessionPoll(e) {
+            e.preventDefault();
+            const question = document.getElementById('pollQuestion').value;
+            const optionsRaw = document.getElementById('pollOptions').value;
+            const options = optionsRaw.split('\n').map(o => o.trim()).filter(o => o);
+
+            if (options.length === 0 || options.length > 9) {
+                return alert("Please provide between 1 and 9 valid poll options.");
+            }
+
+            try {
+                const res = await fetch('/api/sessions/poll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, options })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert("Poll sent to Discord successfully!");
+                    document.getElementById('pollQuestion').value = '';
+                    document.getElementById('pollOptions').value = '';
+                    closeCreatePollModal();
+                } else {
+                    alert(data.error || "Failed to send poll.");
+                }
+            } catch (err) {
+                alert("Connection error.");
+            }
+        }
+
+        // --- SESSIONS SETTINGS ---
+        async function renderSessionsSettingsTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-base font-bold text-white">Configuration</h3>
+                    <p class="text-xs text-slate-400">Configure basic session settings.</p>
+
+                    <div class="space-y-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Sessions Channel (ID)</label>
+                            <input type="text" id="setSessChannel" placeholder="e.g. 123456789012345678" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border-slate-700 text-white">
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Auto Kick While Server Is Down</span>
+                                <span class="text-[11px] text-slate-400">Non moderators will automatically be kicked while there is no active session.</span>
+                            </div>
+                            <input type="checkbox" id="setSessAutoKick" class="w-8 h-4 accent-emerald-500 cursor-pointer">
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">End Staff Shifts on Session Shutdown</span>
+                                <span class="text-[11px] text-slate-400">When the session is shutdown, all active staff shifts will end.</span>
+                            </div>
+                            <input type="checkbox" id="setSessEndShifts" class="w-8 h-4 accent-emerald-500 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-base font-bold text-white">Session Startup</h3>
+                    <p class="text-xs text-slate-400">Configure session startup settings and messages.</p>
+                    
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Customize Session Startup Message</label>
+                            <textarea id="setSessStartupMsg" rows="3" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border-slate-700"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-base font-bold text-white">Session Poll</h3>
+                    <p class="text-xs text-slate-400">Configure session poll settings and messages.</p>
+
+                    <div class="space-y-4 pt-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Default Min Votes</label>
+                            <input type="number" id="setSessMinVotes" min="1" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border-slate-700">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Customize Session Poll Message</label>
+                            <textarea id="setSessPollMsg" rows="2" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border-slate-700"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-base font-bold text-white">Server Shutdown</h3>
+                    <p class="text-xs text-slate-400">Configure settings for when the server shuts down.</p>
+
+                    <div class="space-y-4 pt-2">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Automatically End Session</span>
+                                <span class="text-[11px] text-slate-400">We will automatically end the session and post the shutdown message once the server is empty.</span>
+                            </div>
+                            <input type="checkbox" id="setSessAutoEnd" class="w-8 h-4 accent-emerald-500 cursor-pointer">
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-white block">Automatically Shutdown ER:LC Server</span>
+                                <span class="text-[11px] text-slate-400">When the session is shutdown, the bot will announce it to in-game players and kick all after 10 seconds.</span>
+                            </div>
+                            <input type="checkbox" id="setSessAutoErlc" class="w-8 h-4 accent-emerald-500 cursor-pointer">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Custom Shutdown Message (In-Game)</label>
+                            <input type="text" id="setSessIngameMsg" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border-slate-700">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="saveSessionSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save Session Settings</span>
+                    </button>
+                </div>
+            `;
+            loadSessionSettingsUI();
+        }
+
+        async function loadSessionSettingsUI() {
+            try {
+                const res = await fetch('/api/sessions/settings');
+                const data = await res.json();
+                if (data.success && data.settings) {
+                    const s = data.settings;
+                    document.getElementById('setSessChannel').value = s.sessionsChannel || '';
+                    document.getElementById('setSessAutoKick').checked = s.autoKickDown;
+                    document.getElementById('setSessEndShifts').checked = s.endShiftsOnShutdown;
+                    document.getElementById('setSessStartupMsg').value = s.startupMessage || '';
+                    document.getElementById('setSessMinVotes').value = s.pollMinVotes || 10;
+                    document.getElementById('setSessPollMsg').value = s.pollMessage || '';
+                    document.getElementById('setSessAutoEnd').checked = s.shutdownAutoEnd;
+                    document.getElementById('setSessAutoErlc').checked = s.shutdownAutoErlc;
+                    document.getElementById('setSessIngameMsg').value = s.shutdownIngameMsg || '';
+                }
+            } catch (err) {}
+        }
+
+        async function saveSessionSettings() {
+            const payload = {
+                sessionsChannel: document.getElementById('setSessChannel').value,
+                autoKickDown: document.getElementById('setSessAutoKick').checked,
+                endShiftsOnShutdown: document.getElementById('setSessEndShifts').checked,
+                startupMessage: document.getElementById('setSessStartupMsg').value,
+                pollMinVotes: document.getElementById('setSessMinVotes').value,
+                pollMessage: document.getElementById('setSessPollMsg').value,
+                shutdownAutoEnd: document.getElementById('setSessAutoEnd').checked,
+                shutdownAutoErlc: document.getElementById('setSessAutoErlc').checked,
+                shutdownIngameMsg: document.getElementById('setSessIngameMsg').value
+            };
+
+            try {
+                const res = await fetch('/api/sessions/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) alert("Session settings saved!");
+            } catch (err) { alert("Failed to save session settings."); }
+        }
+
         // --- DEPARTMENTS OVERVIEW & HUB DEPARTMENTS ---
         async function loadHubDepartments() {
             try {
@@ -1045,6 +1406,12 @@
                                 : `<button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>`)
                             : `<button disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-1.5 rounded-lg text-xs cursor-not-allowed">Role Required</button>`;
 
+                        const inviteBtn = d.discordInvite 
+                            ? `<a href="${escapeHtml(d.discordInvite)}" target="_blank" class="w-full bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/80 font-bold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                                <i class="fa-brands fa-discord"></i> Join Discord Server
+                               </a>`
+                            : '';
+
                         return `
                             <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
                                 <div class="flex justify-between items-center">
@@ -1052,7 +1419,10 @@
                                     ${verifiedBadge}
                                 </div>
                                 <p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Duty Operations</p>
-                                ${shiftBtn}
+                                <div class="space-y-1.5 pt-1">
+                                    ${shiftBtn}
+                                    ${inviteBtn}
+                                </div>
                             </div>
                         `;
                     }).join('');
@@ -1122,7 +1492,7 @@
 
                                 <div class="flex items-center space-x-2">
                                     ${toggleBtn}
-                                    <button onclick="openEditDepartmentModal('${dept.id}', '${escapeHtml(dept.name)}', '${escapeHtml(dept.description)}', '${escapeHtml(dept.webhookUrl)}', ${dept.autoClockOutHours}, ${dept.inGameReq})" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                                    <button onclick="openEditDepartmentModal('${dept.id}', '${escapeHtml(dept.name)}', '${escapeHtml(dept.description)}', '${escapeHtml(dept.webhookUrl)}', '${escapeHtml(dept.discordInvite)}', ${dept.autoClockOutHours}, ${dept.inGameReq})" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1">
                                         <i class="fa-solid fa-pen-to-square"></i> Open
                                     </button>
                                 </div>
@@ -1133,11 +1503,12 @@
             } catch (err) {}
         }
 
-        function openEditDepartmentModal(id, name, desc, webhook, autoOut, inGame) {
+        function openEditDepartmentModal(id, name, desc, webhook, invite, autoOut, inGame) {
             document.getElementById('editDeptId').value = id;
             document.getElementById('editDeptTitle').textContent = `Edit ${name}`;
             document.getElementById('editDeptDesc').value = desc;
             document.getElementById('editDeptWebhook').value = webhook;
+            document.getElementById('editDeptInvite').value = invite || '';
             document.getElementById('editDeptAutoOut').value = autoOut;
             document.getElementById('editDeptInGameReq').checked = inGame;
             document.getElementById('editDepartmentModal').classList.remove('hidden');
@@ -1154,6 +1525,7 @@
                 deptId,
                 description: document.getElementById('editDeptDesc').value,
                 webhookUrl: document.getElementById('editDeptWebhook').value,
+                discordInvite: document.getElementById('editDeptInvite').value,
                 autoClockOutHours: document.getElementById('editDeptAutoOut').value,
                 inGameReq: document.getElementById('editDeptInGameReq').checked
             };
@@ -1168,6 +1540,7 @@
                     alert('Department settings saved!');
                     closeEditDepartmentModal();
                     renderDepartmentsOverviewTab();
+                    loadHubDepartments();
                 }
             } catch (err) { alert('Error saving department.'); }
         }
@@ -1181,634 +1554,6 @@
                 });
                 if (res.ok) renderDepartmentsOverviewTab();
             } catch (err) {}
-        }
-
-        // --- MEMBERS TAB ---
-        async function renderMembersListTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-users text-emerald-400"></i> Official Staff Directory
-                        </h3>
-                        <span id="sdStaffCount" class="text-xs text-slate-400 font-semibold">Loading...</span>
-                    </div>
-                    <div id="sdStaffListContainer" class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                        <p class="text-xs text-slate-500 text-center py-4">Fetching staff list...</p>
-                    </div>
-                </div>
-            `;
-
-            try {
-                const res = await fetch('/api/members');
-                const data = await res.json();
-                const listContainer = document.getElementById('sdStaffListContainer');
-                const countLabel = document.getElementById('sdStaffCount');
-
-                if (data.success && Array.isArray(data.members)) {
-                    countLabel.textContent = `${data.members.length} Staff Members`;
-
-                    if (data.members.length === 0) {
-                        listContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No staff members found.</p>`;
-                        return;
-                    }
-
-                    listContainer.innerHTML = data.members.map(member => `
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3">
-                                <img src="${escapeHtml(member.avatarUrl)}" alt="Avatar" class="w-9 h-9 rounded-full border border-slate-700 object-cover">
-                                <div>
-                                    <span class="font-bold text-white block">${escapeHtml(member.displayName)}</span>
-                                    <span class="text-[10px] text-slate-400">@${escapeHtml(member.username)}</span>
-                                </div>
-                            </div>
-                            <span class="text-[11px] px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-semibold">
-                                ${escapeHtml(member.roleName)}
-                            </span>
-                        </div>
-                    `).join('');
-                } else {
-                    listContainer.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Failed to load staff list.</p>`;
-                }
-            } catch (err) {
-                const listContainer = document.getElementById('sdStaffListContainer');
-                if (listContainer) listContainer.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Connection error fetching members.</p>`;
-            }
-        }
-
-        // --- 1. ACTIVITY WAVES TAB ---
-        async function renderActivityWavesTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <h3 class="text-sm font-bold text-white">Wave Duration</h3>
-                    <p class="text-xs text-slate-400">Configure how long activity waves should last</p>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Duration Type</label>
-                        <select class="w-full rounded-xl px-3 py-2 text-xs">
-                            <option value="">Select a duration type</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="biweekly">Bi-weekly</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <h3 class="text-sm font-bold text-white">Hour Requirements</h3>
-                    <p class="text-xs text-slate-400">Set the required hours moderators must meet</p>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Required Hours</label>
-                        <input type="number" placeholder="What is the hour requirement moderators must meet per activity wave?" class="w-full rounded-xl px-3 py-2 text-xs">
-                    </div>
-                    <button onclick="openCustomReqModal()" class="bg-emerald-950/80 text-emerald-400 border border-emerald-800 hover:bg-emerald-900/80 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
-                        <i class="fa-solid fa-sliders"></i> Manage Custom Activity Requirements
-                    </button>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <h3 class="text-sm font-bold text-white">Inactivity Settings</h3>
-                    <p class="text-xs text-slate-400">Configure when members should be flagged as inactive</p>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Inactivity Flag Period</label>
-                        <input type="number" placeholder="How many days should it take for a user to be flagged as inactive?" class="w-full rounded-xl px-3 py-2 text-xs">
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Activity Waves</h3>
-                    <p class="text-xs text-slate-400">View and manage your activity waves</p>
-
-                    <div id="wavesTableContainer" class="space-y-3">
-                        <p class="text-xs text-slate-500 py-2">Loading waves...</p>
-                    </div>
-                </div>
-            `;
-
-            try {
-                const res = await fetch('/api/activity/waves');
-                const data = await res.json();
-                const wavesContainer = document.getElementById('wavesTableContainer');
-
-                if (data.success && data.waves) {
-                    wavesContainer.innerHTML = data.waves.map(wave => `
-                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden text-xs">
-                            <div class="p-3 flex justify-between items-center bg-slate-950/50 cursor-pointer" onclick="toggleWaveDetails('${wave.id}')">
-                                <div class="flex items-center space-x-4">
-                                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
-                                    <span class="font-bold text-white">#${wave.number} <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">ACTIVE</span></span>
-                                    <span class="text-slate-400">${wave.startDate}</span>
-                                </div>
-                                <div class="flex space-x-8 text-right">
-                                    <span>Shifts: <strong class="text-white">${wave.totalShifts}</strong></span>
-                                    <span>Online Time: <strong class="text-emerald-400">${wave.onlineTimeFormatted}</strong></span>
-                                </div>
-                            </div>
-                            <div id="waveDetails_${wave.id}" class="p-4 border-t border-slate-800/80 space-y-3 bg-slate-900/40">
-                                <span class="font-bold text-white text-xs block">Current Stats</span>
-                                <ul class="list-disc list-inside text-slate-400 space-y-1 text-xs">
-                                    <li>${wave.totalShifts} shifts</li>
-                                    <li>${wave.onlineTimeFormatted} of online time</li>
-                                    <li>${wave.breakTimeFormatted} of break time</li>
-                                </ul>
-                                <p class="text-[11px] text-slate-500">Activity wave does not automatically end</p>
-                                <div class="flex space-x-2 pt-1">
-                                    <button onclick="alert('Wave ended')" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 px-3 py-1.5 rounded-lg font-bold">End Wave</button>
-                                    <button onclick="alert('Wave deleted')" class="bg-rose-950/50 hover:bg-rose-900/50 text-rose-400 border border-rose-900 px-3 py-1.5 rounded-lg font-bold">Delete Wave</button>
-                                    <button onclick="alert('Set end date')" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-1.5 rounded-lg font-bold">Set End Date</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
-
-        function toggleWaveDetails(waveId) {
-            const el = document.getElementById(`waveDetails_${waveId}`);
-            if (el) el.classList.toggle('hidden');
-        }
-
-        async function openCustomReqModal() {
-            const modal = document.getElementById('customReqModal');
-            const list = document.getElementById('customReqList');
-            modal.classList.remove('hidden');
-
-            try {
-                const res = await fetch('/api/activity/custom-requirements');
-                const data = await res.json();
-
-                if (data.success && data.roles) {
-                    list.innerHTML = data.roles.map(r => `
-                        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
-                            <span class="font-bold text-white">${escapeHtml(r.name)}</span>
-                            <input type="number" id="req_role_${r.id}" value="${r.requiredHours}" min="0" class="w-20 rounded-lg px-2 py-1 text-xs text-right">
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {
-                list.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Failed to load roles.</p>`;
-            }
-        }
-
-        function closeCustomReqModal() {
-            document.getElementById('customReqModal').classList.add('hidden');
-        }
-
-        async function saveCustomActivityRequirements() {
-            const requirements = {};
-            document.querySelectorAll('[id^="req_role_"]').forEach(input => {
-                const roleId = input.id.replace('req_role_', '');
-                requirements[roleId] = input.value;
-            });
-
-            try {
-                const res = await fetch('/api/activity/custom-requirements', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ requirements })
-                });
-                if (res.ok) {
-                    alert('Custom activity requirements saved successfully!');
-                    closeCustomReqModal();
-                }
-            } catch (err) {
-                alert('Error saving custom activity requirements.');
-            }
-        }
-
-        // --- 2. SHIFTS TAB ---
-        async function renderActivityShiftsTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Shift Settings</h3>
-                    <p class="text-xs text-slate-400">Configure shift logging and restrictions</p>
-
-                    <div class="space-y-3">
-                        <div class="flex items-center space-x-3">
-                            <input type="checkbox" id="shiftLoggingToggle" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
-                            <div>
-                                <label class="text-xs font-bold text-white block">Shift Logging</label>
-                                <span class="text-[11px] text-slate-400 block">Members must be on shift in order to log punishments. Server Administrators bypass this restriction.</span>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center space-x-3">
-                            <input type="checkbox" id="inGameReqToggle" checked class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
-                            <div>
-                                <label class="text-xs font-bold text-white block">In-game Requirement</label>
-                                <span class="text-[11px] text-slate-400 block">Members must be in game in order to start their shift. Requires Roblox Account Connection.</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Minimum Playercount</label>
-                            <input type="number" id="shiftMinPlayers" value="2" class="w-full rounded-xl px-3 py-2 text-xs">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Max On Shift</label>
-                            <input type="number" id="shiftMaxOnShift" placeholder="How many people should be allowed on shift at once?" class="w-full rounded-xl px-3 py-2 text-xs">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <h3 class="text-sm font-bold text-white">Shift Types</h3>
-                    <button onclick="alert('Manage Shift Types')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-700">
-                        Manage Shift Types
-                    </button>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h3 class="text-sm font-bold text-white">Shift Overview</h3>
-                            <p class="text-xs text-slate-400">View and manage shifts for each activity wave</p>
-                        </div>
-                        <button onclick="alert('Create Shift Modal')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-lg flex items-center gap-1.5">
-                            <i class="fa-solid fa-plus"></i> Create Shift
-                        </button>
-                    </div>
-
-                    <div id="shiftsOverviewTable" class="space-y-2 pt-2">
-                        <p class="text-xs text-slate-500 text-center py-4">No logged shifts yet.</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        // --- 3. MEMBER ACTIVITY VIEWER TAB ---
-        async function renderMemberActivityTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Member Activity Viewer</h3>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Member</label>
-                        <select id="memberActivityUserSelect" class="w-full rounded-xl px-3 py-2 text-xs">
-                            <option value="">Select member</option>
-                        </select>
-                    </div>
-                </div>
-            `;
-            loadStaffDropdownForActivity();
-        }
-
-        async function loadStaffDropdownForActivity() {
-            try {
-                const res = await fetch('/api/members');
-                const data = await res.json();
-                const select = document.getElementById('memberActivityUserSelect');
-
-                if (data.success && data.members && select) {
-                    select.innerHTML = `<option value="">Select member</option>` + data.members.map(m => `
-                        <option value="${m.id}">${escapeHtml(m.displayName)} (@${escapeHtml(m.username)})</option>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
-
-        // --- 4. ACTIVITY LEADERBOARD TAB ---
-        async function renderActivityLeaderboardTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Activity Leaderboard</h3>
-                    <div id="leaderboardTableContainer" class="space-y-2 pt-2">
-                        <p class="text-xs text-slate-500 text-center py-4">No activity recorded for this wave.</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        // --- INFRACTIONS: MEMBERS TAB ---
-        async function renderInfractionsMembersTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions
-                        </h3>
-                        <span id="infStaffCount" class="text-xs text-slate-400 font-semibold">Loading...</span>
-                    </div>
-
-                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1">
-                        <p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p>
-                    </div>
-                </div>
-            `;
-
-            try {
-                const res = await fetch('/api/members');
-                const data = await res.json();
-                const list = document.getElementById('infStaffList');
-                const count = document.getElementById('infStaffCount');
-
-                if (data.success && data.members) {
-                    count.textContent = `${data.members.length} Staff Members`;
-
-                    list.innerHTML = data.members.map(m => `
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3">
-                                <img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover" alt="Avatar">
-                                <div>
-                                    <span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span>
-                                    <span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center space-x-3">
-                                <span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">
-                                    ${m.activeStrikes || 0} Active Strikes
-                                </span>
-                                <button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">
-                                    Issue Infraction
-                                </button>
-                                <button onclick="openPromoteStaffModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-lg font-bold transition">
-                                    Promote / Rank
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
-
-        async function openIssueInfractionModal(userId, displayName) {
-            document.getElementById('infractionTargetUserId').value = userId;
-            document.getElementById('infractionTargetUser').value = displayName;
-            
-            const select = document.getElementById('infractionLevelSelect');
-            try {
-                const res = await fetch('/api/infractions/levels');
-                const data = await res.json();
-                if (data.success && data.levels) {
-                    select.innerHTML = data.levels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
-                }
-            } catch (err) {}
-
-            document.getElementById('issueInfractionModal').classList.remove('hidden');
-        }
-
-        function closeIssueInfractionModal() {
-            document.getElementById('issueInfractionModal').classList.add('hidden');
-        }
-
-        async function submitStaffInfraction(e) {
-            e.preventDefault();
-            const payload = {
-                targetUserId: document.getElementById('infractionTargetUserId').value,
-                targetUser: document.getElementById('infractionTargetUser').value,
-                level: document.getElementById('infractionLevelSelect').value,
-                reason: document.getElementById('infractionReasonText').value,
-                proof: document.getElementById('infractionProofText').value
-            };
-
-            try {
-                const res = await fetch('/api/infractions/issue', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    alert('Staff Infraction Issued Successfully!');
-                    closeIssueInfractionModal();
-                    renderInfractionsMembersTab();
-                }
-            } catch (err) { alert('Error issuing infraction.'); }
-        }
-
-        function openPromoteStaffModal(userId, displayName) {
-            document.getElementById('promoteTargetUserId').value = userId;
-            document.getElementById('promoteTargetUser').value = displayName;
-            document.getElementById('promoteStaffModal').classList.remove('hidden');
-        }
-
-        function closePromoteStaffModal() {
-            document.getElementById('promoteStaffModal').classList.add('hidden');
-        }
-
-        async function submitStaffPromotion(e) {
-            e.preventDefault();
-            const payload = {
-                targetUserId: document.getElementById('promoteTargetUserId').value,
-                targetUser: document.getElementById('promoteTargetUser').value,
-                newRole: document.getElementById('promoteNewRole').value,
-                reason: document.getElementById('promoteReason').value
-            };
-
-            try {
-                const res = await fetch('/api/infractions/promote', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    alert('Staff Rank Updated Successfully!');
-                    closePromoteStaffModal();
-                }
-            } catch (err) { alert('Error processing promotion.'); }
-        }
-
-        // --- INFRACTIONS: SETTINGS TAB ---
-        async function renderInfractionsSettingsTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
-                    <p class="text-xs text-slate-400">Add or remove infraction level tags used in the staff moderation system.</p>
-
-                    <div class="flex space-x-2">
-                        <input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level (e.g., Notice, Strike 1)..." class="flex-1 rounded-xl px-3 py-2 text-xs">
-                        <button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
-                            + Add Level
-                        </button>
-                    </div>
-
-                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-                        <p class="text-xs text-slate-500">Loading levels...</p>
-                    </div>
-                </div>
-            `;
-
-            loadInfractionLevelsUI();
-        }
-
-        async function loadInfractionLevelsUI() {
-            try {
-                const res = await fetch('/api/infractions/levels');
-                const data = await res.json();
-                const container = document.getElementById('infractionLevelsContainer');
-
-                if (data.success && data.levels) {
-                    container.innerHTML = data.levels.map((level, idx) => `
-                        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
-                            <span class="font-bold text-white">${escapeHtml(level)}</span>
-                            <button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
-
-        async function addCustomInfractionLevel() {
-            const input = document.getElementById('inputNewInfractionLevel');
-            const name = input.value.trim();
-            if (!name) return alert("Please enter a valid level name.");
-
-            try {
-                const res = await fetch('/api/infractions/levels/add', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                });
-                if (res.ok) {
-                    input.value = '';
-                    loadInfractionLevelsUI();
-                }
-            } catch (err) {}
-        }
-
-        async function removeCustomInfractionLevel(index) {
-            try {
-                const res = await fetch('/api/infractions/levels/remove', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index })
-                });
-                if (res.ok) loadInfractionLevelsUI();
-            } catch (err) {}
-        }
-
-        // --- GENERAL & PANEL RENDERING ---
-        function renderGeneralTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Server Name</h3>
-                        <p class="text-xs text-slate-400">The name of your server displayed throughout the hub.</p>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Name *</label>
-                        <input type="text" id="inputServerName" value="${escapeHtml(currentServerConfig.serverName)}" class="w-full rounded-xl px-3 py-2 text-xs">
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Server Icon</h3>
-                        <p class="text-xs text-slate-400">The icon image of your server displayed throughout the hub.</p>
-                    </div>
-                    <div class="flex items-center space-x-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                        <img src="${escapeHtml(currentServerConfig.serverIcon)}" class="w-10 h-10 rounded-xl object-cover border border-slate-700" alt="Server Preview">
-                        <span class="text-xs font-bold text-white">${escapeHtml(currentServerConfig.serverName)}</span>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Icon Image URL</label>
-                        <input type="text" id="inputServerIcon" value="${escapeHtml(currentServerConfig.serverIcon)}" placeholder="https://..." class="w-full rounded-xl px-3 py-2 text-xs">
-                    </div>
-                </div>
-
-                <div class="flex justify-end">
-                    <button onclick="saveGeneralSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Save General Settings</span>
-                    </button>
-                </div>
-            `;
-        }
-
-        function renderPanelTab() {
-            const autoBanChecked = currentServerConfig.autoBanBolo ? 'checked' : '';
-            const userSeeLogsChecked = currentServerConfig.userSeeLogs ? 'checked' : '';
-            const presetsList = currentServerConfig.punishmentPresets || ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"];
-
-            const presetsChipsHTML = presetsList.map((preset, index) => `
-                <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
-                    <span class="font-bold text-white">${escapeHtml(preset)}</span>
-                    <button onclick="removePunishmentPreset(${index})" class="text-rose-400 hover:text-rose-300 transition text-xs">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </div>
-            `).join('');
-
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Moderator Panel Access</h3>
-                    <div class="flex items-center space-x-3">
-                        <button onclick="attemptModPanelAccess()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            <span>Open Moderator Panel</span>
-                        </button>
-                        <button onclick="copyPanelLink()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-slate-700">
-                            <i class="fa-solid fa-copy mr-1"></i> Copy Link
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Punishment Presets</h3>
-                    <div class="flex space-x-2">
-                        <input type="text" id="inputNewPreset" placeholder="Enter new punishment type..." class="flex-1 rounded-xl px-3 py-2 text-xs">
-                        <button onclick="addPunishmentPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">Add Preset</button>
-                    </div>
-                    <div id="presetsListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-                        ${presetsChipsHTML}
-                    </div>
-                </div>
-            `;
-        }
-
-        function addPunishmentPreset() {
-            const input = document.getElementById('inputNewPreset');
-            const val = input.value.trim();
-            if (!val) return alert("Please enter a valid punishment preset name.");
-            if (!currentServerConfig.punishmentPresets) currentServerConfig.punishmentPresets = [];
-            if (currentServerConfig.punishmentPresets.includes(val)) return alert("Preset already exists.");
-
-            currentServerConfig.punishmentPresets.push(val);
-            input.value = '';
-            renderPanelTab();
-        }
-
-        function removePunishmentPreset(index) {
-            if (!currentServerConfig.punishmentPresets) return;
-            currentServerConfig.punishmentPresets.splice(index, 1);
-            renderPanelTab();
-        }
-
-        async function saveGeneralSettings() {
-            const serverName = document.getElementById('inputServerName').value.trim();
-            const serverIcon = document.getElementById('inputServerIcon').value.trim();
-            if (!serverName) return alert("Server Name cannot be empty.");
-
-            try {
-                const res = await fetch('/api/settings/general', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serverName, serverIcon })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    currentServerConfig = data.config;
-                    applyServerBranding();
-                    alert("General server settings saved!");
-                }
-            } catch (err) { alert("Connection error."); }
-        }
-
-        function copyPanelLink() {
-            navigator.clipboard.writeText(window.location.origin);
-            alert("Moderator Panel link copied to clipboard!");
         }
 
         // --- AUTH & POLLING LOOP ---
@@ -2036,6 +1781,7 @@
                     fetchGeneralSettings();
                     loadNotifications();
                     loadHubDepartments();
+                    loadActiveShifts();
                 } else if (data.discordConnected) {
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
@@ -2047,9 +1793,303 @@
             } catch (err) {}
         }
 
+        setInterval(checkAuth, 4000);
+
+        function toggleSection(secId, isChecked) {
+            const el = document.getElementById(secId);
+            if (el) el.classList.toggle('hidden', !isChecked);
+        }
+
+        async function loadActiveShifts() {
+            try {
+                const res = await fetch('/api/shifts/active');
+                const data = await res.json();
+                const container = document.getElementById('activeShiftsList');
+
+                if (data.success && data.activeShifts.length > 0) {
+                    container.innerHTML = '';
+                    let userIsOnShift = false;
+
+                    data.activeShifts.forEach(s => {
+                        if (s.userId === currentUserId) userIsOnShift = true;
+                        const endShiftBtn = (data.isManager || s.userId === currentUserId)
+                            ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>`
+                            : '';
+
+                        container.innerHTML += `
+                            <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                                    <div>
+                                        <span class="font-bold text-white block text-[11px]">${escapeHtml(s.robloxName)}</span>
+                                        <span class="text-[9px] text-slate-400 block">${escapeHtml(s.department)} &bull; <strong class="text-emerald-400">${s.duration}</strong></span>
+                                    </div>
+                                </div>
+                                ${endShiftBtn}
+                            </div>
+                        `;
+                    });
+
+                    if (userIsOnShift) {
+                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.add('hidden');
+                        document.getElementById('btnEndShift').classList.remove('hidden');
+                    } else {
+                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
+                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
+                        document.getElementById('btnStartShift').classList.remove('hidden');
+                        document.getElementById('btnEndShift').classList.add('hidden');
+                    }
+                } else {
+                    container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
+                }
+            } catch (err) {}
+        }
+
+        async function forceEndShift(targetUserId) {
+            if (!confirm("End this staff member's shift?")) return;
+            try {
+                const res = await fetch('/api/shifts/force-end', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetUserId })
+                });
+                if (res.ok) loadActiveShifts();
+            } catch (err) {}
+        }
+
+        async function loadServerInfo() {
+            try {
+                const res = await fetch('/api/erlc/server-info');
+                const data = await res.json();
+                if (data.success) {
+                    cachedPlayers = data.players || [];
+                    const pContainer = document.getElementById('livePlayersList');
+                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.length} Players`;
+
+                    if (cachedPlayers.length > 0) {
+                        pContainer.innerHTML = cachedPlayers.map(p => {
+                            const parsed = parseErlcPlayer(p);
+                            return `
+                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                                        <span class="font-bold text-white">${escapeHtml(parsed.username)}</span>
+                                    </div>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">In Discord</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (err) {}
+        }
+
+        async function fetchActivityFeed() {
+            try {
+                const res = await fetch('/api/erlc/activity');
+                const data = await res.json();
+                const container = document.getElementById('activityContainer');
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = data.logs.slice(0, 10).map(log => `
+                        <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs flex items-center space-x-2">
+                            <i class="fa-solid fa-terminal text-pink-400 text-xs"></i>
+                            <span class="text-slate-300"><strong class="text-white">${escapeHtml(log.Player || 'Server')}:</strong> ${escapeHtml(log.Command || 'Executed action')}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        function parseErlcPlayer(p) {
+            let rawName = p.Player || p.Name || p.username || '';
+            let rawId = p.UserId || p.id || '';
+            let cleanUsername = rawName;
+            let cleanRobloxId = '';
+
+            if (rawName.includes(':')) {
+                const parts = rawName.split(':');
+                cleanUsername = parts[0].trim();
+                cleanRobloxId = parts[1].trim();
+            } else if (rawId && !isNaN(rawId)) {
+                cleanRobloxId = String(rawId).trim();
+            }
+            return { username: cleanUsername, robloxId: cleanRobloxId };
+        }
+
+        function handlePlayerSearch(query) {
+            const dropdown = document.getElementById('playerSearchDropdown');
+            if (!query.trim()) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+            const matches = cachedPlayers.filter(p => {
+                const parsed = parseErlcPlayer(p);
+                return parsed.username.toLowerCase().includes(query.toLowerCase());
+            });
+
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching in-game players found</div>`;
+            } else {
+                dropdown.innerHTML = matches.map(p => {
+                    const parsed = parseErlcPlayer(p);
+                    return `
+                        <div onclick="selectPlayer('${escapeHtml(parsed.username)}', '${escapeHtml(parsed.robloxId)}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
+                            <span class="text-xs font-bold text-white">${escapeHtml(parsed.username)}</span>
+                            <span class="text-[10px] text-slate-400">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectPlayer(name, id) {
+            document.getElementById('targetUser').value = name;
+            document.getElementById('playerSearchDropdown').classList.add('hidden');
+            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
+        }
+
+        async function autoFetchRobloxId(username) {
+            if (!username.trim() || document.getElementById('robloxId').value) return;
+            const spinner = document.getElementById('idLoadingSpinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false })
+                });
+                const data = await res.json();
+                if (data.data && data.data.length > 0) {
+                    document.getElementById('robloxId').value = data.data[0].id;
+                }
+            } catch (err) {
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function requestHigherUpAssistance() {
+            const reason = prompt("Enter reason for higher-up assistance:");
+            if (!reason) return;
+            try {
+                await fetch('/api/assistance/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                alert("Assistance requested!");
+            } catch (err) {}
+        }
+
         async function logout() {
             await fetch('/api/auth/logout');
             window.location.href = '/';
+        }
+
+        async function toggleShift(action) {
+            try {
+                const res = await fetch('/api/shifts/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, department: 'Staff Moderation' })
+                });
+                if (res.ok) loadActiveShifts();
+            } catch (err) {}
+        }
+
+        async function sendErlcCommand() {
+            const command = document.getElementById('erlcCmdInput').value.trim();
+            if (!command) return;
+            try {
+                const res = await fetch('/api/erlc/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(`Command executed: ${command}`);
+                    document.getElementById('erlcCmdInput').value = '';
+                }
+            } catch (err) {}
+        }
+
+        async function submitInfraction(e) {
+            e.preventDefault();
+            const payload = {
+                targetUser: document.getElementById('targetUser').value,
+                robloxId: document.getElementById('robloxId').value,
+                punishmentType: document.getElementById('punishmentType').value,
+                reason: document.getElementById('infractionReason').value
+            };
+
+            try {
+                const res = await fetch('/api/punishments/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    alert('Punishment Logged!');
+                    document.getElementById('targetUser').value = '';
+                    document.getElementById('robloxId').value = '';
+                    document.getElementById('infractionReason').value = '';
+                    loadLogs();
+                }
+            } catch (err) {}
+        }
+
+        async function removeWarning(logId) {
+            if (!confirm("Remove this log entry?")) return;
+            try {
+                const res = await fetch('/api/punishments/remove-warning', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logId })
+                });
+                if (res.ok) loadLogs();
+            } catch (err) {}
+        }
+
+        async function loadLogs() {
+            try {
+                const res = await fetch('/api/punishments/list');
+                const data = await res.json();
+                const container = document.getElementById('logsContainer');
+
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = data.logs.map(log => {
+                        const isRemoved = log.removed ? 'opacity-50 line-through' : '';
+                        const removeBtn = !log.removed 
+                            ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">Remove</button>`
+                            : `<span class="text-[10px] text-rose-400 font-semibold">[Removed]</span>`;
+
+                        const typeBadgeColor = log.punishmentType === 'Ban BOLO' 
+                            ? 'bg-rose-950 text-rose-300 border-rose-800' 
+                            : 'bg-blue-950 text-blue-400 border-blue-800';
+
+                        return `
+                            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-bold text-white text-xs">${escapeHtml(log.targetUser)}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded border ${typeBadgeColor}">${escapeHtml(log.punishmentType)}</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400"><strong>ID:</strong> ${escapeHtml(log.robloxId)} | <strong>Reason:</strong> ${escapeHtml(log.reason)}</p>
+                                <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
+                                    <span>By: ${escapeHtml(log.staffName)}</span>
+                                    ${removeBtn}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = `<p class="text-xs text-slate-500">No punishments logged yet.</p>`;
+                }
+            } catch (err) {}
         }
 
         document.addEventListener('DOMContentLoaded', checkAuth);
