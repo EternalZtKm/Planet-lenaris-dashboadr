@@ -15,8 +15,9 @@ const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
 const REQUIRED_ROLE_ID = "1427083014147407995"; // Staff Role
-const REVIEW_CHANNEL_ID = "1424047205517492375"; // Channel restricted for /review
+const REVIEW_CHANNEL_ID = "1424047205517492375"; // Channel locked for /review
 const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.onrender.com/api/auth/discord/callback";
 
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
@@ -31,7 +32,7 @@ const SUPPORT_ROLE_IDS = [
     "1425618454337028116"
 ];
 
-// Staff Hierarchy Role IDs (Least to Greatest)
+// Staff Hierarchy Role IDs (Least to Greatest Authority)
 const STAFF_ROLE_IDS_ASC = [
     "1425619421719695500", "1425619419081474079", "1425619416229613578", "1425619413566095493",
     "1425619286864695306", "1425617466092032112", "1425617463051030578", "1425617456432414781",
@@ -68,7 +69,7 @@ let serverConfig = {
     punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
 };
 
-// Distinct Webhook Config
+// Webhook Configuration
 let botConfig = {
     shiftWebhook: process.env.SHIFT_WEBHOOK || "",
     punishmentWebhook: process.env.PUNISHMENT_WEBHOOK || "",
@@ -95,7 +96,6 @@ CUSTOM_ACTIVITY_ROLE_IDS.forEach(id => { customActivityRequirements[id] = 0; });
 let staffInfractionLevels = ["Notice", "Warning", "Strike 1", "Strike 2", "Demotion", "Termination"];
 let staffInfractionLogs = [];
 let staffPromotionLogs = [];
-
 let notificationsList = [];
 
 function addNotification(title, message) {
@@ -167,7 +167,7 @@ async function verifyUserRoleLive(userId) {
     }
 }
 
-// Middleware
+// Middleware Guards
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized" });
     const check = await verifyUserRoleLive(req.session.user.id);
@@ -192,7 +192,7 @@ app.get('/api/auth/discord/login', (req, res) => {
 
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
-    if (!code) return res.redirect('/?auth=failed&reason=NoCode');
+    if (!code) return res.redirect('/?auth=failed');
 
     try {
         const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
@@ -299,7 +299,7 @@ app.get('/api/members', async (req, res) => {
     }
 });
 
-// --- ACTIVITY ENDPOINTS ---
+// --- ACTIVITY & SHIFTS ENDPOINTS ---
 app.get('/api/activity/waves', (req, res) => {
     const enriched = activityWaves.map(wave => {
         const waveShifts = completedShifts.filter(s => s.waveId === wave.id);
@@ -338,6 +338,56 @@ app.post('/api/activity/custom-requirements', requireManagerAuth, (req, res) => 
     res.status(400).json({ success: false });
 });
 
+app.get('/api/shifts/active', requireStaffAuth, (req, res) => {
+    const formatted = activeShifts.map(s => {
+        const durationMs = Date.now() - s.startTime;
+        const totalMins = Math.floor(durationMs / 60000);
+        return { ...s, duration: `${Math.floor(totalMins / 60)}h ${totalMins % 60}m` };
+    });
+    res.json({ success: true, activeShifts: formatted, isManager: req.session.user.isManager });
+});
+
+app.post('/api/shifts/toggle', requireStaffAuth, async (req, res) => {
+    const { action, department } = req.body || {};
+    const discordUser = req.session.user;
+
+    if (action === 'CLOCK_IN') {
+        activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
+        activeShifts.push({
+            userId: discordUser.id,
+            username: discordUser.username,
+            robloxName: discordUser.displayName || discordUser.username,
+            avatar: discordUser.avatar,
+            startTime: Date.now(),
+            department: department || "General Staff"
+        });
+    } else {
+        const existing = activeShifts.find(s => s.userId === discordUser.id);
+        if (existing) {
+            completedShifts.unshift({
+                id: `shift_${Date.now()}`,
+                userId: discordUser.id,
+                username: discordUser.username,
+                displayName: discordUser.displayName,
+                avatarUrl: discordUser.avatar,
+                startTime: existing.startTime,
+                endTime: Date.now(),
+                durationMinutes: Math.floor((Date.now() - existing.startTime) / 60000),
+                shiftType: "Default",
+                waveId: "wave_1"
+            });
+        }
+        activeShifts = activeShifts.filter(s => s.userId !== discordUser.id);
+    }
+    res.json({ success: true });
+});
+
+app.post('/api/shifts/force-end', requireManagerAuth, (req, res) => {
+    const { targetUserId } = req.body || {};
+    activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
+    res.json({ success: true });
+});
+
 // --- INFRACTIONS & PROMOTIONS ENDPOINTS ---
 app.get('/api/infractions/levels', (req, res) => {
     res.json({ success: true, levels: staffInfractionLevels });
@@ -345,17 +395,13 @@ app.get('/api/infractions/levels', (req, res) => {
 
 app.post('/api/infractions/levels/add', requireManagerAuth, (req, res) => {
     const { name } = req.body || {};
-    if (name && !staffInfractionLevels.includes(name.trim())) {
-        staffInfractionLevels.push(name.trim());
-    }
+    if (name && !staffInfractionLevels.includes(name.trim())) staffInfractionLevels.push(name.trim());
     res.json({ success: true, levels: staffInfractionLevels });
 });
 
 app.post('/api/infractions/levels/remove', requireManagerAuth, (req, res) => {
     const { index } = req.body || {};
-    if (index !== undefined && staffInfractionLevels[index]) {
-        staffInfractionLevels.splice(index, 1);
-    }
+    if (index !== undefined && staffInfractionLevels[index]) staffInfractionLevels.splice(index, 1);
     res.json({ success: true, levels: staffInfractionLevels });
 });
 
@@ -375,7 +421,6 @@ app.post('/api/infractions/issue', requireManagerAuth, async (req, res) => {
     };
 
     staffInfractionLogs.unshift(log);
-    addNotification("Infraction Issued", `${level} issued to ${targetUser}.`);
 
     sendDiscordLog(botConfig.infractionWebhook, {
         title: `⚠️ Staff Infraction Issued: ${level}`,
@@ -408,7 +453,6 @@ app.post('/api/infractions/promote', requireManagerAuth, async (req, res) => {
     };
 
     staffPromotionLogs.unshift(log);
-    addNotification("Promotion Logged", `${targetUser} promoted to ${newRole}.`);
 
     sendDiscordLog(botConfig.promotionWebhook, {
         title: `🎉 Staff Promotion / Rank Update`,
@@ -464,7 +508,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- DISCORD BOT BOT INITIALIZATION & COMMANDS ---
+// --- DISCORD BOT BOT INITIALIZATION & FULL COMMAND REGISTRATION ---
 let discordClient;
 
 if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
@@ -472,7 +516,9 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
         intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
     });
 
+    // ALL DASHBOARD & MODERATOR SLASH COMMANDS
     const commands = [
+        // --- 1. MODERATOR PANEL COMMANDS (STAFF ROLE REQUIRED) ---
         new SlashCommandBuilder()
             .setName('review')
             .setDescription('Submit an official staff member review')
@@ -492,6 +538,42 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             .addStringOption(opt => opt.setName('note').setDescription('Your review note/feedback').setRequired(true)),
 
         new SlashCommandBuilder()
+            .setName('shift')
+            .setDescription('Clock in or clock out of a staff shift')
+            .addStringOption(opt => 
+                opt.setName('action')
+                   .setDescription('Clock In or Clock Out')
+                   .setRequired(true)
+                   .addChoices(
+                       { name: 'Clock In', value: 'CLOCK_IN' },
+                       { name: 'Clock Out', value: 'CLOCK_OUT' }
+                   )
+            ),
+
+        new SlashCommandBuilder()
+            .setName('active-shifts')
+            .setDescription('View all staff members currently on shift'),
+
+        new SlashCommandBuilder()
+            .setName('erlc-command')
+            .setDescription('Execute an in-game command (e.g. :pm, :kick, :ban)')
+            .addStringOption(opt => opt.setName('command').setDescription('The exact in-game command text').setRequired(true)),
+
+        new SlashCommandBuilder()
+            .setName('log-punishment')
+            .setDescription('Log an in-game player punishment')
+            .addStringOption(opt => opt.setName('player').setDescription('Target player username').setRequired(true))
+            .addStringOption(opt => opt.setName('type').setDescription('Type of punishment (Warning, Kick, Ban, Ban BOLO)').setRequired(true))
+            .addStringOption(opt => opt.setName('reason').setDescription('Reason for punishment').setRequired(true))
+            .addStringOption(opt => opt.setName('roblox_id').setDescription('Roblox player User ID').setRequired(false)),
+
+        new SlashCommandBuilder()
+            .setName('assistance')
+            .setDescription('Request higher-up staff assistance')
+            .addStringOption(opt => opt.setName('reason').setDescription('Details for assistance request').setRequired(true)),
+
+        // --- 2. SERVER DASHBOARD COMMANDS (MANAGEMENT ROLES REQUIRED) ---
+        new SlashCommandBuilder()
             .setName('infract')
             .setDescription('Issue an official staff infraction (Management Only)')
             .addUserOption(opt => opt.setName('staff').setDescription('The staff member to infract').setRequired(true))
@@ -504,7 +586,12 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             .setDescription('Promote or update a staff member rank (Management Only)')
             .addUserOption(opt => opt.setName('staff').setDescription('The staff member').setRequired(true))
             .addStringOption(opt => opt.setName('new_role').setDescription('The new staff role name').setRequired(true))
-            .addStringOption(opt => opt.setName('reason').setDescription('Reason for promotion/rank change').setRequired(true))
+            .addStringOption(opt => opt.setName('reason').setDescription('Reason for promotion/rank change').setRequired(true)),
+
+        new SlashCommandBuilder()
+            .setName('force-end-shift')
+            .setDescription('Forcefully end an active staff shift (Management Only)')
+            .addUserOption(opt => opt.setName('staff').setDescription('The staff member whose shift to end').setRequired(true))
     ];
 
     const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
@@ -513,7 +600,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
         try {
             console.log('Registering Slash Commands...');
             await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-            console.log('Slash Commands Registered!');
+            console.log('All Slash Commands Registered Successfully!');
         } catch (err) {
             console.error('Command Registration Error:', err);
         }
@@ -524,7 +611,11 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
 
         const { commandName, options, channelId, member, user } = interaction;
 
-        // /review COMMAND LOGIC
+        // HELPER CHECKS
+        const isStaff = member.roles.cache.has(REQUIRED_ROLE_ID);
+        const isManager = member.roles.cache.some(r => botConfig.managerRoleIds.includes(r.id));
+
+        // --- 1. MODERATOR PANEL COMMANDS HANDLERS ---
         if (commandName === 'review') {
             if (channelId !== REVIEW_CHANNEL_ID) {
                 return interaction.reply({
@@ -538,9 +629,9 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             const note = options.getString('note');
 
             const guildMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-            const isStaff = guildMember && guildMember.roles.cache.has(REQUIRED_ROLE_ID);
+            const targetIsStaff = guildMember && guildMember.roles.cache.has(REQUIRED_ROLE_ID);
 
-            if (!isStaff) {
+            if (!targetIsStaff) {
                 return interaction.reply({
                     content: `❌ You can only review official staff members who possess the Staff Role!`,
                     ephemeral: true
@@ -568,27 +659,144 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
 
             await interaction.reply({ embeds: [reviewEmbed] });
 
-            // Post copy to distinct Review Webhook if configured
             if (botConfig.reviewWebhook) {
                 sendDiscordLog(botConfig.reviewWebhook, reviewEmbed.toJSON());
             }
             return;
         }
 
-        // MANAGEMENT COMMAND CHECK HELPER
-        const isManager = member.roles.cache.some(r => botConfig.managerRoleIds.includes(r.id));
+        // REQUIRES STAFF ROLE FOR OTHER MOD PANEL COMMANDS
+        if (['shift', 'active-shifts', 'erlc-command', 'log-punishment', 'assistance'].includes(commandName)) {
+            if (!isStaff && !isManager) {
+                return interaction.reply({ content: '❌ Access Denied: You must possess the Staff Role to use this command.', ephemeral: true });
+            }
+        }
 
-        if (commandName === 'infract') {
+        if (commandName === 'shift') {
+            const action = options.getString('action');
+            if (action === 'CLOCK_IN') {
+                activeShifts = activeShifts.filter(s => s.userId !== user.id);
+                activeShifts.push({
+                    userId: user.id,
+                    username: user.username,
+                    robloxName: member.displayName || user.username,
+                    avatar: user.displayAvatarURL(),
+                    startTime: Date.now(),
+                    department: "Staff Moderation"
+                });
+                await interaction.reply({ content: `🟢 **Clocked In** for shift!`, ephemeral: true });
+            } else {
+                activeShifts = activeShifts.filter(s => s.userId !== user.id);
+                await interaction.reply({ content: `🔴 **Clocked Out** of shift!`, ephemeral: true });
+            }
+
+            sendDiscordLog(botConfig.shiftWebhook, {
+                title: action === 'CLOCK_IN' ? "🟢 Shift Clocked In" : "🔴 Shift Clocked Out",
+                color: action === 'CLOCK_IN' ? 5763719 : 15548997,
+                fields: [
+                    { name: "Staff Member", value: `<@${user.id}>`, inline: true },
+                    { name: "Time", value: new Date().toLocaleString(), inline: false }
+                ]
+            });
+            return;
+        }
+
+        if (commandName === 'active-shifts') {
+            if (activeShifts.length === 0) {
+                return interaction.reply({ content: 'ℹ️ No staff members are currently on shift.', ephemeral: true });
+            }
+
+            const list = activeShifts.map(s => `<@${s.userId}> (${Math.floor((Date.now() - s.startTime) / 60000)}m)`).join('\n');
+            return interaction.reply({
+                embeds: [new EmbedBuilder().setTitle("Active Staff On Shift").setColor(0x57f287).setDescription(list)],
+                ephemeral: true
+            });
+        }
+
+        if (commandName === 'erlc-command') {
+            const cmd = options.getString('command');
+            if (!ERLC_API_KEY) return interaction.reply({ content: '❌ ER:LC API Key is not configured.', ephemeral: true });
+
+            try {
+                const res = await fetch('https://api.erlc.gg/v1/server/command', {
+                    method: 'POST',
+                    headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+
+                if (res.ok) {
+                    interaction.reply({ content: `✅ Command sent to ER:LC server: \`${cmd}\``, ephemeral: true });
+                } else {
+                    interaction.reply({ content: `❌ Failed to execute command.`, ephemeral: true });
+                }
+            } catch (err) {
+                interaction.reply({ content: `❌ Connection error.`, ephemeral: true });
+            }
+            return;
+        }
+
+        if (commandName === 'log-punishment') {
+            const targetPlayer = options.getString('player');
+            const type = options.getString('type');
+            const reason = options.getString('reason');
+            const rId = options.getString('roblox_id') || 'N/A';
+
+            punishmentLogs.unshift({
+                id: punishmentLogs.length + 1,
+                targetUser: targetPlayer,
+                robloxId: rId,
+                punishmentType: type,
+                reason,
+                staffName: user.username,
+                removed: false,
+                createdAt: new Date().toLocaleString()
+            });
+
+            const embed = new EmbedBuilder()
+                .setTitle(`🔨 Punishment Logged: ${type}`)
+                .setColor(0xed4245)
+                .addFields(
+                    { name: "Target Player", value: targetPlayer, inline: true },
+                    { name: "Roblox ID", value: rId, inline: true },
+                    { name: "Issued By", value: `<@${user.id}>`, inline: true },
+                    { name: "Reason", value: reason, inline: false }
+                );
+
+            await interaction.reply({ content: `✅ Punishment logged for **${targetPlayer}**!`, ephemeral: true });
+            sendDiscordLog(botConfig.punishmentWebhook, embed.toJSON());
+            return;
+        }
+
+        if (commandName === 'assistance') {
+            const reason = options.getString('reason');
+            const supportPing = SUPPORT_ROLE_IDS.map(id => `<@&${id}>`).join(' ');
+
+            sendDiscordLog(botConfig.assistanceWebhook, {
+                title: "🚨 Staff Assistance Requested",
+                color: 15548997,
+                fields: [
+                    { name: "Requested By", value: `<@${user.id}>`, inline: true },
+                    { name: "Details", value: reason, inline: false }
+                ]
+            }, `🚨 **STAFF ASSISTANCE NEEDED**\n${supportPing}`);
+
+            return interaction.reply({ content: '🚨 Assistance request sent to higher-ups!', ephemeral: true });
+        }
+
+        // --- 2. SERVER DASHBOARD COMMANDS HANDLERS (MANAGEMENT ONLY) ---
+        if (['infract', 'promote', 'force-end-shift'].includes(commandName)) {
             if (!isManager) {
                 return interaction.reply({ content: '❌ Access Denied: Management permissions required.', ephemeral: true });
             }
+        }
 
+        if (commandName === 'infract') {
             const targetUser = options.getUser('staff');
             const level = options.getString('level');
             const reason = options.getString('reason');
             const proof = options.getString('proof') || "None Provided";
 
-            const log = {
+            staffInfractionLogs.unshift({
                 id: `inf_${Date.now()}`,
                 targetUserId: targetUser.id,
                 targetUser: targetUser.username,
@@ -597,9 +805,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
                 proof,
                 issuedBy: user.username,
                 createdAt: new Date().toLocaleString()
-            };
-
-            staffInfractionLogs.unshift(log);
+            });
 
             const embed = new EmbedBuilder()
                 .setTitle(`⚠️ Staff Infraction Issued: ${level}`)
@@ -614,21 +820,16 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
                 .setFooter({ text: `${serverConfig.serverName} Staff System` });
 
             await interaction.reply({ content: `✅ Issued **${level}** to <@${targetUser.id}>!`, ephemeral: true });
-
             sendDiscordLog(botConfig.infractionWebhook, embed.toJSON());
             return;
         }
 
         if (commandName === 'promote') {
-            if (!isManager) {
-                return interaction.reply({ content: '❌ Access Denied: Management permissions required.', ephemeral: true });
-            }
-
             const targetUser = options.getUser('staff');
             const newRole = options.getString('new_role');
             const reason = options.getString('reason');
 
-            const log = {
+            staffPromotionLogs.unshift({
                 id: `prom_${Date.now()}`,
                 targetUserId: targetUser.id,
                 targetUser: targetUser.username,
@@ -636,9 +837,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
                 reason,
                 promotedBy: user.username,
                 createdAt: new Date().toLocaleString()
-            };
-
-            staffPromotionLogs.unshift(log);
+            });
 
             const embed = new EmbedBuilder()
                 .setTitle(`🎉 Staff Promotion / Rank Update`)
@@ -652,9 +851,14 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
                 .setFooter({ text: `${serverConfig.serverName} Staff System` });
 
             await interaction.reply({ content: `✅ Updated rank for <@${targetUser.id}> to **${newRole}**!`, ephemeral: true });
-
             sendDiscordLog(botConfig.promotionWebhook, embed.toJSON());
             return;
+        }
+
+        if (commandName === 'force-end-shift') {
+            const targetUser = options.getUser('staff');
+            activeShifts = activeShifts.filter(s => s.userId !== targetUser.id);
+            return interaction.reply({ content: `🛑 Ended active shift for <@${targetUser.id}>.`, ephemeral: true });
         }
     });
 
