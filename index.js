@@ -156,23 +156,6 @@ async function verifyUserRoleLive(userId) {
     }
 }
 
-// --- MEMBERS / STAFF LIST ENDPOINT ---
-app.get('/api/members/staff', requireStaffAuth, async (req, res) => {
-    // Array of active staff members
-    // In production, this can automatically fetch members from Discord using BOT_TOKEN
-    const staffMembers = [
-        {
-            username: req.session.user.username,
-            avatar: req.session.user.avatar,
-            role: req.session.user.isManager ? "Director" : "Junior Moderator",
-            joinedDate: "Recently",
-            status: "Active"
-        }
-    ];
-
-    res.json({ success: true, staff: staffMembers });
-});
-
 // Middleware
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) {
