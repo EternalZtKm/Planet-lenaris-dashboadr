@@ -430,7 +430,6 @@
                     </button>
                     <div id="menuInfractions" class="pl-8 space-y-1 hidden">
                         <button onclick="selectSidebarItem('infractions-members')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Members</button>
-                        <button onclick="selectSidebarItem('infractions-appeals')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Appeals</button>
                         <button onclick="selectSidebarItem('infractions-settings')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Settings</button>
                     </div>
                 </div>
@@ -598,7 +597,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Infraction Level</label>
                     <select id="infractionLevelSelect" class="w-full rounded-lg px-3 py-2 text-xs">
-                        </select>
+                    </select>
                 </div>
 
                 <div>
@@ -724,7 +723,7 @@
             </div>
 
             <div id="shiftReportBody" class="space-y-2 text-xs">
-                </div>
+            </div>
         </div>
     </div>
 
@@ -761,6 +760,10 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Promotions & Rank Changes Webhook</label>
                     <input type="text" id="webhookPromotion" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Staff Reviews Webhook</label>
+                    <input type="text" id="webhookReview" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
                 </div>
 
                 <div class="flex space-x-2 pt-2 border-t border-slate-800">
@@ -956,13 +959,6 @@
                 titleEl.textContent = "Staff Infractions & Members";
                 descEl.textContent = "Review staff infraction records, issue strikes, and log promotions.";
                 renderInfractionsMembersTab();
-                return;
-            }
-
-            if (tabKey === 'infractions-appeals') {
-                titleEl.textContent = "Infraction Appeals";
-                descEl.textContent = "Review and process submitted staff infraction appeals.";
-                renderInfractionsAppealsTab();
                 return;
             }
 
@@ -1806,21 +1802,6 @@
             } catch (err) { alert('Error processing promotion.'); }
         }
 
-        // --- INFRACTIONS: APPEALS TAB ---
-        async function renderInfractionsAppealsTab() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Infraction Appeals</h3>
-                    <p class="text-xs text-slate-400">Review staff member submitted appeals for active warnings or strikes.</p>
-
-                    <div id="appealsListContainer" class="space-y-2">
-                        <p class="text-xs text-slate-500 text-center py-4">No pending appeals.</p>
-                    </div>
-                </div>
-            `;
-        }
-
         // --- INFRACTIONS: SETTINGS TAB (CUSTOM INFRACTION LEVELS MANAGER) ---
         async function renderInfractionsSettingsTab() {
             const container = document.getElementById('sdContentContainer');
@@ -2151,6 +2132,7 @@
                     document.getElementById('webhookActivity').value = data.webhooks.activityWebhook || '';
                     document.getElementById('webhookInfraction').value = data.webhooks.infractionWebhook || '';
                     document.getElementById('webhookPromotion').value = data.webhooks.promotionWebhook || '';
+                    document.getElementById('webhookReview').value = data.webhooks.reviewWebhook || '';
                     document.getElementById('webhookModal').classList.remove('hidden');
                 }
             } catch (err) { alert("Failed to load settings."); }
@@ -2168,7 +2150,8 @@
                 assistanceWebhook: document.getElementById('webhookAssistance').value,
                 activityWebhook: document.getElementById('webhookActivity').value,
                 infractionWebhook: document.getElementById('webhookInfraction').value,
-                promotionWebhook: document.getElementById('webhookPromotion').value
+                promotionWebhook: document.getElementById('webhookPromotion').value,
+                reviewWebhook: document.getElementById('webhookReview').value
             };
             try {
                 const res = await fetch('/api/settings/webhooks', {
