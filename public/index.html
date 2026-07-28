@@ -925,7 +925,7 @@
             selectEl.innerHTML = presets.map(p => `<option value="${p}">${p}</option>`).join('');
         }
 
-        function switchView(viewName) {
+        function switchView(viewName, defaultTab = 'general') {
             const hub = document.getElementById('viewHub');
             const modPanel = document.getElementById('viewModPanel');
             const serverDash = document.getElementById('viewServerDashboard');
@@ -944,7 +944,7 @@
                 serverDash.classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
                 if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
-                selectSidebarItem('general');
+                selectSidebarItem(defaultTab);
             } else {
                 hub.classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
@@ -969,6 +969,21 @@
 
         // --- SIDEBAR SWITCHER & DYNAMIC PANELS ---
         function selectSidebarItem(tabKey) {
+            // Remove highlight from all sidebar buttons
+            document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
+                el.classList.remove('text-emerald-400', 'bg-slate-800/50');
+                if(el.classList.contains('sb-subitem')) el.classList.remove('text-emerald-400');
+            });
+            // Highlight active
+            const activeBtn = document.querySelector(`[onclick="selectSidebarItem('${tabKey}')"]`);
+            if (activeBtn) {
+                if (activeBtn.classList.contains('sb-subitem')) {
+                    activeBtn.classList.add('text-emerald-400');
+                } else {
+                    activeBtn.classList.add('text-white', 'bg-slate-800/50');
+                }
+            }
+
             const titleEl = document.getElementById('sdActiveTitle');
             const descEl = document.getElementById('sdActiveDesc');
 
@@ -978,85 +993,72 @@
                 renderMembersListTab();
                 return;
             }
-
             if (tabKey === 'activity-waves') {
                 titleEl.textContent = "Activity Waves";
                 descEl.textContent = "Configure wave duration, hour requirements, and manage active waves.";
                 renderActivityWavesTab();
                 return;
             }
-
             if (tabKey === 'activity-shifts') {
                 titleEl.textContent = "Shift Management";
                 descEl.textContent = "Configure shift restrictions, types, and review past shift records.";
                 renderActivityShiftsTab();
                 return;
             }
-
             if (tabKey === 'activity-member') {
                 titleEl.textContent = "Member Activity Viewer";
                 descEl.textContent = "View detailed moderation and shift activity statistics for each staff member.";
                 renderMemberActivityTab();
                 return;
             }
-
             if (tabKey === 'activity-leaderboard') {
                 titleEl.textContent = "Activity Leaderboard";
                 descEl.textContent = "View and compare staff member activity statistics.";
                 renderActivityLeaderboardTab();
                 return;
             }
-
             if (tabKey === 'infractions-members') {
                 titleEl.textContent = "Staff Infractions & Members";
                 descEl.textContent = "Review staff infraction records, issue strikes, and log promotions.";
                 renderInfractionsMembersTab();
                 return;
             }
-
             if (tabKey === 'infractions-settings') {
                 titleEl.textContent = "Infraction Settings & Levels";
                 descEl.textContent = "Configure infraction levels, auto-escalation rules, and expiration times.";
                 renderInfractionsSettingsTab();
                 return;
             }
-
             if (tabKey === 'dept-overview') {
                 titleEl.textContent = "Departments Overview";
                 descEl.textContent = "Manage your server departments, settings, and duty clock-in requirements.";
                 renderDepartmentsOverviewTab();
                 return;
             }
-
             if (tabKey === 'dept-settings') {
                 titleEl.textContent = "Departments Settings";
                 descEl.textContent = "Configure global settings and rules for server departments.";
-                // In a real app this might have a separate render function, fallback to overview for now
-                renderDepartmentsOverviewTab();
+                renderDepartmentsOverviewTab(); // Fallback to overview for now
                 return;
             }
-
             if (tabKey === 'sessions-overview') {
                 titleEl.textContent = "Sessions Overview";
                 descEl.textContent = "View session analytics, active statuses, and historical records.";
                 renderSessionsOverviewTab();
                 return;
             }
-
             if (tabKey === 'sessions-settings') {
                 titleEl.textContent = "Sessions Settings";
                 descEl.textContent = "Configure announcements, shutdown actions, and session polling behaviors.";
                 renderSessionsSettingsTab();
                 return;
             }
-
             if (tabKey === 'general') {
                 titleEl.textContent = "General";
                 descEl.textContent = "Configure general server branding and display settings.";
                 renderGeneralTab();
                 return;
             }
-
             if (tabKey === 'panel') {
                 titleEl.textContent = "Panel";
                 descEl.textContent = "Configure moderator panel access, automation settings, and punishment presets.";
@@ -1064,13 +1066,14 @@
                 return;
             }
 
+            // Fallback for unimplemented tabs
             const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
             titleEl.textContent = formattedTitle;
             descEl.textContent = `Manage and view ${formattedTitle} details for ${currentServerConfig.serverName}.`;
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3>
-                    <p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is active.</p>
+                    <p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is currently active.</p>
                 </div>
             `;
         }
@@ -1128,7 +1131,7 @@
                             <button id="btnToggleSession" onclick="toggleSessionAction()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
                                 Start Session
                             </button>
-                            <button class="bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-emerald-600/50">
+                            <button onclick="fetchSessionsOverviewData()" class="bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-emerald-600/50">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </button>
                         </div>
@@ -1407,19 +1410,21 @@
                             : `<button disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-1.5 rounded-lg text-xs cursor-not-allowed">Role Required</button>`;
 
                         const inviteBtn = d.discordInvite 
-                            ? `<a href="${escapeHtml(d.discordInvite)}" target="_blank" class="w-full bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/80 font-bold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5">
+                            ? `<a href="${escapeHtml(d.discordInvite)}" target="_blank" class="w-full bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/80 font-bold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 mt-2">
                                 <i class="fa-brands fa-discord"></i> Join Discord Server
                                </a>`
                             : '';
 
                         return `
-                            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-xs text-white block">${escapeHtml(d.deptName)}</span>
-                                    ${verifiedBadge}
+                            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full">
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="font-bold text-xs text-white block truncate pr-2">${escapeHtml(d.deptName)}</span>
+                                        ${verifiedBadge}
+                                    </div>
+                                    <p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Duty Operations</p>
                                 </div>
-                                <p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Duty Operations</p>
-                                <div class="space-y-1.5 pt-1">
+                                <div class="pt-3">
                                     ${shiftBtn}
                                     ${inviteBtn}
                                 </div>
@@ -1554,6 +1559,1000 @@
                 });
                 if (res.ok) renderDepartmentsOverviewTab();
             } catch (err) {}
+        }
+
+        // --- ACTIVITY WAVES TAB ---
+        async function renderActivityWavesTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                    <h3 class="text-sm font-bold text-white">Wave Duration</h3>
+                    <p class="text-xs text-slate-400">Configure how long activity waves should last</p>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Duration Type</label>
+                        <select class="w-full rounded-xl px-3 py-2 text-xs">
+                            <option value="">Select a duration type</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Bi-weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                    <h3 class="text-sm font-bold text-white">Hour Requirements</h3>
+                    <p class="text-xs text-slate-400">Set the required hours moderators must meet</p>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Required Hours</label>
+                        <input type="number" placeholder="What is the hour requirement moderators must meet per activity wave?" class="w-full rounded-xl px-3 py-2 text-xs">
+                    </div>
+                    <button onclick="openCustomReqModal()" class="bg-emerald-950/80 text-emerald-400 border border-emerald-800 hover:bg-emerald-900/80 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> Manage Custom Activity Requirements
+                    </button>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                    <h3 class="text-sm font-bold text-white">Inactivity Settings</h3>
+                    <p class="text-xs text-slate-400">Configure when members should be flagged as inactive</p>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Inactivity Flag Period</label>
+                        <input type="number" placeholder="How many days should it take for a user to be flagged as inactive?" class="w-full rounded-xl px-3 py-2 text-xs">
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Activity Waves</h3>
+                    <p class="text-xs text-slate-400">View and manage your activity waves</p>
+
+                    <div id="wavesTableContainer" class="space-y-3">
+                        <p class="text-xs text-slate-500 py-2">Loading waves...</p>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch('/api/activity/waves');
+                const data = await res.json();
+                const wavesContainer = document.getElementById('wavesTableContainer');
+
+                if (data.success && data.waves) {
+                    wavesContainer.innerHTML = data.waves.map(wave => `
+                        <div class="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden text-xs">
+                            <div class="p-3 flex justify-between items-center bg-slate-950/50 cursor-pointer" onclick="toggleWaveDetails('${wave.id}')">
+                                <div class="flex items-center space-x-4">
+                                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                                    <span class="font-bold text-white">#${wave.number} <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">ACTIVE</span></span>
+                                    <span class="text-slate-400">${wave.startDate}</span>
+                                </div>
+                                <div class="flex space-x-8 text-right">
+                                    <span>Shifts: <strong class="text-white">${wave.totalShifts}</strong></span>
+                                    <span>Online Time: <strong class="text-emerald-400">${wave.onlineTimeFormatted}</strong></span>
+                                </div>
+                            </div>
+                            <div id="waveDetails_${wave.id}" class="p-4 border-t border-slate-800/80 space-y-3 bg-slate-900/40 hidden">
+                                <span class="font-bold text-white text-xs block">Current Stats</span>
+                                <ul class="list-disc list-inside text-slate-400 space-y-1 text-xs">
+                                    <li>${wave.totalShifts} shifts</li>
+                                    <li>${wave.onlineTimeFormatted} of online time</li>
+                                    <li>${wave.breakTimeFormatted} of break time</li>
+                                </ul>
+                                <p class="text-[11px] text-slate-500">Activity wave does not automatically end</p>
+                                <div class="flex space-x-2 pt-1">
+                                    <button onclick="alert('Wave ended')" class="bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 px-3 py-1.5 rounded-lg font-bold">End Wave</button>
+                                    <button onclick="alert('Wave deleted')" class="bg-rose-950/50 hover:bg-rose-900/50 text-rose-400 border border-rose-900 px-3 py-1.5 rounded-lg font-bold">Delete Wave</button>
+                                    <button onclick="alert('Set end date')" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-1.5 rounded-lg font-bold">Set End Date</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        function toggleWaveDetails(waveId) {
+            const el = document.getElementById(`waveDetails_${waveId}`);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        async function openCustomReqModal() {
+            const modal = document.getElementById('customReqModal');
+            const list = document.getElementById('customReqList');
+            modal.classList.remove('hidden');
+
+            try {
+                const res = await fetch('/api/activity/custom-requirements');
+                const data = await res.json();
+
+                if (data.success && data.roles) {
+                    list.innerHTML = data.roles.map(r => `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
+                            <span class="font-bold text-white">${escapeHtml(r.name)}</span>
+                            <input type="number" id="req_role_${r.id}" value="${r.requiredHours}" min="0" class="w-20 rounded-lg px-2 py-1 text-xs text-right">
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                list.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Failed to load roles.</p>`;
+            }
+        }
+
+        function closeCustomReqModal() {
+            document.getElementById('customReqModal').classList.add('hidden');
+        }
+
+        async function saveCustomActivityRequirements() {
+            const requirements = {};
+            document.querySelectorAll('[id^="req_role_"]').forEach(input => {
+                const roleId = input.id.replace('req_role_', '');
+                requirements[roleId] = input.value;
+            });
+
+            try {
+                const res = await fetch('/api/activity/custom-requirements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requirements })
+                });
+                if (res.ok) {
+                    alert('Custom activity requirements saved successfully!');
+                    closeCustomReqModal();
+                }
+            } catch (err) {
+                alert('Error saving custom activity requirements.');
+            }
+        }
+
+        // --- SHIFTS TAB ---
+        async function renderActivityShiftsTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Shift Settings</h3>
+                    <p class="text-xs text-slate-400">Configure shift logging and restrictions</p>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="shiftLoggingToggle" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" onchange="updateShiftSettings()">
+                            <div>
+                                <label class="text-xs font-bold text-white block">Shift Logging</label>
+                                <span class="text-[11px] text-slate-400 block">Members must be on shift in order to log punishments. Server Administrators bypass this restriction.</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="inGameReqToggle" checked class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" onchange="updateShiftSettings()">
+                            <div>
+                                <label class="text-xs font-bold text-white block">In-game Requirement</label>
+                                <span class="text-[11px] text-slate-400 block">Members must be in game in order to start their shift. Server Administrators bypass this restriction. Requires Roblox Account Connection.</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Minimum Playercount</label>
+                            <input type="number" id="shiftMinPlayers" value="2" onchange="updateShiftSettings()" class="w-full rounded-xl px-3 py-2 text-xs">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Max On Shift</label>
+                            <input type="number" id="shiftMaxOnShift" placeholder="How many people should be allowed on shift at once?" onchange="updateShiftSettings()" class="w-full rounded-xl px-3 py-2 text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                    <h3 class="text-sm font-bold text-white">Shift Types</h3>
+                    <p class="text-xs text-slate-400">Shift types allow you to separate shifts into categories</p>
+
+                    <button onclick="alert('Manage Shift Types')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-700">
+                        Manage Shift Types
+                    </button>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Default Shift Report Form</label>
+                        <select id="shiftReportFormSelect" class="w-full rounded-xl px-3 py-2 text-xs">
+                            <option value="">Select a shift report form</option>
+                            <option value="Default Form">Default Form</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Shift Overview</h3>
+                            <p class="text-xs text-slate-400">View and manage shifts for each activity wave</p>
+                        </div>
+                        <button onclick="alert('Create Shift Modal')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-lg flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Create Shift
+                        </button>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <select id="overviewWaveSelect" class="flex-1 rounded-xl px-3 py-2 text-xs" onchange="loadShiftOverviewTable()">
+                            <option value="wave_1">Activity Wave #1 | Jul 1, 2026 - Ongoing</option>
+                        </select>
+                        <select id="overviewFilterType" class="w-48 rounded-xl px-3 py-2 text-xs" onchange="loadShiftOverviewTable()">
+                            <option value="">Filter by shift type</option>
+                            <option value="Default">Default</option>
+                            <option value="Patrol">Patrol</option>
+                        </select>
+                    </div>
+
+                    <div id="shiftsOverviewTable" class="space-y-2 pt-2">
+                        <p class="text-xs text-slate-500 text-center py-4">Loading shifts...</p>
+                    </div>
+                </div>
+            `;
+
+            loadShiftSettingsUI();
+            loadShiftOverviewTable();
+        }
+
+        async function loadShiftSettingsUI() {
+            try {
+                const res = await fetch('/api/shifts/settings');
+                const data = await res.json();
+                if (data.success && data.settings) {
+                    const s = data.settings;
+                    document.getElementById('shiftLoggingToggle').checked = s.shiftLogging;
+                    document.getElementById('inGameReqToggle').checked = s.inGameRequirement;
+                    document.getElementById('shiftMinPlayers').value = s.minPlayercount;
+                    document.getElementById('shiftMaxOnShift').value = s.maxOnShift || '';
+                }
+            } catch (err) {}
+        }
+
+        async function updateShiftSettings() {
+            const payload = {
+                shiftLogging: document.getElementById('shiftLoggingToggle').checked,
+                inGameRequirement: document.getElementById('inGameReqToggle').checked,
+                minPlayercount: document.getElementById('shiftMinPlayers').value,
+                maxOnShift: document.getElementById('shiftMaxOnShift').value
+            };
+            try {
+                await fetch('/api/shifts/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {}
+        }
+
+        async function loadShiftOverviewTable() {
+            const waveId = document.getElementById('overviewWaveSelect')?.value || 'wave_1';
+            const shiftType = document.getElementById('overviewFilterType')?.value || '';
+            const container = document.getElementById('shiftsOverviewTable');
+
+            try {
+                const res = await fetch(`/api/shifts/all?waveId=${waveId}&shiftType=${shiftType}`);
+                const data = await res.json();
+
+                if (data.success && data.shifts) {
+                    if (data.shifts.length === 0) {
+                        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No shifts logged for this wave.</p>`;
+                        return;
+                    }
+
+                    container.innerHTML = data.shifts.map(s => {
+                        const startStr = new Date(s.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                        const endStr = new Date(s.endTime).toLocaleTimeString([], { timeStyle: 'short' });
+                        const hours = Math.floor(s.durationMinutes / 60);
+                        const mins = s.durationMinutes % 60;
+                        const durationFormatted = `${hours > 0 ? hours + ' hours ' : ''}${mins} minutes`;
+
+                        return `
+                            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs relative">
+                                <div class="flex items-center space-x-3 w-1/4">
+                                    <img src="${escapeHtml(s.avatarUrl)}" class="w-8 h-8 rounded-full border border-slate-700 object-cover" alt="Avatar">
+                                    <div>
+                                        <span class="font-bold text-white block">${escapeHtml(s.displayName)}</span>
+                                        <span class="text-[10px] text-slate-400">@${escapeHtml(s.username)}</span>
+                                    </div>
+                                </div>
+                                <span class="text-slate-300 w-1/3">${startStr} &rarr; ${endStr}</span>
+                                <span class="text-emerald-400 font-semibold w-1/5">${durationFormatted}</span>
+                                <span class="text-[10px] px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">${s.shiftType}</span>
+                                
+                                <button onclick="toggleShiftContextMenu(event, '${s.id}')" class="p-2 text-slate-400 hover:text-white focus:outline-none">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+
+                                <div id="shiftMenu_${s.id}" class="absolute right-3 top-10 w-36 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-50 hidden overflow-hidden divide-y divide-slate-800">
+                                    <button onclick="openShiftReport('${s.id}')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-800 text-slate-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-clipboard-list"></i> Shift Report
+                                    </button>
+                                    <button onclick="openEditShiftModal('${s.id}', ${hours}, ${mins}, '${s.shiftType}')" class="w-full text-left px-3 py-2 text-xs hover:bg-slate-800 text-slate-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-pen"></i> Edit Shift
+                                    </button>
+                                    <button onclick="deleteShift('${s.id}')" class="w-full text-left px-3 py-2 text-xs hover:bg-rose-950 text-rose-400 flex items-center gap-2">
+                                        <i class="fa-solid fa-trash"></i> Delete Shift
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                if (container) container.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Failed to load shifts.</p>`;
+            }
+        }
+
+        function toggleShiftContextMenu(e, shiftId) {
+            e.stopPropagation();
+            document.querySelectorAll('[id^="shiftMenu_"]').forEach(el => {
+                if (el.id !== `shiftMenu_${shiftId}`) el.classList.add('hidden');
+            });
+            const menu = document.getElementById(`shiftMenu_${shiftId}`);
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('[id^="shiftMenu_"]').forEach(el => el.classList.add('hidden'));
+        });
+
+        function openEditShiftModal(shiftId, hours, mins, type) {
+            activeShiftEditId = shiftId;
+            document.getElementById('editShiftHours').value = hours;
+            document.getElementById('editShiftMinutes').value = mins;
+            document.getElementById('editShiftTypeSelect').value = type;
+            document.getElementById('editShiftModal').classList.remove('hidden');
+        }
+
+        function closeEditShiftModal() {
+            document.getElementById('editShiftModal').classList.add('hidden');
+        }
+
+        async function saveShiftEdit() {
+            if (!activeShiftEditId) return;
+            const hours = document.getElementById('editShiftHours').value;
+            const minutes = document.getElementById('editShiftMinutes').value;
+            const shiftType = document.getElementById('editShiftTypeSelect').value;
+
+            try {
+                const res = await fetch('/api/shifts/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shiftId: activeShiftEditId, hours, minutes, shiftType })
+                });
+                if (res.ok) {
+                    closeEditShiftModal();
+                    loadShiftOverviewTable();
+                }
+            } catch (err) {}
+        }
+
+        async function deleteShift(shiftId) {
+            if (!confirm("Are you sure you want to delete this shift?")) return;
+            try {
+                const res = await fetch('/api/shifts/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shiftId })
+                });
+                if (res.ok) loadShiftOverviewTable();
+            } catch (err) {}
+        }
+
+        async function openShiftReport(shiftId) {
+            const modal = document.getElementById('shiftReportModal');
+            const body = document.getElementById('shiftReportBody');
+            modal.classList.remove('hidden');
+
+            body.innerHTML = `
+                <div class="space-y-2">
+                    <div class="flex justify-between py-1 border-b border-slate-800"><span>Total Logs</span><strong class="text-white">0</strong></div>
+                    <div class="flex justify-between py-1 border-b border-slate-800"><span>Warns</span><strong class="text-white">0</strong></div>
+                    <div class="flex justify-between py-1 border-b border-slate-800"><span>Kicks</span><strong class="text-white">0</strong></div>
+                    <div class="flex justify-between py-1 border-b border-slate-800"><span>Bans</span><strong class="text-white">0</strong></div>
+                    <div class="flex justify-between py-1 border-b border-slate-800"><span>Ban Bolos</span><strong class="text-white">0</strong></div>
+                    <div class="flex justify-between py-1 border-b border-slate-800"><span>Notes</span><strong class="text-white">0</strong></div>
+                </div>
+            `;
+        }
+
+        function closeShiftReportModal() {
+            document.getElementById('shiftReportModal').classList.add('hidden');
+        }
+
+        // --- MEMBER ACTIVITY VIEWER TAB ---
+        async function renderMemberActivityTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Member Activity Viewer</h3>
+                    <p class="text-xs text-slate-400">View detailed activity statistics for each member</p>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Activity Wave</label>
+                            <select id="memberActivityWaveSelect" class="w-full rounded-xl px-3 py-2 text-xs" onchange="fetchSelectedMemberStats()">
+                                <option value="wave_1">Activity Wave #1 | Jul 1, 2026 - Ongoing</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Member</label>
+                            <select id="memberActivityUserSelect" class="w-full rounded-xl px-3 py-2 text-xs" onchange="fetchSelectedMemberStats()">
+                                <option value="">Select member</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="memberStatsDisplay" class="space-y-6 hidden">
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <div class="flex items-center space-x-3">
+                                <img id="memStatAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
+                                <div>
+                                    <span id="memStatUsername" class="font-bold text-white text-sm block"></span>
+                                    <span class="text-[10px] text-slate-400">Activity Statistics</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="alert('Viewing raw logs')" class="bg-emerald-950/80 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-lg text-xs font-bold">View Logs</button>
+                                <select class="rounded-lg px-2 py-1 text-xs"><option value="overall">Overall</option></select>
+                            </div>
+                        </div>
+
+                        <h4 class="font-bold text-white text-xs uppercase tracking-wider">Logs</h4>
+                        <div class="space-y-1 text-xs divide-y divide-slate-800/60">
+                            <div class="flex justify-between py-1.5"><span>Total Logs</span><strong id="statTotalLogs" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Warns</span><strong id="statWarns" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Kicks</span><strong id="statKicks" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Bans</span><strong id="statBans" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Ban BOLOs</span><strong id="statBanBolos" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Notes</span><strong id="statNotes" class="text-white">0</strong></div>
+                        </div>
+
+                        <h4 class="font-bold text-white text-xs uppercase tracking-wider pt-2">Job</h4>
+                        <div class="space-y-1 text-xs divide-y divide-slate-800/60">
+                            <div class="flex justify-between py-1.5"><span>Actions Executed</span><strong id="statActionsExecuted" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Priority Requests Approved</span><strong id="statPriorityApproved" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Priority Requests Denied</span><strong id="statPriorityDenied" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Modcalls Claimed</span><strong id="statModcallsClaimed" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Member Checks</span><strong id="statMemberChecks" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Vehicle Checks</span><strong id="statVehicleChecks" class="text-white">0</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                            <h3 class="text-sm font-bold text-white">Shift History</h3>
+                            <select class="rounded-lg px-2 py-1 text-xs"><option value="">Filter by type</option></select>
+                        </div>
+
+                        <div class="space-y-1 text-xs divide-y divide-slate-800/60">
+                            <div class="flex justify-between py-1.5"><span>Total Shifts</span><strong id="statTotalShifts" class="text-white">0</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Time Online</span><strong id="statTimeOnline" class="text-emerald-400">0 hours 0 minutes</strong></div>
+                            <div class="flex justify-between py-1.5"><span>Time on Break</span><strong id="statTimeBreak" class="text-slate-400">0 seconds</strong></div>
+                        </div>
+
+                        <div id="memberShiftsTable" class="space-y-2 pt-2"></div>
+                    </div>
+                </div>
+            `;
+            loadStaffDropdownForActivity();
+        }
+
+        async function loadStaffDropdownForActivity() {
+            try {
+                const res = await fetch('/api/members');
+                const data = await res.json();
+                const select = document.getElementById('memberActivityUserSelect');
+
+                if (data.success && data.members && select) {
+                    select.innerHTML = `<option value="">Select member</option>` + data.members.map(m => `
+                        <option value="${m.id}">${escapeHtml(m.displayName)} (@${escapeHtml(m.username)})</option>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function fetchSelectedMemberStats() {
+            const userId = document.getElementById('memberActivityUserSelect')?.value;
+            const waveId = document.getElementById('memberActivityWaveSelect')?.value;
+            const display = document.getElementById('memberStatsDisplay');
+
+            if (!userId) {
+                if (display) display.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/activity/member-stats?userId=${userId}&waveId=${waveId}`);
+                const data = await res.json();
+
+                if (data.success && data.stats) {
+                    display.classList.remove('hidden');
+                    const s = data.stats;
+
+                    document.getElementById('statTotalLogs').textContent = s.logs.total;
+                    document.getElementById('statWarns').textContent = s.logs.warns;
+                    document.getElementById('statKicks').textContent = s.logs.kicks;
+                    document.getElementById('statBans').textContent = s.logs.bans;
+                    document.getElementById('statBanBolos').textContent = s.logs.banBolos;
+                    document.getElementById('statNotes').textContent = s.logs.notes;
+
+                    document.getElementById('statActionsExecuted').textContent = s.job.actionsExecuted;
+                    document.getElementById('statPriorityApproved').textContent = s.job.priorityApproved;
+                    document.getElementById('statPriorityDenied').textContent = s.job.priorityDenied;
+                    document.getElementById('statModcallsClaimed').textContent = s.job.modcallsClaimed;
+                    document.getElementById('statMemberChecks').textContent = s.job.memberChecks;
+                    document.getElementById('statVehicleChecks').textContent = s.job.vehicleChecks;
+
+                    document.getElementById('statTotalShifts').textContent = s.totalShifts;
+                    document.getElementById('statTimeOnline').textContent = s.timeOnlineFormatted;
+                    document.getElementById('statTimeBreak').textContent = s.timeOnBreakFormatted;
+
+                    const shiftsTable = document.getElementById('memberShiftsTable');
+                    if (s.shifts && s.shifts.length > 0) {
+                        shiftsTable.innerHTML = s.shifts.map(sh => {
+                            const startStr = new Date(sh.startTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                            const endStr = new Date(sh.endTime).toLocaleTimeString([], { timeStyle: 'short' });
+                            const h = Math.floor(sh.durationMinutes / 60);
+                            const m = sh.durationMinutes % 60;
+                            return `
+                                <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                                    <span class="text-slate-300">${startStr} &rarr; ${endStr}</span>
+                                    <span class="text-emerald-400 font-semibold">${h > 0 ? h + ' hours ' : ''}${m} minutes</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 border border-slate-700">${sh.shiftType}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        shiftsTable.innerHTML = `<p class="text-xs text-slate-500 text-center py-2">No shift history found for this wave.</p>`;
+                    }
+                }
+            } catch (err) {}
+        }
+
+        // --- ACTIVITY LEADERBOARD TAB ---
+        async function renderActivityLeaderboardTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Activity Leaderboard</h3>
+                    <p class="text-xs text-slate-400">View and compare member activity statistics</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Activity Wave</label>
+                            <select id="leaderboardWaveSelect" class="w-full rounded-xl px-3 py-2 text-xs" onchange="fetchLeaderboardData()">
+                                <option value="wave_1">Activity Wave #1 | Jul 1, 2026 - Ongoing</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Filter by Shift Type</label>
+                            <select id="leaderboardShiftType" class="w-full rounded-xl px-3 py-2 text-xs" onchange="fetchLeaderboardData()">
+                                <option value="">Filter by shift type</option>
+                                <option value="Default">Default</option>
+                                <option value="Patrol">Patrol</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="leaderboardTableContainer" class="space-y-2 pt-2">
+                        <p class="text-xs text-slate-500 text-center py-4">Loading leaderboard...</p>
+                    </div>
+
+                    <div class="p-3 bg-indigo-950/40 border border-indigo-800/60 rounded-xl text-xs text-indigo-300 flex items-center space-x-2">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Activity leaderboards may take up to 5 minutes to update.</span>
+                    </div>
+                </div>
+            `;
+
+            fetchLeaderboardData();
+        }
+
+        async function fetchLeaderboardData() {
+            const waveId = document.getElementById('leaderboardWaveSelect')?.value || 'wave_1';
+            const shiftType = document.getElementById('leaderboardShiftType')?.value || '';
+            const container = document.getElementById('leaderboardTableContainer');
+
+            try {
+                const res = await fetch(`/api/activity/leaderboard?waveId=${waveId}&shiftType=${shiftType}`);
+                const data = await res.json();
+
+                if (data.success && data.leaderboard) {
+                    if (data.leaderboard.length === 0) {
+                        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No activity recorded for this wave.</p>`;
+                        return;
+                    }
+
+                    container.innerHTML = data.leaderboard.map((item, idx) => `
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                            <div class="flex items-center space-x-3">
+                                <span class="font-bold text-slate-500 w-4">#${idx + 1}</span>
+                                <img src="${escapeHtml(item.avatarUrl)}" class="w-8 h-8 rounded-full border border-slate-700 object-cover" alt="Avatar">
+                                <div>
+                                    <span class="font-bold text-white block">${escapeHtml(item.displayName)}</span>
+                                    <span class="text-[10px] text-slate-400">@${escapeHtml(item.username)}</span>
+                                </div>
+                            </div>
+                            <span class="font-bold text-emerald-400">${item.activityTimeFormatted}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                if (container) container.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Failed to load leaderboard.</p>`;
+            }
+        }
+
+        // --- INFRACTIONS: MEMBERS TAB ---
+        async function renderInfractionsMembersTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions
+                        </h3>
+                        <span id="infStaffCount" class="text-xs text-slate-400 font-semibold">Loading...</span>
+                    </div>
+
+                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1">
+                        <p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch('/api/members');
+                const data = await res.json();
+                const list = document.getElementById('infStaffList');
+                const count = document.getElementById('infStaffCount');
+
+                if (data.success && data.members) {
+                    count.textContent = `${data.members.length} Staff Members`;
+
+                    list.innerHTML = data.members.map(m => `
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                            <div class="flex items-center space-x-3">
+                                <img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover" alt="Avatar">
+                                <div>
+                                    <span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span>
+                                    <span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-3">
+                                <span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">
+                                    ${m.activeStrikes || 0} Active Strikes
+                                </span>
+                                <button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">
+                                    Issue Infraction
+                                </button>
+                                <button onclick="openPromoteStaffModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-lg font-bold transition">
+                                    Promote / Rank
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function openIssueInfractionModal(userId, displayName) {
+            document.getElementById('infractionTargetUserId').value = userId;
+            document.getElementById('infractionTargetUser').value = displayName;
+            
+            const select = document.getElementById('infractionLevelSelect');
+            try {
+                const res = await fetch('/api/infractions/levels');
+                const data = await res.json();
+                if (data.success && data.levels) {
+                    select.innerHTML = data.levels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+                }
+            } catch (err) {}
+
+            document.getElementById('issueInfractionModal').classList.remove('hidden');
+        }
+
+        function closeIssueInfractionModal() {
+            document.getElementById('issueInfractionModal').classList.add('hidden');
+        }
+
+        async function submitStaffInfraction(e) {
+            e.preventDefault();
+            const payload = {
+                targetUserId: document.getElementById('infractionTargetUserId').value,
+                targetUser: document.getElementById('infractionTargetUser').value,
+                level: document.getElementById('infractionLevelSelect').value,
+                reason: document.getElementById('infractionReasonText').value,
+                proof: document.getElementById('infractionProofText').value
+            };
+
+            try {
+                const res = await fetch('/api/infractions/issue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('Staff Infraction Issued Successfully!');
+                    closeIssueInfractionModal();
+                    renderInfractionsMembersTab();
+                }
+            } catch (err) { alert('Error issuing infraction.'); }
+        }
+
+        function openPromoteStaffModal(userId, displayName) {
+            document.getElementById('promoteTargetUserId').value = userId;
+            document.getElementById('promoteTargetUser').value = displayName;
+            document.getElementById('promoteStaffModal').classList.remove('hidden');
+        }
+
+        function closePromoteStaffModal() {
+            document.getElementById('promoteStaffModal').classList.add('hidden');
+        }
+
+        async function submitStaffPromotion(e) {
+            e.preventDefault();
+            const payload = {
+                targetUserId: document.getElementById('promoteTargetUserId').value,
+                targetUser: document.getElementById('promoteTargetUser').value,
+                newRole: document.getElementById('promoteNewRole').value,
+                reason: document.getElementById('promoteReason').value
+            };
+
+            try {
+                const res = await fetch('/api/infractions/promote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('Staff Rank Updated Successfully!');
+                    closePromoteStaffModal();
+                }
+            } catch (err) { alert('Error processing promotion.'); }
+        }
+
+        // --- INFRACTIONS: SETTINGS TAB ---
+        async function renderInfractionsSettingsTab() {
+            const container = document.getElementById('sdContentContainer');
+            container.innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
+                    <p class="text-xs text-slate-400">Add or remove infraction level tags used in the staff moderation system.</p>
+
+                    <div class="flex space-x-2">
+                        <input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level (e.g., Notice, Strike 1)..." class="flex-1 rounded-xl px-3 py-2 text-xs">
+                        <button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
+                            + Add Level
+                        </button>
+                    </div>
+
+                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                        <p class="text-xs text-slate-500">Loading levels...</p>
+                    </div>
+                </div>
+            `;
+
+            loadInfractionLevelsUI();
+        }
+
+        async function loadInfractionLevelsUI() {
+            try {
+                const res = await fetch('/api/infractions/levels');
+                const data = await res.json();
+                const container = document.getElementById('infractionLevelsContainer');
+
+                if (data.success && data.levels) {
+                    container.innerHTML = data.levels.map((level, idx) => `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
+                            <span class="font-bold text-white">${escapeHtml(level)}</span>
+                            <button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function addCustomInfractionLevel() {
+            const input = document.getElementById('inputNewInfractionLevel');
+            const name = input.value.trim();
+            if (!name) return alert("Please enter a valid level name.");
+
+            try {
+                const res = await fetch('/api/infractions/levels/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                if (res.ok) {
+                    input.value = '';
+                    loadInfractionLevelsUI();
+                }
+            } catch (err) {}
+        }
+
+        async function removeCustomInfractionLevel(index) {
+            try {
+                const res = await fetch('/api/infractions/levels/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ index })
+                });
+                if (res.ok) loadInfractionLevelsUI();
+            } catch (err) {}
+        }
+
+        // --- GENERAL & PANEL RENDERING ---
+        function renderGeneralTab() {
+            document.getElementById('sdContentContainer').innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Server Name</h3>
+                        <p class="text-xs text-slate-400">The name of your server displayed throughout the hub.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Name *</label>
+                        <input type="text" id="inputServerName" value="${escapeHtml(currentServerConfig.serverName)}" class="w-full rounded-xl px-3 py-2 text-xs">
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Server Icon</h3>
+                        <p class="text-xs text-slate-400">The icon image of your server displayed throughout the hub.</p>
+                    </div>
+                    <div class="flex items-center space-x-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <img src="${escapeHtml(currentServerConfig.serverIcon)}" class="w-10 h-10 rounded-xl object-cover border border-slate-700" alt="Server Preview">
+                        <span class="text-xs font-bold text-white">${escapeHtml(currentServerConfig.serverName)}</span>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Icon Image URL</label>
+                        <input type="text" id="inputServerIcon" value="${escapeHtml(currentServerConfig.serverIcon)}" placeholder="https://..." class="w-full rounded-xl px-3 py-2 text-xs">
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="saveGeneralSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save General Settings</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderPanelTab() {
+            const autoBanChecked = currentServerConfig.autoBanBolo ? 'checked' : '';
+            const userSeeLogsChecked = currentServerConfig.userSeeLogs ? 'checked' : '';
+            const presetsList = currentServerConfig.punishmentPresets || ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"];
+
+            const presetsChipsHTML = presetsList.map((preset, index) => `
+                <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
+                    <span class="font-bold text-white">${escapeHtml(preset)}</span>
+                    <button onclick="removePunishmentPreset(${index})" class="text-rose-400 hover:text-rose-300 transition text-xs">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            document.getElementById('sdContentContainer').innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Moderator Panel Access</h3>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="attemptModPanelAccess()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span>Open Moderator Panel</span>
+                        </button>
+                        <button onclick="copyPanelLink()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-slate-700">
+                            <i class="fa-solid fa-copy mr-1"></i> Copy Link
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Moderation Settings</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="chkAutoBanBolo" ${autoBanChecked} class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            <div>
+                                <label for="chkAutoBanBolo" class="text-xs font-bold text-white block cursor-pointer">Auto Ban BOLO Enforcement</label>
+                                <span class="text-[11px] text-slate-400 block">Automatically bans rejoining players with active Ban BOLO logs in-game.</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="chkUserSeeLogs" ${userSeeLogsChecked} class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                            <div>
+                                <label for="chkUserSeeLogs" class="text-xs font-bold text-white block cursor-pointer">Allow Users to see their own Logs</label>
+                                <span class="text-[11px] text-slate-400 block">Members can view warning details issued to them.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Punishment Presets</h3>
+                    <div class="flex space-x-2">
+                        <input type="text" id="inputNewPreset" placeholder="Enter new punishment type..." class="flex-1 rounded-xl px-3 py-2 text-xs">
+                        <button onclick="addPunishmentPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">Add Preset</button>
+                    </div>
+                    <div id="presetsListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                        ${presetsChipsHTML}
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="savePanelSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save Panel Settings</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function addPunishmentPreset() {
+            const input = document.getElementById('inputNewPreset');
+            const val = input.value.trim();
+            if (!val) return alert("Please enter a valid punishment preset name.");
+            if (!currentServerConfig.punishmentPresets) currentServerConfig.punishmentPresets = [];
+            if (currentServerConfig.punishmentPresets.includes(val)) return alert("Preset already exists.");
+
+            currentServerConfig.punishmentPresets.push(val);
+            input.value = '';
+            renderPanelTab();
+        }
+
+        function removePunishmentPreset(index) {
+            if (!currentServerConfig.punishmentPresets) return;
+            currentServerConfig.punishmentPresets.splice(index, 1);
+            renderPanelTab();
+        }
+
+        async function saveGeneralSettings() {
+            const serverName = document.getElementById('inputServerName').value.trim();
+            const serverIcon = document.getElementById('inputServerIcon').value.trim();
+            if (!serverName) return alert("Server Name cannot be empty.");
+
+            try {
+                const res = await fetch('/api/settings/general', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serverName, serverIcon })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentServerConfig = data.config;
+                    applyServerBranding();
+                    alert("General server settings saved!");
+                }
+            } catch (err) { alert("Connection error."); }
+        }
+
+        async function savePanelSettings() {
+            const autoBanBolo = document.getElementById('chkAutoBanBolo').checked;
+            const userSeeLogs = document.getElementById('chkUserSeeLogs').checked;
+
+            try {
+                const res = await fetch('/api/settings/general', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autoBanBolo, userSeeLogs, punishmentPresets: currentServerConfig.punishmentPresets })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentServerConfig = data.config;
+                    updatePunishmentDropdown();
+                    alert("Panel moderation settings & presets saved!");
+                }
+            } catch (err) { alert("Connection error."); }
+        }
+
+        function copyPanelLink() {
+            navigator.clipboard.writeText(window.location.origin);
+            alert("Moderator Panel link copied to clipboard!");
         }
 
         // --- AUTH & POLLING LOOP ---
@@ -1800,207 +2799,7 @@
             if (el) el.classList.toggle('hidden', !isChecked);
         }
 
-        async function loadActiveShifts() {
-            try {
-                const res = await fetch('/api/shifts/active');
-                const data = await res.json();
-                const container = document.getElementById('activeShiftsList');
-
-                if (data.success && data.activeShifts.length > 0) {
-                    container.innerHTML = '';
-                    let userIsOnShift = false;
-
-                    data.activeShifts.forEach(s => {
-                        if (s.userId === currentUserId) userIsOnShift = true;
-                        const endShiftBtn = (data.isManager || s.userId === currentUserId)
-                            ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>`
-                            : '';
-
-                        container.innerHTML += `
-                            <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                                <div class="flex items-center space-x-2">
-                                    <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                                    <div>
-                                        <span class="font-bold text-white block text-[11px]">${escapeHtml(s.robloxName)}</span>
-                                        <span class="text-[9px] text-slate-400 block">${escapeHtml(s.department)} &bull; <strong class="text-emerald-400">${s.duration}</strong></span>
-                                    </div>
-                                </div>
-                                ${endShiftBtn}
-                            </div>
-                        `;
-                    });
-
-                    if (userIsOnShift) {
-                        document.getElementById('shiftBadge').textContent = 'ON SHIFT';
-                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold';
-                        document.getElementById('btnStartShift').classList.add('hidden');
-                        document.getElementById('btnEndShift').classList.remove('hidden');
-                    } else {
-                        document.getElementById('shiftBadge').textContent = 'OFFLINE';
-                        document.getElementById('shiftBadge').className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold';
-                        document.getElementById('btnStartShift').classList.remove('hidden');
-                        document.getElementById('btnEndShift').classList.add('hidden');
-                    }
-                } else {
-                    container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`;
-                }
-            } catch (err) {}
-        }
-
-        async function forceEndShift(targetUserId) {
-            if (!confirm("End this staff member's shift?")) return;
-            try {
-                const res = await fetch('/api/shifts/force-end', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ targetUserId })
-                });
-                if (res.ok) loadActiveShifts();
-            } catch (err) {}
-        }
-
-        async function loadServerInfo() {
-            try {
-                const res = await fetch('/api/erlc/server-info');
-                const data = await res.json();
-                if (data.success) {
-                    cachedPlayers = data.players || [];
-                    const pContainer = document.getElementById('livePlayersList');
-                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.length} Players`;
-
-                    if (cachedPlayers.length > 0) {
-                        pContainer.innerHTML = cachedPlayers.map(p => {
-                            const parsed = parseErlcPlayer(p);
-                            return `
-                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
-                                        <span class="font-bold text-white">${escapeHtml(parsed.username)}</span>
-                                    </div>
-                                    <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">In Discord</span>
-                                </div>
-                            `;
-                        }).join('');
-                    }
-                }
-            } catch (err) {}
-        }
-
-        async function fetchActivityFeed() {
-            try {
-                const res = await fetch('/api/erlc/activity');
-                const data = await res.json();
-                const container = document.getElementById('activityContainer');
-                if (data.success && data.logs.length > 0) {
-                    container.innerHTML = data.logs.slice(0, 10).map(log => `
-                        <div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs flex items-center space-x-2">
-                            <i class="fa-solid fa-terminal text-pink-400 text-xs"></i>
-                            <span class="text-slate-300"><strong class="text-white">${escapeHtml(log.Player || 'Server')}:</strong> ${escapeHtml(log.Command || 'Executed action')}</span>
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
-
-        function parseErlcPlayer(p) {
-            let rawName = p.Player || p.Name || p.username || '';
-            let rawId = p.UserId || p.id || '';
-            let cleanUsername = rawName;
-            let cleanRobloxId = '';
-
-            if (rawName.includes(':')) {
-                const parts = rawName.split(':');
-                cleanUsername = parts[0].trim();
-                cleanRobloxId = parts[1].trim();
-            } else if (rawId && !isNaN(rawId)) {
-                cleanRobloxId = String(rawId).trim();
-            }
-            return { username: cleanUsername, robloxId: cleanRobloxId };
-        }
-
-        function handlePlayerSearch(query) {
-            const dropdown = document.getElementById('playerSearchDropdown');
-            if (!query.trim()) {
-                dropdown.classList.add('hidden');
-                return;
-            }
-            const matches = cachedPlayers.filter(p => {
-                const parsed = parseErlcPlayer(p);
-                return parsed.username.toLowerCase().includes(query.toLowerCase());
-            });
-
-            if (matches.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching in-game players found</div>`;
-            } else {
-                dropdown.innerHTML = matches.map(p => {
-                    const parsed = parseErlcPlayer(p);
-                    return `
-                        <div onclick="selectPlayer('${escapeHtml(parsed.username)}', '${escapeHtml(parsed.robloxId)}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
-                            <span class="text-xs font-bold text-white">${escapeHtml(parsed.username)}</span>
-                            <span class="text-[10px] text-slate-400">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-            dropdown.classList.remove('hidden');
-        }
-
-        function selectPlayer(name, id) {
-            document.getElementById('targetUser').value = name;
-            document.getElementById('playerSearchDropdown').classList.add('hidden');
-            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
-        }
-
-        async function autoFetchRobloxId(username) {
-            if (!username.trim() || document.getElementById('robloxId').value) return;
-            const spinner = document.getElementById('idLoadingSpinner');
-            spinner.classList.remove('hidden');
-
-            try {
-                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false })
-                });
-                const data = await res.json();
-                if (data.data && data.data.length > 0) {
-                    document.getElementById('robloxId').value = data.data[0].id;
-                }
-            } catch (err) {
-            } finally {
-                spinner.classList.add('hidden');
-            }
-        }
-
-        async function requestHigherUpAssistance() {
-            const reason = prompt("Enter reason for higher-up assistance:");
-            if (!reason) return;
-            try {
-                await fetch('/api/assistance/request', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reason })
-                });
-                alert("Assistance requested!");
-            } catch (err) {}
-        }
-
-        async function logout() {
-            await fetch('/api/auth/logout');
-            window.location.href = '/';
-        }
-
-        async function toggleShift(action) {
-            try {
-                const res = await fetch('/api/shifts/toggle', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action, department: 'Staff Moderation' })
-                });
-                if (res.ok) loadActiveShifts();
-            } catch (err) {}
-        }
-
+        // --- DASHBOARD ACTIONS ---
         async function sendErlcCommand() {
             const command = document.getElementById('erlcCmdInput').value.trim();
             if (!command) return;
@@ -2088,6 +2887,91 @@
                     }).join('');
                 } else {
                     container.innerHTML = `<p class="text-xs text-slate-500">No punishments logged yet.</p>`;
+                }
+            } catch (err) {}
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout');
+            window.location.href = '/';
+        }
+
+        // Search Handlers
+        function handlePlayerSearch(query) {
+            const dropdown = document.getElementById('playerSearchDropdown');
+            if (!query.trim()) { dropdown.classList.add('hidden'); return; }
+            const matches = cachedPlayers.filter(p => parseErlcPlayer(p).username.toLowerCase().includes(query.toLowerCase()));
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching in-game players found</div>`;
+            } else {
+                dropdown.innerHTML = matches.map(p => {
+                    const parsed = parseErlcPlayer(p);
+                    return `<div onclick="selectPlayer('${escapeHtml(parsed.username)}', '${escapeHtml(parsed.robloxId)}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition"><span class="text-xs font-bold text-white">${escapeHtml(parsed.username)}</span><span class="text-[10px] text-slate-400">${parsed.robloxId ? 'ID: ' + parsed.robloxId : ''}</span></div>`;
+                }).join('');
+            }
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectPlayer(name, id) {
+            document.getElementById('targetUser').value = name;
+            document.getElementById('playerSearchDropdown').classList.add('hidden');
+            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
+        }
+
+        async function autoFetchRobloxId(username) {
+            if (!username.trim() || document.getElementById('robloxId').value) return;
+            document.getElementById('idLoadingSpinner').classList.remove('hidden');
+            try {
+                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false })
+                });
+                const data = await res.json();
+                if (data.data && data.data.length > 0) document.getElementById('robloxId').value = data.data[0].id;
+            } catch (err) {} finally { document.getElementById('idLoadingSpinner').classList.add('hidden'); }
+        }
+
+        function parseErlcPlayer(p) {
+            let rawName = p.Player || p.Name || p.username || '';
+            let rawId = p.UserId || p.id || '';
+            let cleanUsername = rawName, cleanRobloxId = String(rawId).trim();
+            if (rawName.includes(':')) { const parts = rawName.split(':'); cleanUsername = parts[0].trim(); cleanRobloxId = parts[1].trim(); }
+            return { username: cleanUsername, robloxId: cleanRobloxId };
+        }
+
+        async function fetchActivityFeed() {
+            try {
+                const res = await fetch('/api/erlc/activity');
+                const data = await res.json();
+                const container = document.getElementById('activityContainer');
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = data.logs.slice(0, 10).map(log => `<div class="p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs flex items-center space-x-2"><i class="fa-solid fa-terminal text-pink-400 text-xs"></i><span class="text-slate-300"><strong class="text-white">${escapeHtml(log.Player || 'Server')}:</strong> ${escapeHtml(log.Command || 'Executed action')}</span></div>`).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function requestHigherUpAssistance() {
+            const reason = prompt("Enter reason for higher-up assistance:");
+            if (!reason) return;
+            try {
+                await fetch('/api/assistance/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+                alert("Assistance requested!");
+            } catch (err) {}
+        }
+
+        async function loadServerInfo() {
+            try {
+                const res = await fetch('/api/erlc/server-info');
+                const data = await res.json();
+                if (data.success) {
+                    cachedPlayers = data.players || [];
+                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.length} Players`;
+                    const pContainer = document.getElementById('livePlayersList');
+                    if (cachedPlayers.length > 0) {
+                        pContainer.innerHTML = cachedPlayers.map(p => {
+                            const parsed = parseErlcPlayer(p);
+                            return `<div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="flex items-center space-x-2"><div class="w-2 h-2 rounded-full bg-emerald-400"></div><span class="font-bold text-white">${escapeHtml(parsed.username)}</span></div><span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">In Discord</span></div>`;
+                        }).join('');
+                    }
                 }
             } catch (err) {}
         }
