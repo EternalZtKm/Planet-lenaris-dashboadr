@@ -20,7 +20,7 @@ const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboa
 
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 
-// Support Role IDs for Webhook Notifications
+// Support Role IDs
 const SUPPORT_ROLE_IDS = [
     "1425618034214699078",
     "1425618073917853796",
@@ -30,7 +30,7 @@ const SUPPORT_ROLE_IDS = [
     "1425618454337028116"
 ];
 
-// Staff Hierarchy Role IDs (Ordered from LEAST to GREATEST authority)
+// Staff Hierarchy Role IDs (Least to Greatest Authority)
 const STAFF_ROLE_IDS_ASC = [
     "1425619421719695500", "1425619419081474079", "1425619416229613578", "1425619413566095493",
     "1425619286864695306", "1425617466092032112", "1425617463051030578", "1425617456432414781",
@@ -67,12 +67,14 @@ let serverConfig = {
     punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
 };
 
-// Webhook & Bot Config
+// Webhooks Config (Expanded for Infractions and Promotions)
 let botConfig = {
     shiftWebhook: process.env.SHIFT_WEBHOOK || "",
     punishmentWebhook: process.env.PUNISHMENT_WEBHOOK || "",
     assistanceWebhook: process.env.ASSISTANCE_WEBHOOK || "",
     activityWebhook: process.env.ACTIVITY_WEBHOOK || "",
+    infractionWebhook: process.env.INFRACTION_WEBHOOK || "",
+    promotionWebhook: process.env.PROMOTION_WEBHOOK || "",
     managerRoleIds: [
         "1425618356912001135",
         "1425618591637835797",
@@ -139,6 +141,18 @@ let shiftSettings = {
     defaultReportForm: "Default Form"
 };
 
+// --- INFRACTIONS & PROMOTIONS DATA STORES ---
+let staffInfractionLevels = ["Notice", "Warning", "Strike 1", "Strike 2", "Demotion", "Termination"];
+let staffInfractionLogs = [];
+let staffPromotionLogs = [];
+let staffAppeals = [];
+
+let infractionSettings = {
+    autoEscalation: true,
+    warnsPerStrike: 3,
+    expirationDays: 30
+};
+
 let notificationsList = [
     {
         id: 1,
@@ -186,7 +200,7 @@ function scheduleMidnightReset() {
 }
 scheduleMidnightReset();
 
-// Middleware & Express Config
+// Express Configuration
 app.use(cors());
 app.use(express.json());
 
@@ -201,7 +215,7 @@ app.use(session({
     }
 }));
 
-// Logo Route
+// Logo Endpoint
 app.get(['/Logo.png', '/logo.png', '/server-logo.png', '/api/logo'], (req, res) => {
     if (serverConfig.serverIcon) {
         return res.redirect(serverConfig.serverIcon);
@@ -215,10 +229,9 @@ app.get(['/Logo.png', '/logo.png', '/server-logo.png', '/api/logo'], (req, res) 
     res.status(404).send('Logo file not found');
 });
 
-// Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Verification Helper
+// Role Verification Helper
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -376,6 +389,8 @@ app.get('/api/members', async (req, res) => {
                 const highestRoleId = STAFF_ROLE_IDS_ASC[highestRankIndex];
                 const highestRole = guild.roles.cache.get(highestRoleId);
 
+                const activeStrikes = staffInfractionLogs.filter(i => i.targetUserId === member.id && !i.removed).length;
+
                 staffMembers.push({
                     id: member.id,
                     username: member.user.username,
@@ -384,6 +399,7 @@ app.get('/api/members', async (req, res) => {
                     roleName: highestRole ? highestRole.name : "Staff Member",
                     roleId: highestRoleId,
                     rankIndex: highestRankIndex,
+                    activeStrikes: activeStrikes,
                     joinedAt: member.joinedAt ? member.joinedAt.toISOString() : null
                 });
             }
@@ -398,8 +414,6 @@ app.get('/api/members', async (req, res) => {
 });
 
 // --- ACTIVITY ENDPOINTS ---
-
-// 1. WAVES API
 app.get('/api/activity/waves', (req, res) => {
     const enrichedWaves = activityWaves.map(wave => {
         const waveShifts = completedShifts.filter(s => s.waveId === wave.id);
@@ -454,7 +468,7 @@ app.post('/api/activity/custom-requirements', requireManagerAuth, (req, res) => 
     res.status(400).json({ success: false, error: "Invalid payload" });
 });
 
-// 2. SHIFTS API
+// SHIFTS ENDPOINTS
 app.get('/api/shifts/all', (req, res) => {
     const { waveId, shiftType } = req.query;
     let filtered = [...completedShifts];
@@ -501,7 +515,7 @@ app.post('/api/shifts/delete', requireManagerAuth, (req, res) => {
     res.json({ success: true });
 });
 
-// 3. MEMBER ACTIVITY STATS API
+// MEMBER ACTIVITY STATS API
 app.get('/api/activity/member-stats', async (req, res) => {
     const { userId, waveId } = req.query;
     if (!userId) return res.status(400).json({ success: false, error: "Missing userId" });
@@ -548,7 +562,7 @@ app.get('/api/activity/member-stats', async (req, res) => {
     });
 });
 
-// 4. LEADERBOARD API
+// LEADERBOARD API
 app.get('/api/activity/leaderboard', async (req, res) => {
     const { waveId, shiftType } = req.query;
     let filteredShifts = [...completedShifts];
@@ -582,6 +596,146 @@ app.get('/api/activity/leaderboard', async (req, res) => {
     res.json({ success: true, leaderboard });
 });
 
+// --- INFRACTIONS & PROMOTIONS ENDPOINTS ---
+app.get('/api/infractions/levels', (req, res) => {
+    res.json({ success: true, levels: staffInfractionLevels, settings: infractionSettings });
+});
+
+app.post('/api/infractions/levels/add', requireManagerAuth, (req, res) => {
+    const { name } = req.body || {};
+    if (!name || !name.trim()) return res.status(400).json({ success: false, error: "Invalid level name" });
+
+    const trimmed = name.trim();
+    if (!staffInfractionLevels.includes(trimmed)) {
+        staffInfractionLevels.push(trimmed);
+    }
+    res.json({ success: true, levels: staffInfractionLevels });
+});
+
+app.post('/api/infractions/levels/remove', requireManagerAuth, (req, res) => {
+    const { index } = req.body || {};
+    if (index !== undefined && staffInfractionLevels[index]) {
+        staffInfractionLevels.splice(index, 1);
+    }
+    res.json({ success: true, levels: staffInfractionLevels });
+});
+
+app.post('/api/infractions/issue', requireManagerAuth, async (req, res) => {
+    try {
+        const { targetUserId, targetUser, level, reason, proof } = req.body || {};
+        const staff = req.session.user;
+
+        const infraction = {
+            id: `inf_${Date.now()}`,
+            targetUserId,
+            targetUser,
+            level: level || "Warning",
+            reason,
+            proof: proof || "None Provided",
+            issuedBy: staff.displayName || staff.username,
+            issuedByUserId: staff.id,
+            removed: false,
+            createdAt: new Date().toLocaleString()
+        };
+
+        staffInfractionLogs.unshift(infraction);
+        addNotification("Staff Infraction Issued", `${level} issued to ${targetUser} by ${staff.displayName || staff.username}.`);
+
+        // Send to Infraction Webhook
+        sendDiscordLog(botConfig.infractionWebhook, {
+            title: `⚠️ Staff Infraction Issued: ${level}`,
+            color: 15548997,
+            fields: [
+                { name: "Staff Member", value: `${targetUser} (<@${targetUserId}>)`, inline: true },
+                { name: "Infraction Level", value: level, inline: true },
+                { name: "Issued By", value: `${staff.displayName} (<@${staff.id}>)`, inline: true },
+                { name: "Reason", value: reason || "No reason given", inline: false },
+                { name: "Proof / Evidence", value: proof || "None Provided", inline: false }
+            ],
+            footer: { text: `${serverConfig.serverName} Staff Management` }
+        });
+
+        res.json({ success: true, infraction });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/infractions/promote', requireManagerAuth, async (req, res) => {
+    try {
+        const { targetUserId, targetUser, newRole, reason } = req.body || {};
+        const staff = req.session.user;
+
+        const promotion = {
+            id: `prom_${Date.now()}`,
+            targetUserId,
+            targetUser,
+            newRole,
+            reason,
+            promotedBy: staff.displayName || staff.username,
+            createdAt: new Date().toLocaleString()
+        };
+
+        staffPromotionLogs.unshift(promotion);
+        addNotification("Staff Status Changed", `${targetUser} promoted/updated to ${newRole}.`);
+
+        // Send to Promotion Webhook
+        sendDiscordLog(botConfig.promotionWebhook, {
+            title: `🎉 Staff Promotion / Rank Change`,
+            color: 5763719,
+            fields: [
+                { name: "Staff Member", value: `${targetUser} (<@${targetUserId}>)`, inline: true },
+                { name: "New Rank / Role", value: newRole, inline: true },
+                { name: "Action By", value: `${staff.displayName} (<@${staff.id}>)`, inline: true },
+                { name: "Notes / Reason", value: reason || "No notes provided", inline: false }
+            ],
+            footer: { text: `${serverConfig.serverName} Staff Promotions` }
+        });
+
+        res.json({ success: true, promotion });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/infractions/list', requireStaffAuth, (req, res) => {
+    res.json({ success: true, infractions: staffInfractionLogs, promotions: staffPromotionLogs });
+});
+
+// Appeals API
+app.get('/api/infractions/appeals', requireStaffAuth, (req, res) => {
+    res.json({ success: true, appeals: staffAppeals });
+});
+
+app.post('/api/infractions/appeals/review', requireManagerAuth, (req, res) => {
+    const { appealId, status, notes } = req.body || {};
+    const appeal = staffAppeals.find(a => a.id === appealId);
+
+    if (!appeal) return res.status(404).json({ success: false, error: "Appeal not found." });
+
+    appeal.status = status; // Approved or Denied
+    appeal.notes = notes;
+    appeal.reviewedBy = req.session.user.displayName || req.session.user.username;
+
+    if (status === 'Approved' && appeal.infractionId) {
+        const targetInfraction = staffInfractionLogs.find(i => i.id === appeal.infractionId);
+        if (targetInfraction) targetInfraction.removed = true;
+    }
+
+    addNotification("Appeal Reviewed", `Appeal for ${appeal.username} set to ${status}.`);
+    res.json({ success: true, appeal });
+});
+
+// Settings Update for Infractions
+app.post('/api/infractions/settings', requireManagerAuth, (req, res) => {
+    const { autoEscalation, warnsPerStrike, expirationDays } = req.body || {};
+    if (autoEscalation !== undefined) infractionSettings.autoEscalation = !!autoEscalation;
+    if (warnsPerStrike !== undefined) infractionSettings.warnsPerStrike = parseInt(warnsPerStrike) || 3;
+    if (expirationDays !== undefined) infractionSettings.expirationDays = parseInt(expirationDays) || 30;
+
+    res.json({ success: true, settings: infractionSettings });
+});
+
 // --- GENERAL SETTINGS & WEBHOOKS ---
 app.get('/api/settings/general', (req, res) => {
     res.json({ success: true, config: serverConfig });
@@ -607,18 +761,22 @@ app.get('/api/settings/webhooks', requireManagerAuth, (req, res) => {
             shiftWebhook: botConfig.shiftWebhook,
             punishmentWebhook: botConfig.punishmentWebhook,
             assistanceWebhook: botConfig.assistanceWebhook,
-            activityWebhook: botConfig.activityWebhook
+            activityWebhook: botConfig.activityWebhook,
+            infractionWebhook: botConfig.infractionWebhook,
+            promotionWebhook: botConfig.promotionWebhook
         }
     });
 });
 
 app.post('/api/settings/webhooks', requireManagerAuth, (req, res) => {
-    const { shiftWebhook, punishmentWebhook, assistanceWebhook, activityWebhook } = req.body || {};
+    const { shiftWebhook, punishmentWebhook, assistanceWebhook, activityWebhook, infractionWebhook, promotionWebhook } = req.body || {};
     
     if (shiftWebhook !== undefined) botConfig.shiftWebhook = shiftWebhook.trim();
     if (punishmentWebhook !== undefined) botConfig.punishmentWebhook = punishmentWebhook.trim();
     if (assistanceWebhook !== undefined) botConfig.assistanceWebhook = assistanceWebhook.trim();
     if (activityWebhook !== undefined) botConfig.activityWebhook = activityWebhook.trim();
+    if (infractionWebhook !== undefined) botConfig.infractionWebhook = infractionWebhook.trim();
+    if (promotionWebhook !== undefined) botConfig.promotionWebhook = promotionWebhook.trim();
 
     addNotification("Settings Updated", "Discord webhook configuration updated by Management.");
     res.json({ success: true, webhooks: botConfig });
@@ -902,7 +1060,7 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- DISCORD BOT BOT INITIALIZATION ---
+// --- DISCORD BOT INITIALIZATION ---
 let discordClient;
 
 if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
