@@ -30,6 +30,21 @@ const SUPPORT_ROLE_IDS = [
     "1425618454337028116"
 ];
 
+// Staff Hierarchy Role IDs (Ordered from LEAST to GREATEST authority)
+const STAFF_ROLE_IDS_ASC = [
+    "1425619421719695500", "1425619419081474079", "1425619416229613578", "1425619413566095493",
+    "1425619286864695306", "1425617466092032112", "1425617463051030578", "1425617456432414781",
+    "1425617453102137364", "1425617450023784559", "1425617405073424514", "1425617401826775101",
+    "1425617398924447896", "1425617395762073740", "1425617392423276708", "1425617114298978324",
+    "1425617110826090567", "1425617102567641138", "1424244176236711946", "1425616980345487380",
+    "1425616349920755772", "1425616338831016088", "1425616334569341089", "1425616324121596054",
+    "1425616282295861298", "1425616084496814180", "1425616019874906223", "1425615977495920721",
+    "1425615914061008990", "1425615745727074405", "1425615423025578005", "1425615381283737610",
+    "1425615346764742686", "1425615265277673612", "1425615123069927444", "1425614333957636138",
+    "1425614322603655231", "1425614286499086396", "1425614245973983322", "1425614210624389244",
+    "1425613708222267472", "1425613620829491372", "1425613579931095051"
+];
+
 // Server General Configuration
 let serverConfig = {
     serverName: "Planet Lenaris",
@@ -295,6 +310,56 @@ app.get('/api/auth/user', async (req, res) => {
 
 app.get('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
+});
+
+// --- STAFF MEMBERS ENDPOINT ---
+app.get('/api/members', async (req, res) => {
+    try {
+        if (!discordClient || !discordClient.isReady()) {
+            return res.status(503).json({ success: false, error: "Discord client is not ready." });
+        }
+
+        const guild = await discordClient.guilds.fetch(GUILD_ID);
+        if (!guild) {
+            return res.status(500).json({ success: false, error: "Guild not found." });
+        }
+
+        const members = await guild.members.fetch();
+        const staffMembers = [];
+
+        members.forEach((member) => {
+            if (member.user.bot) return;
+
+            // Check matching staff roles against provided list
+            const userStaffRoleIndexes = member.roles.cache
+                .map((role) => STAFF_ROLE_IDS_ASC.indexOf(role.id))
+                .filter((index) => index !== -1);
+
+            // Filter out non-staff members
+            if (userStaffRoleIndexes.length > 0) {
+                const highestRankIndex = Math.max(...userStaffRoleIndexes);
+                const highestRoleId = STAFF_ROLE_IDS_ASC[highestRankIndex];
+                const highestRole = guild.roles.cache.get(highestRoleId);
+
+                staffMembers.push({
+                    id: member.id,
+                    username: member.user.username,
+                    displayName: member.displayName || member.user.username,
+                    avatarUrl: member.user.displayAvatarURL({ extension: 'png', size: 128 }),
+                    roleName: highestRole ? highestRole.name : "Staff Member",
+                    rankIndex: highestRankIndex
+                });
+            }
+        });
+
+        // Sort members from highest rank to lowest rank
+        staffMembers.sort((a, b) => b.rankIndex - a.rankIndex);
+
+        res.json({ success: true, members: staffMembers });
+    } catch (err) {
+        console.error("Error fetching staff members:", err);
+        res.status(500).json({ success: false, error: "Failed to fetch staff members." });
+    }
 });
 
 // --- WEBHOOK & SETTINGS ENDPOINTS ---
@@ -680,8 +745,10 @@ app.get('*', (req, res) => {
 });
 
 // --- DISCORD BOT LOGIC ---
+let discordClient;
+
 if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
-    const discordClient = new Client({
+    discordClient = new Client({
         intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
     });
 
