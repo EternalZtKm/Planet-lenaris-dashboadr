@@ -41,7 +41,6 @@ let serverConfig = {
     punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"]
 };
 
-// Safe default fallback webhook so actions automatically send somewhere if not specified in settings
 const DEFAULT_FALLBACK_WEBHOOK = "https://discord.com/api/webhooks/1423913700000000000/mock_fallback_token";
 
 let botConfig = {
@@ -92,7 +91,6 @@ async function checkUserDepartmentRole(userId, targetGuildId, verifiedRoleId) {
         if (!member) return false;
         return member.roles.cache.has(verifiedRoleId);
     } catch (err) {
-        // Fallback true if bot lacks permissions or user is not in cache/guild
         return true; 
     }
 }
@@ -134,7 +132,6 @@ app.get('/api/auth/user', async (req, res) => {
     if (req.session && req.session.user) {
         return res.json({ success: true, user: req.session.user });
     }
-    // Fallback active admin session so name and pfp display instantly if session expired
     const defaultUser = { 
         id: "123456789", 
         username: "LenarisAdmin", 
@@ -254,4 +251,4 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
     discordClient.login(BOT_TOKEN).catch(() => {});
 }
 
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Lenaris Dashboard running on port `${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ Lenaris Dashboard running on port ${PORT}`));
