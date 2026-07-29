@@ -235,7 +235,7 @@
                             <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
                         </div>
 
-                        <div class="flex space-x-3">
+                        <div class="flex space-x-2">
                             <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
                                 Start Shift
                             </button>
@@ -805,8 +805,15 @@
         let currentUserId = null;
         let currentUserData = null;
 
-        let currentServerConfig = { serverName: "Planet Lenaris", serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", autoBanBolo: true, userSeeLogs: false, punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] };
+        let currentServerConfig = { 
+            serverName: "Planet Lenaris", 
+            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", 
+            autoBanBolo: true, 
+            userSeeLogs: false, 
+            punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] 
+        };
 
+        // --- GENERAL BRANDING & SETUP ---
         async function fetchGeneralSettings() {
             try {
                 const res = await fetch('/api/settings/general');
@@ -817,11 +824,14 @@
                     document.querySelectorAll('.img-logo').forEach(img => img.src = currentServerConfig.serverIcon);
                     document.getElementById('docTitle').textContent = `${currentServerConfig.serverName} | Official Hub`;
                     const selectEl = document.getElementById('punishmentType');
-                    if (selectEl) selectEl.innerHTML = (currentServerConfig.punishmentPresets || []).map(p => `<option value="${p}">${p}</option>`).join('');
+                    if (selectEl) {
+                        selectEl.innerHTML = (currentServerConfig.punishmentPresets || []).map(p => `<option value="${p}">${p}</option>`).join('');
+                    }
                 }
             } catch (err) {}
         }
 
+        // --- NAVIGATION & UI HELPERS ---
         function switchView(viewName, defaultTab = 'general') {
             document.getElementById('viewHub').classList.add('hidden');
             document.getElementById('viewModPanel').classList.add('hidden');
@@ -850,10 +860,17 @@
         function toggleSidebarMenu(menuId) {
             const el = document.getElementById(menuId);
             const arrow = document.getElementById('arrow-' + menuId);
-            if (el) { el.classList.toggle('hidden'); if (arrow) arrow.classList.toggle('rotate-180'); }
+            if (el) { 
+                el.classList.toggle('hidden'); 
+                if (arrow) arrow.classList.toggle('rotate-180'); 
+            }
         }
 
-        function escapeHtml(str) { return String(str || '').replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; }); }
+        function escapeHtml(str) { 
+            return String(str || '').replace(/[&<>"']/g, function(m) { 
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; 
+            }); 
+        }
 
         function selectSidebarItem(tabKey) {
             document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
@@ -885,6 +902,7 @@
             document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is active.</p></div>`;
         }
 
+        // --- DASHBOARD TAB RENDERS ---
         function renderGeneralTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
@@ -1237,7 +1255,6 @@
                 document.getElementById('robloxId').value = found.robloxId;
                 return;
             }
-            // Fallback to Roblox API lookup
             document.getElementById('idLoadingSpinner').classList.remove('hidden');
             try {
                 const res = await fetch(`https://users.roblox.com/v1/usernames/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false }) });
