@@ -805,15 +805,8 @@
         let currentUserId = null;
         let currentUserData = null;
 
-        let currentServerConfig = { 
-            serverName: "Planet Lenaris", 
-            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", 
-            autoBanBolo: true, 
-            userSeeLogs: false, 
-            punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] 
-        };
+        let currentServerConfig = { serverName: "Planet Lenaris", serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", autoBanBolo: true, userSeeLogs: false, punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] };
 
-        // --- GENERAL BRANDING & SETUP ---
         async function fetchGeneralSettings() {
             try {
                 const res = await fetch('/api/settings/general');
@@ -824,14 +817,11 @@
                     document.querySelectorAll('.img-logo').forEach(img => img.src = currentServerConfig.serverIcon);
                     document.getElementById('docTitle').textContent = `${currentServerConfig.serverName} | Official Hub`;
                     const selectEl = document.getElementById('punishmentType');
-                    if (selectEl) {
-                        selectEl.innerHTML = (currentServerConfig.punishmentPresets || []).map(p => `<option value="${p}">${p}</option>`).join('');
-                    }
+                    if (selectEl) selectEl.innerHTML = (currentServerConfig.punishmentPresets || []).map(p => `<option value="${p}">${p}</option>`).join('');
                 }
             } catch (err) {}
         }
 
-        // --- NAVIGATION & UI HELPERS ---
         function switchView(viewName, defaultTab = 'general') {
             document.getElementById('viewHub').classList.add('hidden');
             document.getElementById('viewModPanel').classList.add('hidden');
@@ -844,6 +834,7 @@
                 document.getElementById('viewModPanel').classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
                 if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
+                loadServerInfo();
             } else if (viewName === 'serverDashboard') {
                 document.getElementById('viewServerDashboard').classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
@@ -859,26 +850,16 @@
         function toggleSidebarMenu(menuId) {
             const el = document.getElementById(menuId);
             const arrow = document.getElementById('arrow-' + menuId);
-            if (el) { 
-                el.classList.toggle('hidden'); 
-                if (arrow) arrow.classList.toggle('rotate-180'); 
-            }
+            if (el) { el.classList.toggle('hidden'); if (arrow) arrow.classList.toggle('rotate-180'); }
         }
 
-        function escapeHtml(str) { 
-            return String(str || '').replace(/[&<>"']/g, function(m) { 
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; 
-            }); 
-        }
+        function escapeHtml(str) { return String(str || '').replace(/[&<>"']/g, function(m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; }); }
 
         function selectSidebarItem(tabKey) {
-            // Remove highlight from all sidebar buttons
             document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
                 el.classList.remove('text-emerald-400', 'bg-slate-800/50');
                 if(el.classList.contains('sb-subitem')) el.classList.remove('text-emerald-400');
             });
-
-            // Highlight active button
             const activeBtn = document.querySelector(`[onclick="selectSidebarItem('${tabKey}')"]`);
             if (activeBtn) {
                 if (activeBtn.classList.contains('sb-subitem')) activeBtn.classList.add('text-emerald-400');
@@ -901,120 +882,55 @@
             const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
             titleEl.textContent = formattedTitle;
             descEl.textContent = `Manage and view ${formattedTitle} details.`;
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3>
-                    <p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is active.</p>
-                </div>`;
+            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is active.</p></div>`;
         }
 
-        // --- TAB RENDERING LOGIC ---
         function renderGeneralTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Server Name</h3>
-                        <p class="text-xs text-slate-400">The name of your server displayed throughout the hub.</p>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Name *</label>
-                        <input type="text" id="inputServerName" value="${escapeHtml(currentServerConfig.serverName)}" class="w-full rounded-xl px-3 py-2 text-xs">
-                    </div>
+                    <div><h3 class="text-sm font-bold text-white">Server Name</h3><p class="text-xs text-slate-400">The name of your server displayed throughout the hub.</p></div>
+                    <div><label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Name *</label><input type="text" id="inputServerName" value="${escapeHtml(currentServerConfig.serverName)}" class="w-full rounded-xl px-3 py-2 text-xs"></div>
                 </div>
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Server Icon</h3>
-                        <p class="text-xs text-slate-400">The icon image of your server.</p>
-                    </div>
-                    <div class="flex items-center space-x-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                        <img src="${escapeHtml(currentServerConfig.serverIcon)}" class="w-10 h-10 rounded-xl object-cover border border-slate-700" alt="Server Preview">
-                        <span class="text-xs font-bold text-white">${escapeHtml(currentServerConfig.serverName)}</span>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Icon Image URL</label>
-                        <input type="text" id="inputServerIcon" value="${escapeHtml(currentServerConfig.serverIcon)}" class="w-full rounded-xl px-3 py-2 text-xs">
-                    </div>
+                    <div><h3 class="text-sm font-bold text-white">Server Icon</h3><p class="text-xs text-slate-400">The icon image of your server.</p></div>
+                    <div class="flex items-center space-x-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800"><img src="${escapeHtml(currentServerConfig.serverIcon)}" class="w-10 h-10 rounded-xl object-cover border border-slate-700" alt="Server Preview"><span class="text-xs font-bold text-white">${escapeHtml(currentServerConfig.serverName)}</span></div>
+                    <div><label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Icon Image URL</label><input type="text" id="inputServerIcon" value="${escapeHtml(currentServerConfig.serverIcon)}" class="w-full rounded-xl px-3 py-2 text-xs"></div>
                 </div>
-                <div class="flex justify-end">
-                    <button onclick="saveGeneralSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2">
-                        <i class="fa-solid fa-floppy-disk"></i><span>Save General Settings</span>
-                    </button>
-                </div>
+                <div class="flex justify-end"><button onclick="saveGeneralSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2"><i class="fa-solid fa-floppy-disk"></i><span>Save General Settings</span></button></div>
             `;
         }
 
         function renderPanelTab() {
-            const presetsChipsHTML = (currentServerConfig.punishmentPresets || []).map((preset, index) => `
-                <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
-                    <span class="font-bold text-white">${escapeHtml(preset)}</span>
-                    <button onclick="removePunishmentPreset(${index})" class="text-rose-400 hover:text-rose-300 transition text-xs">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </div>
-            `).join('');
-
+            const presetsChipsHTML = (currentServerConfig.punishmentPresets || []).map((preset, index) => `<div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs"><span class="font-bold text-white">${escapeHtml(preset)}</span><button onclick="removePunishmentPreset(${index})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
                     <h3 class="text-sm font-bold text-white">Moderator Panel Access</h3>
-                    <div class="flex items-center space-x-3">
-                        <button onclick="attemptModPanelAccess()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i><span>Open Moderator Panel</span>
-                        </button>
-                        <button onclick="copyPanelLink()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-slate-700">
-                            <i class="fa-solid fa-copy mr-1"></i> Copy Link
-                        </button>
-                    </div>
+                    <div class="flex items-center space-x-3"><button onclick="attemptModPanelAccess()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2"><i class="fa-solid fa-arrow-up-right-from-square"></i><span>Open Moderator Panel</span></button><button onclick="copyPanelLink()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-slate-700"><i class="fa-solid fa-copy mr-1"></i> Copy Link</button></div>
                 </div>
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
                     <h3 class="text-sm font-bold text-white">Punishment Presets</h3>
-                    <div class="flex space-x-2">
-                        <input type="text" id="inputNewPreset" placeholder="Enter new punishment type..." class="flex-1 rounded-xl px-3 py-2 text-xs">
-                        <button onclick="addPunishmentPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">Add Preset</button>
-                    </div>
-                    <div id="presetsListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-                        ${presetsChipsHTML}
-                    </div>
+                    <div class="flex space-x-2"><input type="text" id="inputNewPreset" placeholder="Enter new punishment type..." class="flex-1 rounded-xl px-3 py-2 text-xs"><button onclick="addPunishmentPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">Add Preset</button></div>
+                    <div id="presetsListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">${presetsChipsHTML}</div>
                 </div>
             `;
         }
 
-        function copyPanelLink() { 
-            navigator.clipboard.writeText(window.location.origin); 
-            alert("Link copied!"); 
-        }
-
+        function copyPanelLink() { navigator.clipboard.writeText(window.location.origin); alert("Link copied!"); }
         function addPunishmentPreset() {
             const val = document.getElementById('inputNewPreset').value.trim();
             if (!val) return;
             if (!currentServerConfig.punishmentPresets) currentServerConfig.punishmentPresets = [];
-            if (!currentServerConfig.punishmentPresets.includes(val)) { 
-                currentServerConfig.punishmentPresets.push(val); 
-                renderPanelTab(); 
-                saveGeneralSettings(true); 
-            }
+            if (!currentServerConfig.punishmentPresets.includes(val)) { currentServerConfig.punishmentPresets.push(val); renderPanelTab(); saveGeneralSettings(true); }
         }
-
-        function removePunishmentPreset(idx) { 
-            currentServerConfig.punishmentPresets.splice(idx, 1); 
-            renderPanelTab(); 
-            saveGeneralSettings(true); 
-        }
+        function removePunishmentPreset(idx) { currentServerConfig.punishmentPresets.splice(idx, 1); renderPanelTab(); saveGeneralSettings(true); }
         
         async function saveGeneralSettings(silent = false) {
             const serverName = document.getElementById('inputServerName') ? document.getElementById('inputServerName').value.trim() : currentServerConfig.serverName;
             const serverIcon = document.getElementById('inputServerIcon') ? document.getElementById('inputServerIcon').value.trim() : currentServerConfig.serverIcon;
             try {
-                const res = await fetch('/api/settings/general', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ serverName, serverIcon, punishmentPresets: currentServerConfig.punishmentPresets }) 
-                });
+                const res = await fetch('/api/settings/general', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serverName, serverIcon, punishmentPresets: currentServerConfig.punishmentPresets }) });
                 const data = await res.json();
-                if (data.success) { 
-                    currentServerConfig = data.config; 
-                    applyServerBranding(); 
-                    if(!silent) alert("Saved!"); 
-                }
+                if (data.success) { currentServerConfig = data.config; document.querySelectorAll('.txt-server-name').forEach(el => el.textContent = currentServerConfig.serverName); if(!silent) alert("Saved!"); }
             } catch (err) {}
         }
 
@@ -1022,14 +938,10 @@
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-users text-emerald-400"></i> Official Staff Directory
-                        </h3>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-users text-emerald-400"></i> Official Staff Directory</h3>
                         <span id="sdStaffCount" class="text-xs text-slate-400 font-semibold">Loading...</span>
                     </div>
-                    <div id="sdStaffListContainer" class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                        <p class="text-xs text-slate-500 text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Fetching staff list from Discord...</p>
-                    </div>
+                    <div id="sdStaffListContainer" class="space-y-2 max-h-[600px] overflow-y-auto pr-1"><p class="text-xs text-slate-500 text-center py-4"><i class="fa-solid fa-spinner fa-spin"></i> Fetching staff list from Discord...</p></div>
                 </div>
             `;
             try {
@@ -1039,13 +951,7 @@
                     document.getElementById('sdStaffCount').textContent = `${data.members.length} Staff Members`;
                     document.getElementById('sdStaffListContainer').innerHTML = data.members.length === 0 ? `<p class="text-xs text-slate-500 text-center py-4">No staff members found.</p>` : data.members.map(m => `
                         <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3">
-                                <img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover">
-                                <div>
-                                    <span class="font-bold text-white block">${escapeHtml(m.displayName)}</span>
-                                    <span class="text-[10px] text-slate-400">@${escapeHtml(m.username)}</span>
-                                </div>
-                            </div>
+                            <div class="flex items-center space-x-3"><img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover"><div><span class="font-bold text-white block">${escapeHtml(m.displayName)}</span><span class="text-[10px] text-slate-400">@${escapeHtml(m.username)}</span></div></div>
                             <span class="text-[11px] px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-semibold">${escapeHtml(m.roleName)}</span>
                         </div>
                     `).join('');
@@ -1056,56 +962,13 @@
         async function renderActivityShiftsTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Shift Settings</h3>
-                        <p class="text-xs text-slate-400">Configure shift logging and restrictions</p>
-                    </div>
+                    <div><h3 class="text-sm font-bold text-white">Shift Settings</h3><p class="text-xs text-slate-400">Configure shift logging and restrictions</p></div>
                     <div class="space-y-4 pt-2">
-                        <div class="flex items-center space-x-3">
-                            <input type="checkbox" id="shiftLoggingToggle" class="w-10 h-5 accent-emerald-500 rounded cursor-pointer">
-                            <div>
-                                <label class="text-xs font-bold text-white block">Shift Logging</label>
-                                <span class="text-[11px] text-slate-400 block">Members must be on shift in order to log punishments. Server Administrators bypass this restriction.</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <input type="checkbox" id="inGameReqToggle" class="w-10 h-5 accent-emerald-500 rounded cursor-pointer">
-                            <div>
-                                <label class="text-xs font-bold text-white block">In-game Requirement</label>
-                                <span class="text-[11px] text-slate-400 block">Members must be in game in order to start their shift. Server Administrators bypass this restriction. Requires Roblox Account Connection.</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">Minimum Playercount</label>
-                            <p class="text-[11px] text-slate-400 mb-2">How many players should be in game before staff can start a shift? Server Administrators bypass this restriction.</p>
-                            <input type="number" id="shiftMinPlayers" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1">Max On Shift</label>
-                            <p class="text-[11px] text-slate-400 mb-2">How many people should be allowed on shift at once? Leave empty for none.</p>
-                            <input type="number" id="shiftMaxOnShift" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
-                        </div>
-                        <div class="flex justify-end pt-2">
-                            <button onclick="saveShiftSettingsUI()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">Save Settings</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Shift Types</h3>
-                        <p class="text-xs text-slate-400">Shift types allow you to separate shifts into categories</p>
-                    </div>
-                    <button class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2 rounded-lg text-xs transition border border-slate-700 flex items-center gap-2">
-                        <i class="fa-solid fa-border-all"></i> Manage Shift Types
-                    </button>
-                    <div class="pt-4 border-t border-slate-800">
-                        <label class="block text-xs font-bold text-white mb-1">Default Shift Report Form</label>
-                        <p class="text-[11px] text-slate-400 mb-2">Select a form for users to report their shifts for the default shift type.</p>
-                        <select id="shiftReportFormSelect" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
-                            <option value="">Select a shift report form</option>
-                            <option value="Default Form">Default Form</option>
-                        </select>
+                        <div class="flex items-center space-x-3"><input type="checkbox" id="shiftLoggingToggle" class="w-10 h-5 accent-emerald-500 rounded cursor-pointer"><div><label class="text-xs font-bold text-white block">Shift Logging</label><span class="text-[11px] text-slate-400 block">Members must be on shift in order to log punishments.</span></div></div>
+                        <div class="flex items-center space-x-3"><input type="checkbox" id="inGameReqToggle" class="w-10 h-5 accent-emerald-500 rounded cursor-pointer"><div><label class="text-xs font-bold text-white block">In-game Requirement</label><span class="text-[11px] text-slate-400 block">Members must be in game in order to start their shift.</span></div></div>
+                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">Minimum Playercount</label><input type="number" id="shiftMinPlayers" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"></div>
+                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">Max On Shift</label><input type="number" id="shiftMaxOnShift" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"></div>
+                        <div class="flex justify-end pt-2"><button onclick="saveShiftSettingsUI()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">Save Settings</button></div>
                     </div>
                 </div>
             `;
@@ -1122,49 +985,25 @@
         }
 
         async function saveShiftSettingsUI() {
-            const payload = {
-                shiftLogging: document.getElementById('shiftLoggingToggle').checked,
-                inGameRequirement: document.getElementById('inGameReqToggle').checked,
-                minPlayercount: document.getElementById('shiftMinPlayers').value,
-                maxOnShift: document.getElementById('shiftMaxOnShift').value
-            };
-            try {
-                const res = await fetch('/api/shifts/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) alert("Shift settings saved!");
-            } catch (err) {}
+            const payload = { shiftLogging: document.getElementById('shiftLoggingToggle').checked, inGameRequirement: document.getElementById('inGameReqToggle').checked, minPlayercount: document.getElementById('shiftMinPlayers').value, maxOnShift: document.getElementById('shiftMaxOnShift').value };
+            try { const res = await fetch('/api/shifts/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) alert("Shift settings saved!"); } catch (err) {}
         }
 
         async function renderInfractionsMembersTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions
-                        </h3>
-                    </div>
-                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1">
-                        <p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p>
-                    </div>
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions</h3></div>
+                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1"><p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p></div>
                 </div>
             `;
             try {
                 const res = await fetch('/api/members');
                 const data = await res.json();
-                const list = document.getElementById('infStaffList');
                 if (data.success && data.members) {
-                    list.innerHTML = data.members.map(m => `
+                    document.getElementById('infStaffList').innerHTML = data.members.map(m => `
                         <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3">
-                                <img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover">
-                                <div>
-                                    <span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span>
-                                    <span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">${m.activeStrikes || 0} Strikes</span>
-                                <button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">Issue Infraction</button>
-                            </div>
+                            <div class="flex items-center space-x-3"><img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover"><div><span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span><span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span></div></div>
+                            <div class="flex items-center space-x-3"><span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">${m.activeStrikes || 0} Strikes</span><button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">Issue Infraction</button></div>
                         </div>
                     `).join('');
                 }
@@ -1175,26 +1014,14 @@
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
                     <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
-                    <div class="flex space-x-2">
-                        <input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level (e.g., Notice)..." class="flex-1 rounded-xl px-3 py-2 text-xs">
-                        <button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">+ Add Level</button>
-                    </div>
-                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-                        <p class="text-xs text-slate-500">Loading levels...</p>
-                    </div>
+                    <div class="flex space-x-2"><input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level..." class="flex-1 rounded-xl px-3 py-2 text-xs"><button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">+ Add Level</button></div>
+                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2"><p class="text-xs text-slate-500">Loading levels...</p></div>
                 </div>
             `;
             try {
                 const res = await fetch('/api/infractions/levels');
                 const data = await res.json();
-                if (data.success) {
-                    document.getElementById('infractionLevelsContainer').innerHTML = data.levels.map((level, idx) => `
-                        <div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
-                            <span class="font-bold text-white">${escapeHtml(level)}</span>
-                            <button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    `).join('');
-                }
+                if (data.success) document.getElementById('infractionLevelsContainer').innerHTML = data.levels.map((level, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs"><span class="font-bold text-white">${escapeHtml(level)}</span><button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
             } catch (err) {}
         }
 
@@ -1208,76 +1035,34 @@
             } catch (err) {}
             document.getElementById('issueInfractionModal').classList.remove('hidden');
         }
-
-        function closeIssueInfractionModal() { 
-            document.getElementById('issueInfractionModal').classList.add('hidden'); 
-        }
-
+        function closeIssueInfractionModal() { document.getElementById('issueInfractionModal').classList.add('hidden'); }
         async function submitStaffInfraction(e) {
             e.preventDefault();
-            const payload = { 
-                targetUserId: document.getElementById('infractionTargetUserId').value, 
-                targetUser: document.getElementById('infractionTargetUser').value, 
-                level: document.getElementById('infractionLevelSelect').value, 
-                reason: document.getElementById('infractionReasonText').value, 
-                proof: document.getElementById('infractionProofText').value 
-            };
-            try { 
-                const res = await fetch('/api/infractions/issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-                if (res.ok) { alert('Infraction Issued!'); closeIssueInfractionModal(); renderInfractionsMembersTab(); } 
-            } catch (err) {}
+            const payload = { targetUserId: document.getElementById('infractionTargetUserId').value, targetUser: document.getElementById('infractionTargetUser').value, level: document.getElementById('infractionLevelSelect').value, reason: document.getElementById('infractionReasonText').value, proof: document.getElementById('infractionProofText').value };
+            try { const res = await fetch('/api/infractions/issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Infraction Issued!'); closeIssueInfractionModal(); renderInfractionsMembersTab(); } } catch (err) {}
         }
-
         async function addCustomInfractionLevel() {
             const name = document.getElementById('inputNewInfractionLevel').value.trim();
             if (!name) return;
-            try { 
-                const res = await fetch('/api/infractions/levels/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); 
-                if (res.ok) renderInfractionsSettingsTab(); 
-            } catch (err) {}
+            try { const res = await fetch('/api/infractions/levels/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
         }
-
         async function removeCustomInfractionLevel(index) {
-            try { 
-                const res = await fetch('/api/infractions/levels/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ index }) }); 
-                if (res.ok) renderInfractionsSettingsTab(); 
-            } catch (err) {}
+            try { const res = await fetch('/api/infractions/levels/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ index }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
         }
 
         async function renderSessionsOverviewTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="card p-5 rounded-2xl border border-slate-800 lg:col-span-2 space-y-4">
-                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 class="text-base font-bold text-white">Analytics Overview</h3>
-                        </div>
-                        <div class="flex space-x-4">
-                            <div class="flex-1 bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-                                <span class="text-[10px] text-slate-400 font-semibold uppercase">Unique Players</span>
-                                <span id="sessStatPlayers" class="text-xl font-bold text-white block">...</span>
-                            </div>
-                            <div class="flex-1 bg-slate-900/40 border border-slate-800 rounded-xl p-4">
-                                <span class="text-[10px] text-slate-400 font-semibold uppercase">Mod Commands</span>
-                                <span id="sessStatCmds" class="text-xl font-bold text-white block">...</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="card p-5 rounded-2xl border border-slate-800 lg:col-span-2 space-y-4"><div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-base font-bold text-white">Analytics Overview</h3></div></div>
                     <div class="card p-5 rounded-2xl border border-slate-800 space-y-4">
-                        <div id="sessionStatusBox">
-                            <h3 class="text-base font-bold text-white" id="sessStatusTitle">Loading...</h3>
-                            <p class="text-xs text-slate-400 mt-1" id="sessStatusDesc">Checking status...</p>
-                        </div>
-                        <div class="flex space-x-2 pt-2">
-                            <button id="btnToggleSession" onclick="toggleSessionAction()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Start Session</button>
-                            <button onclick="fetchSessionsOverviewData()" class="bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 font-bold px-3 py-2.5 rounded-xl text-xs transition border border-emerald-600/50"><i class="fa-solid fa-clock-rotate-left"></i></button>
-                        </div>
+                        <div id="sessionStatusBox"><h3 class="text-base font-bold text-white" id="sessStatusTitle">Loading...</h3><p class="text-xs text-slate-400 mt-1" id="sessStatusDesc">Checking status...</p></div>
+                        <div class="flex space-x-2 pt-2"><button id="btnToggleSession" onclick="toggleSessionAction()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Start Session</button></div>
                         <button onclick="openCreatePollModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Create Poll</button>
                     </div>
                 </div>
             `;
             fetchSessionsOverviewData();
         }
-
         async function fetchSessionsOverviewData() {
             try {
                 const res = await fetch('/api/sessions/overview');
@@ -1286,48 +1071,19 @@
                     const btn = document.getElementById('btnToggleSession');
                     const title = document.getElementById('sessStatusTitle');
                     const desc = document.getElementById('sessStatusDesc');
-
-                    if (data.activeSession) {
-                        title.textContent = "Active session in progress"; 
-                        title.className = "text-base font-bold text-emerald-400";
-                        desc.textContent = "A server roleplay session is currently running.";
-                        btn.textContent = "End Session"; 
-                        btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; 
-                        btn.onclick = () => toggleSessionAction('END');
-                    } else {
-                        title.textContent = "No active session"; 
-                        title.className = "text-base font-bold text-white";
-                        desc.textContent = "Start a session or create a poll below.";
-                        btn.textContent = "Start Session"; 
-                        btn.className = "flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; 
-                        btn.onclick = () => toggleSessionAction('START');
-                    }
-                    document.getElementById('sessStatPlayers').textContent = data.analytics.uniquePlayers;
-                    document.getElementById('sessStatCmds').textContent = data.analytics.modCommands;
+                    if (data.activeSession) { title.textContent = "Active session in progress"; title.className = "text-base font-bold text-emerald-400"; desc.textContent = "A server roleplay session is currently running."; btn.textContent = "End Session"; btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; btn.onclick = () => toggleSessionAction('END'); }
+                    else { title.textContent = "No active session"; title.className = "text-base font-bold text-white"; desc.textContent = "Start a session or create a poll below."; btn.textContent = "Start Session"; btn.className = "flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; btn.onclick = () => toggleSessionAction('START'); }
                 }
             } catch (err) {}
         }
-
-        async function toggleSessionAction(action) { 
-            try { 
-                const res = await fetch('/api/sessions/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); 
-                if (res.ok) fetchSessionsOverviewData(); 
-            } catch (err) {} 
-        }
-
+        async function toggleSessionAction(action) { try { const res = await fetch('/api/sessions/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); if (res.ok) fetchSessionsOverviewData(); } catch (err) {} }
         function openCreatePollModal() { document.getElementById('createPollModal').classList.remove('hidden'); }
         function closeCreatePollModal() { document.getElementById('createPollModal').classList.add('hidden'); }
-        
         async function submitSessionPoll(e) {
             e.preventDefault();
             const question = document.getElementById('pollQuestion').value;
             const options = document.getElementById('pollOptions').value.split('\n').map(o => o.trim()).filter(o => o);
-            if (options.length === 0 || options.length > 9) return alert("Provide 1 to 9 poll options.");
-            try {
-                const res = await fetch('/api/sessions/poll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, options }) });
-                const data = await res.json();
-                if (res.ok && data.success) { alert("Poll sent to Discord!"); closeCreatePollModal(); } else alert(data.error || "Failed to send poll.");
-            } catch (err) {}
+            try { const res = await fetch('/api/sessions/poll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, options }) }); if (res.ok) { alert("Poll sent!"); closeCreatePollModal(); } } catch (err) {}
         }
 
         async function renderSessionsSettingsTab() {
@@ -1335,63 +1091,20 @@
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
                     <h3 class="text-base font-bold text-white">Configuration</h3>
                     <div class="space-y-4 pt-2">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Sessions Channel (ID)</label>
-                            <input type="text" id="setSessChannel" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-white border border-slate-700">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <div><span class="text-xs font-bold text-white block">Auto Kick While Server Is Down</span></div>
-                            <input type="checkbox" id="setSessAutoKick" class="w-8 h-4 accent-emerald-500 cursor-pointer">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <div><span class="text-xs font-bold text-white block">End Staff Shifts on Session Shutdown</span></div>
-                            <input type="checkbox" id="setSessEndShifts" class="w-8 h-4 accent-emerald-500 cursor-pointer">
-                        </div>
+                        <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Sessions Channel (ID)</label><input type="text" id="setSessChannel" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-white border border-slate-700"></div>
+                        <div class="flex items-center justify-between"><div><span class="text-xs font-bold text-white block">Auto Kick While Server Is Down</span></div><input type="checkbox" id="setSessAutoKick" class="w-8 h-4 accent-emerald-500 cursor-pointer"></div>
                     </div>
                 </div>
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-base font-bold text-white">Server Shutdown</h3>
-                    <div class="space-y-4 pt-2">
-                        <div class="flex items-center justify-between">
-                            <div><span class="text-xs font-bold text-white block">Automatically End Session</span></div>
-                            <input type="checkbox" id="setSessAutoEnd" class="w-8 h-4 accent-emerald-500 cursor-pointer">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <div><span class="text-xs font-bold text-white block">Automatically Shutdown ER:LC Server</span></div>
-                            <input type="checkbox" id="setSessAutoErlc" class="w-8 h-4 accent-emerald-500 cursor-pointer">
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end">
-                    <button onclick="saveSessionSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Session Settings</button>
-                </div>
+                <div class="flex justify-end"><button onclick="saveSessionSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Session Settings</button></div>
             `;
             try {
                 const res = await fetch('/api/sessions/settings');
                 const data = await res.json();
-                if (data.success) {
-                    const s = data.settings;
-                    document.getElementById('setSessChannel').value = s.sessionsChannel || '';
-                    document.getElementById('setSessAutoKick').checked = s.autoKickDown;
-                    document.getElementById('setSessEndShifts').checked = s.endShiftsOnShutdown;
-                    document.getElementById('setSessAutoEnd').checked = s.shutdownAutoEnd;
-                    document.getElementById('setSessAutoErlc').checked = s.shutdownAutoErlc;
-                }
+                if (data.success) document.getElementById('setSessChannel').value = data.settings.sessionsChannel || '';
             } catch (err) {}
         }
-
         async function saveSessionSettings() {
-            const payload = { 
-                sessionsChannel: document.getElementById('setSessChannel').value, 
-                autoKickDown: document.getElementById('setSessAutoKick').checked, 
-                endShiftsOnShutdown: document.getElementById('setSessEndShifts').checked, 
-                shutdownAutoEnd: document.getElementById('setSessAutoEnd').checked, 
-                shutdownAutoErlc: document.getElementById('setSessAutoErlc').checked 
-            };
-            try { 
-                const res = await fetch('/api/sessions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-                if (res.ok) alert("Session settings saved!"); 
-            } catch (err) {}
+            try { await fetch('/api/sessions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionsChannel: document.getElementById('setSessChannel').value }) }); alert("Saved!"); } catch (err) {}
         }
 
         async function loadHubDepartments() {
@@ -1399,62 +1112,30 @@
                 const res = await fetch('/api/departments/my-status');
                 const data = await res.json();
                 const container = document.getElementById('hubDepartmentsContainer');
-
                 if (data.success && data.userDepartments) {
                     container.innerHTML = data.userDepartments.map(d => {
                         const verifiedBadge = d.isVerifiedWorker ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">🛠️ Verified Worker</span>` : `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Not Verified</span>`;
                         let shiftBtn = '';
-                        if (!d.isVerifiedWorker) {
-                            shiftBtn = `<button disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-1.5 rounded-lg text-xs cursor-not-allowed">Role Required</button>`;
-                        } else if (!d.isOnShift) {
-                            shiftBtn = `<button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>`;
-                        } else {
+                        if (!d.isVerifiedWorker) shiftBtn = `<button disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-1.5 rounded-lg text-xs cursor-not-allowed">Role Required</button>`;
+                        else if (!d.isOnShift) shiftBtn = `<button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>`;
+                        else {
                             const breakLabel = d.isOnBreak ? "End Break" : "Take Break";
                             const breakColor = d.isOnBreak ? "bg-amber-600 text-white" : "bg-amber-950/60 text-amber-400 border border-amber-800";
-                            shiftBtn = `
-                                <div class="flex space-x-2">
-                                    <button onclick="toggleDeptShift('${d.deptId}', 'TOGGLE_BREAK')" class="flex-1 ${breakColor} font-bold py-1.5 rounded-lg text-xs transition">${breakLabel}</button>
-                                    <button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-lg text-xs transition">Clock Out</button>
-                                </div>`;
+                            shiftBtn = `<div class="flex space-x-2"><button onclick="toggleDeptShift('${d.deptId}', 'TOGGLE_BREAK')" class="flex-1 ${breakColor} font-bold py-1.5 rounded-lg text-xs transition">${breakLabel}</button><button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-lg text-xs transition">Clock Out</button></div>`;
                         }
-                        const inviteBtn = d.discordInvite ? `<a href="${escapeHtml(d.discordInvite)}" target="_blank" class="w-full bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/80 font-bold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 mt-2"><i class="fa-brands fa-discord"></i> Join Discord Server</a>` : '';
-                        
-                        return `
-                            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full">
-                                <div>
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="font-bold text-xs text-white block truncate pr-2">${escapeHtml(d.deptName)}</span>
-                                        ${verifiedBadge}
-                                    </div>
-                                    <p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Duty Operations</p>
-                                </div>
-                                <div class="pt-3">${shiftBtn}${inviteBtn}</div>
-                            </div>`;
+                        const inviteBtn = d.discordInvite ? `<a href="${escapeHtml(d.discordInvite)}" target="_blank" class="w-full bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 font-bold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 mt-2"><i class="fa-brands fa-discord"></i> Join Discord</a>` : '';
+                        return `<div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full"><div><div class="flex justify-between items-center mb-1"><span class="font-bold text-xs text-white block truncate pr-2">${escapeHtml(d.deptName)}</span>${verifiedBadge}</div><p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Operations</p></div><div class="pt-3">${shiftBtn}${inviteBtn}</div></div>`;
                     }).join('');
                 }
             } catch (err) {}
         }
 
         async function toggleDeptShift(deptId, action) {
-            try { 
-                const res = await fetch('/api/departments/shift/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, action }) }); 
-                if (res.ok) { 
-                    if(action !== 'TOGGLE_BREAK') alert(`Shift updated!`); 
-                    loadHubDepartments(); 
-                } 
-            } catch (err) {}
+            try { const res = await fetch('/api/departments/shift/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, action }) }); if (res.ok) { if(action !== 'TOGGLE_BREAK') alert(`Shift updated!`); loadHubDepartments(); } } catch (err) {}
         }
 
         async function renderDepartmentsOverviewTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <div><h3 class="text-sm font-bold text-white">Registered Departments</h3></div>
-                    </div>
-                    <div id="sdDeptListContainer" class="space-y-3">
-                        <p class="text-xs text-slate-500 py-4 text-center">Loading departments...</p>
-                    </div>
-                </div>`;
+            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-4"><div class="flex justify-between items-center border-b border-slate-800 pb-3"><div><h3 class="text-sm font-bold text-white">Registered Departments</h3></div></div><div id="sdDeptListContainer" class="space-y-3"><p class="text-xs text-slate-500 py-4 text-center">Loading departments...</p></div></div>`;
             try {
                 const res = await fetch('/api/departments/list');
                 const data = await res.json();
@@ -1462,171 +1143,23 @@
                     document.getElementById('sdDeptListContainer').innerHTML = data.departments.map(dept => {
                         const statusBadge = dept.active ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">ACTIVE</span>` : `<span class="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-400 font-bold">INACTIVE</span>`;
                         const toggleBtn = dept.active ? `<button onclick="toggleDepartmentActive('${dept.id}', false)" class="bg-rose-950/80 text-rose-300 px-3 py-1 rounded-lg text-xs font-bold">Deactivate</button>` : `<button onclick="toggleDepartmentActive('${dept.id}', true)" class="bg-emerald-950/80 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold">Activate</button>`;
-                        return `
-                            <div class="p-4 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-bold text-white text-sm">${escapeHtml(dept.name)}</span>
-                                        ${statusBadge}
-                                    </div>
-                                    <span class="text-[10px] text-indigo-400 block font-mono">Server ID: ${dept.guildId}</span>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    ${toggleBtn}
-                                    <button onclick="openEditDepartmentModal('${dept.id}', '${escapeHtml(dept.name)}', '${escapeHtml(dept.description)}', '${escapeHtml(dept.webhookUrl)}', '${escapeHtml(dept.discordInvite)}')" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold">Open</button>
-                                </div>
-                            </div>`;
+                        return `<div class="p-4 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="space-y-1"><div class="flex items-center gap-2"><span class="font-bold text-white text-sm">${escapeHtml(dept.name)}</span>${statusBadge}</div><span class="text-[10px] text-indigo-400 block font-mono">Server ID: ${dept.guildId}</span></div><div class="flex items-center space-x-2">${toggleBtn}<button onclick="openEditDepartmentModal('${dept.id}', '${escapeHtml(dept.name)}', '${escapeHtml(dept.description)}', '${escapeHtml(dept.webhookUrl)}', '${escapeHtml(dept.discordInvite)}')" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold">Open</button></div></div>`;
                     }).join('');
                 }
             } catch (err) {}
         }
-
         function openEditDepartmentModal(id, name, desc, webhook, invite) {
-            document.getElementById('editDeptId').value = id; 
-            document.getElementById('editDeptTitle').textContent = `Edit ${name}`; 
-            document.getElementById('editDeptDesc').value = desc; 
-            document.getElementById('editDeptWebhook').value = webhook; 
-            document.getElementById('editDeptInvite').value = invite || ''; 
-            document.getElementById('editDepartmentModal').classList.remove('hidden');
+            document.getElementById('editDeptId').value = id; document.getElementById('editDeptTitle').textContent = `Edit ${name}`; document.getElementById('editDeptDesc').value = desc; document.getElementById('editDeptWebhook').value = webhook; document.getElementById('editDeptInvite').value = invite || ''; document.getElementById('editDepartmentModal').classList.remove('hidden');
         }
-
-        function closeEditDepartmentModal() { 
-            document.getElementById('editDepartmentModal').classList.add('hidden'); 
-        }
-
+        function closeEditDepartmentModal() { document.getElementById('editDepartmentModal').classList.add('hidden'); }
         async function saveDepartmentSettings(e) {
             e.preventDefault();
-            const payload = { 
-                deptId: document.getElementById('editDeptId').value, 
-                description: document.getElementById('editDeptDesc').value, 
-                webhookUrl: document.getElementById('editDeptWebhook').value, 
-                discordInvite: document.getElementById('editDeptInvite').value 
-            };
-            try { 
-                const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-                if (res.ok) { alert('Saved!'); closeEditDepartmentModal(); renderDepartmentsOverviewTab(); loadHubDepartments(); } 
-            } catch (err) {}
+            const payload = { deptId: document.getElementById('editDeptId').value, description: document.getElementById('editDeptDesc').value, webhookUrl: document.getElementById('editDeptWebhook').value, discordInvite: document.getElementById('editDeptInvite').value };
+            try { const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Saved!'); closeEditDepartmentModal(); renderDepartmentsOverviewTab(); loadHubDepartments(); } } catch (err) {}
         }
+        async function toggleDepartmentActive(deptId, active) { try { const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, active }) }); if (res.ok) renderDepartmentsOverviewTab(); } catch (err) {} }
 
-        async function toggleDepartmentActive(deptId, active) { 
-            try { 
-                const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, active }) }); 
-                if (res.ok) renderDepartmentsOverviewTab(); 
-            } catch (err) {} 
-        }
-
-        // --- MODALS & EXTRAS ---
-        function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
-        function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
-        function openSupportModal() { document.getElementById('supportModal').classList.remove('hidden'); }
-        function closeSupportModal() { document.getElementById('supportModal').classList.add('hidden'); }
-
-        async function submitSupportTicket(e) {
-            e.preventDefault();
-            const subject = document.getElementById('supportSubject').value;
-            const message = document.getElementById('supportMessage').value;
-            try {
-                const res = await fetch('/api/support/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, message }) });
-                if (res.ok) { 
-                    alert('Support ticket submitted successfully!'); 
-                    document.getElementById('supportSubject').value = ''; 
-                    document.getElementById('supportMessage').value = ''; 
-                    closeSupportModal(); 
-                }
-            } catch (err) { alert('Connection error.'); }
-        }
-
-        function toggleNotificationDropdown(e) {
-            if (e) e.stopPropagation();
-            const dropdown = document.getElementById('notifDropdown');
-            dropdown.classList.toggle('hidden');
-            if (!dropdown.classList.contains('hidden')) loadNotifications();
-        }
-
-        async function loadNotifications() {
-            try {
-                const res = await fetch('/api/notifications/list');
-                const data = await res.json();
-                if (data.success) {
-                    const listContainer = document.getElementById('notifListContainer');
-                    const badge = document.getElementById('notifBadge');
-                    const unreadCount = data.notifications.filter(n => !n.read).length;
-
-                    if (unreadCount > 0) { 
-                        badge.textContent = unreadCount; 
-                        badge.classList.remove('hidden'); 
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-
-                    if (!data.notifications || data.notifications.length === 0) {
-                        listContainer.innerHTML = `<p class="text-xs text-slate-500 p-4 text-center">No notifications.</p>`;
-                    } else {
-                        listContainer.innerHTML = data.notifications.map(n => `
-                            <div class="p-3 hover:bg-slate-800/50 transition flex items-start space-x-2.5">
-                                ${!n.read ? `<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1"></span>` : ''}
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-center">
-                                        <strong class="text-xs text-white block truncate">${escapeHtml(n.title)}</strong>
-                                        <span class="text-[9px] text-slate-500">${n.time}</span>
-                                    </div>
-                                    <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(n.message)}</p>
-                                </div>
-                            </div>`).join('');
-                    }
-                }
-            } catch (err) {}
-        }
-
-        async function markNotificationsRead() { 
-            try { 
-                await fetch('/api/notifications/read', { method: 'POST' }); 
-                loadNotifications(); 
-            } catch (err) {} 
-        }
-
-        async function openWebhookModal() {
-            try {
-                const res = await fetch('/api/settings/webhooks');
-                const data = await res.json();
-                if (data.success) {
-                    const w = data.webhooks;
-                    document.getElementById('webhookShift').value = w.shiftWebhook || '';
-                    document.getElementById('webhookPunish').value = w.punishmentWebhook || '';
-                    document.getElementById('webhookAssistance').value = w.assistanceWebhook || '';
-                    document.getElementById('webhookActivity').value = w.activityWebhook || '';
-                    document.getElementById('webhookInfraction').value = w.infractionWebhook || '';
-                    document.getElementById('webhookPromotion').value = w.promotionWebhook || '';
-                    document.getElementById('webhookReview').value = w.reviewWebhook || '';
-                    document.getElementById('webhookAudit').value = w.auditWebhook || '';
-                    document.getElementById('webhookModal').classList.remove('hidden');
-                }
-            } catch (err) {}
-        }
-
-        function closeWebhookModal() { 
-            document.getElementById('webhookModal').classList.add('hidden'); 
-        }
-
-        async function saveWebhookSettings(e) {
-            e.preventDefault();
-            const payload = {
-                shiftWebhook: document.getElementById('webhookShift').value, 
-                punishmentWebhook: document.getElementById('webhookPunish').value,
-                assistanceWebhook: document.getElementById('webhookAssistance').value, 
-                activityWebhook: document.getElementById('webhookActivity').value,
-                infractionWebhook: document.getElementById('webhookInfraction').value, 
-                promotionWebhook: document.getElementById('webhookPromotion').value,
-                reviewWebhook: document.getElementById('webhookReview').value,
-                auditWebhook: document.getElementById('webhookAudit').value
-            };
-            try { 
-                const res = await fetch('/api/settings/webhooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-                if (res.ok) { alert('Webhooks saved!'); closeWebhookModal(); } 
-            } catch (err) {}
-        }
-
-        // --- AUTH & POLLING ---
+        // --- AUTH & MISC ---
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -1638,45 +1171,84 @@
                     document.getElementById('userProfile').classList.remove('hidden');
                     document.getElementById('userName').textContent = data.user.username;
                     document.getElementById('userAvatar').src = data.user.avatar;
-
                     if (data.user.isManager) {
                         document.getElementById('btnWebhookSettings').classList.remove('hidden');
                         document.getElementById('btnServerDashboard').classList.remove('hidden');
                         document.getElementById('userRoleBadge').textContent = 'Management Team';
-                    } else if (data.user.verifiedRole) {
-                        document.getElementById('userRoleBadge').textContent = 'Verified Staff';
-                    }
-                    fetchGeneralSettings(); 
-                    loadHubDepartments(); 
-                    loadActiveShifts(); 
-                    loadNotifications();
+                    } else if (data.user.verifiedRole) { document.getElementById('userRoleBadge').textContent = 'Verified Staff'; }
+                    fetchGeneralSettings(); loadHubDepartments(); loadActiveShifts(); loadNotifications();
                 } else if (data.discordConnected) {
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
-                    fetchGeneralSettings(); 
-                    loadHubDepartments();
-                } else { 
-                    document.getElementById('loginOverlay').classList.remove('hidden'); 
+                    fetchGeneralSettings(); loadHubDepartments();
+                } else { document.getElementById('loginOverlay').classList.remove('hidden'); }
+            } catch (err) {}
+        }
+        setInterval(checkAuth, 4000);
+        async function logout() { await fetch('/api/auth/logout'); window.location.href = '/'; }
+        async function attemptModPanelAccess() { switchView('modPanel'); }
+
+        // --- MOD PANEL PLAYER AUTOCOMPLETE & LEFTHANDLING ---
+        async function loadServerInfo() {
+            try {
+                const res = await fetch('/api/erlc/players');
+                const data = await res.json();
+                if (data.success) {
+                    cachedPlayers = data.players || [];
+                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.filter(p => !p.leftGame).length} Players`;
+                    const pContainer = document.getElementById('livePlayersList');
+                    if (cachedPlayers.length > 0) {
+                        pContainer.innerHTML = cachedPlayers.map(p => {
+                            const statusBadge = p.leftGame ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 font-bold">Left Game</span>` : `<span class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300">In Game</span>`;
+                            return `<div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="flex items-center space-x-2"><div class="w-2 h-2 rounded-full ${p.leftGame ? 'bg-rose-500' : 'bg-emerald-400'}"></div><span class="font-bold text-white">${escapeHtml(p.username)}</span></div>${statusBadge}</div>`;
+                        }).join('');
+                    }
                 }
             } catch (err) {}
         }
+        setInterval(loadServerInfo, 8000);
 
-        setInterval(checkAuth, 4000);
-        async function logout() { 
-            await fetch('/api/auth/logout'); 
-            window.location.href = '/'; 
+        function handlePlayerSearch(query) {
+            const dropdown = document.getElementById('playerSearchDropdown');
+            if (!query.trim()) { dropdown.classList.add('hidden'); return; }
+            const matches = cachedPlayers.filter(p => p.username.toLowerCase().includes(query.toLowerCase()));
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching players found</div>`;
+            } else {
+                dropdown.innerHTML = matches.map(p => `
+                    <div onclick="selectPlayer('${escapeHtml(p.username)}', '${escapeHtml(p.robloxId)}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
+                        <span class="text-xs font-bold text-white">${escapeHtml(p.username)} ${p.leftGame ? '<span class="text-[9px] text-rose-400">(Left)</span>' : ''}</span>
+                        <span class="text-[10px] text-slate-400">ID: ${escapeHtml(p.robloxId)}</span>
+                    </div>`).join('');
+            }
+            dropdown.classList.remove('hidden');
         }
 
-        async function attemptModPanelAccess() { 
-            switchView('modPanel'); 
+        function selectPlayer(name, id) {
+            document.getElementById('targetUser').value = name;
+            document.getElementById('playerSearchDropdown').classList.add('hidden');
+            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
         }
 
-        // --- MODERATOR PANEL ACTIONS ---
+        async function autoFetchRobloxId(username) {
+            if (!username.trim() || document.getElementById('robloxId').value) return;
+            const found = cachedPlayers.find(p => p.username.toLowerCase() === username.trim().toLowerCase());
+            if (found && found.robloxId && found.robloxId !== 'N/A') {
+                document.getElementById('robloxId').value = found.robloxId;
+                return;
+            }
+            // Fallback to Roblox API lookup
+            document.getElementById('idLoadingSpinner').classList.remove('hidden');
+            try {
+                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false }) });
+                const data = await res.json();
+                if (data.data && data.data.length > 0) document.getElementById('robloxId').value = data.data[0].id;
+            } catch (err) {} finally { document.getElementById('idLoadingSpinner').classList.add('hidden'); }
+        }
+
+        // --- SHIFTS & MOD PANEL ACTIONS ---
         async function toggleShift(action) { 
-            try { 
-                const res = await fetch('/api/shifts/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, department: 'Staff Moderation' }) }); 
-                if (res.ok) loadActiveShifts(); 
-            } catch (err) {} 
+            try { const res = await fetch('/api/shifts/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, department: 'Staff Moderation' }) }); if (res.ok) loadActiveShifts(); } catch (err) {} 
         }
 
         async function loadActiveShifts() {
@@ -1692,32 +1264,13 @@
                             if (s.userId === data.currentUserId) userShift = s;
                             const breakStatus = s.isOnBreak ? `<span class="text-[9px] text-amber-400 font-bold ml-1">(ON BREAK)</span>` : '';
                             const endShiftBtn = (data.isManager || s.userId === data.currentUserId) ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>` : '';
-                            
-                            container.innerHTML += `
-                                <div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-2 h-2 rounded-full ${s.isOnBreak ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}"></div>
-                                        <div>
-                                            <span class="font-bold text-white block text-[11px]">${escapeHtml(s.robloxName)} ${breakStatus}</span>
-                                            <span class="text-[9px] text-slate-400 block">${escapeHtml(s.department)} &bull; <strong class="${s.isOnBreak ? 'text-amber-400' : 'text-emerald-400'}">${s.duration}</strong></span>
-                                        </div>
-                                    </div>
-                                    ${endShiftBtn}
-                                </div>`;
+                            container.innerHTML += `<div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="flex items-center space-x-2"><div class="w-2 h-2 rounded-full ${s.isOnBreak ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}"></div><div><span class="font-bold text-white block text-[11px]">${escapeHtml(s.robloxName)} ${breakStatus}</span><span class="text-[9px] text-slate-400 block">${escapeHtml(s.department)} &bull; <strong class="${s.isOnBreak ? 'text-amber-400' : 'text-emerald-400'}">${s.duration}</strong></span></div></div>${endShiftBtn}</div>`;
                         });
-                    } else { 
-                        container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`; 
-                    }
+                    } else { container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`; }
 
-                    const btnStart = document.getElementById('btnStartShift'); 
-                    const btnBreak = document.getElementById('btnToggleBreak'); 
-                    const btnEnd = document.getElementById('btnEndShift'); 
-                    const badge = document.getElementById('shiftBadge');
-
+                    const btnStart = document.getElementById('btnStartShift'); const btnBreak = document.getElementById('btnToggleBreak'); const btnEnd = document.getElementById('btnEndShift'); const badge = document.getElementById('shiftBadge');
                     if (userShift) {
-                        if(btnStart) btnStart.classList.add('hidden');
-                        if(btnBreak) btnBreak.classList.remove('hidden');
-                        if(btnEnd) btnEnd.classList.remove('hidden');
+                        if(btnStart) btnStart.classList.add('hidden'); if(btnBreak) btnBreak.classList.remove('hidden'); if(btnEnd) btnEnd.classList.remove('hidden');
                         if (userShift.isOnBreak) {
                             if(badge){ badge.textContent = 'ON BREAK'; badge.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800 font-semibold'; }
                             if(btnBreak){ btnBreak.textContent = 'End Break'; btnBreak.className = 'flex-1 bg-amber-950/60 hover:bg-amber-900/80 text-amber-400 border border-amber-800 font-bold py-2.5 rounded-xl text-sm transition'; }
@@ -1727,51 +1280,24 @@
                         }
                     } else {
                         if(badge){ badge.textContent = 'OFFLINE'; badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold'; }
-                        if(btnStart) btnStart.classList.remove('hidden');
-                        if(btnBreak) btnBreak.classList.add('hidden');
-                        if(btnEnd) btnEnd.classList.add('hidden');
+                        if(btnStart) btnStart.classList.remove('hidden'); if(btnBreak) btnBreak.classList.add('hidden'); if(btnEnd) btnEnd.classList.add('hidden');
                     }
                 }
             } catch (err) {}
         }
 
-        async function forceEndShift(targetUserId) { 
-            if (!confirm("End this shift?")) return; 
-            try { 
-                const res = await fetch('/api/shifts/force-end', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUserId }) }); 
-                if (res.ok) loadActiveShifts(); 
-            } catch (err) {} 
-        }
+        async function forceEndShift(targetUserId) { if (!confirm("End this shift?")) return; try { const res = await fetch('/api/shifts/force-end', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUserId }) }); if (res.ok) loadActiveShifts(); } catch (err) {} }
         
         async function sendErlcCommand() {
             const command = document.getElementById('erlcCmdInput').value.trim();
             if (!command) return;
-            try { 
-                const res = await fetch('/api/erlc/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) }); 
-                const data = await res.json(); 
-                if (res.ok && data.success) { alert(`Command executed!`); document.getElementById('erlcCmdInput').value = ''; } 
-                else alert('Command failed.'); 
-            } catch (err) {}
+            try { const res = await fetch('/api/erlc/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) }); const data = await res.json(); if (res.ok && data.success) { alert(`Command executed!`); document.getElementById('erlcCmdInput').value = ''; } else alert('Command failed.'); } catch (err) {}
         }
         
         async function submitInfraction(e) {
             e.preventDefault();
-            const payload = { 
-                targetUser: document.getElementById('targetUser').value, 
-                robloxId: document.getElementById('robloxId').value, 
-                punishmentType: document.getElementById('punishmentType').value, 
-                reason: document.getElementById('infractionReason').value 
-            };
-            try { 
-                const res = await fetch('/api/punishments/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-                if (res.ok) { 
-                    alert('Punishment Logged!'); 
-                    document.getElementById('targetUser').value = ''; 
-                    document.getElementById('robloxId').value = ''; 
-                    document.getElementById('infractionReason').value = ''; 
-                    loadLogs(); 
-                } 
-            } catch (err) {}
+            const payload = { targetUser: document.getElementById('targetUser').value, robloxId: document.getElementById('robloxId').value, punishmentType: document.getElementById('punishmentType').value, reason: document.getElementById('infractionReason').value };
+            try { const res = await fetch('/api/punishments/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Punishment Logged!'); document.getElementById('targetUser').value = ''; document.getElementById('robloxId').value = ''; document.getElementById('infractionReason').value = ''; loadLogs(); } } catch (err) {}
         }
 
         async function loadLogs() {
@@ -1782,44 +1308,15 @@
                     document.getElementById('logsContainer').innerHTML = data.logs.map(log => {
                         const isRemoved = log.removed ? 'opacity-50 line-through' : '';
                         const removeBtn = !log.removed ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 text-rose-300 px-2 py-0.5 rounded">Remove</button>` : `<span class="text-[10px] text-rose-400">[Removed]</span>`;
-                        return `
-                            <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-white text-xs">${escapeHtml(log.targetUser)}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded border bg-blue-950 text-blue-400">${escapeHtml(log.punishmentType)}</span>
-                                </div>
-                                <p class="text-[11px] text-slate-400"><strong>Reason:</strong> ${escapeHtml(log.reason)}</p>
-                                <div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
-                                    <span>By: ${escapeHtml(log.staffName)}</span>
-                                    ${removeBtn}
-                                </div>
-                            </div>`;
+                        return `<div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}"><div class="flex justify-between items-center"><span class="font-bold text-white text-xs">${escapeHtml(log.targetUser)}</span><span class="text-[10px] px-2 py-0.5 rounded border bg-blue-950 text-blue-400">${escapeHtml(log.punishmentType)}</span></div><p class="text-[11px] text-slate-400"><strong>Reason:</strong> ${escapeHtml(log.reason)}</p><div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60"><span>By: ${escapeHtml(log.staffName)}</span>${removeBtn}</div></div>`;
                     }).join('');
                 } else document.getElementById('logsContainer').innerHTML = `<p class="text-xs text-slate-500">No punishments logged yet.</p>`;
             } catch (err) {}
         }
+        async function removeWarning(logId) { if (!confirm("Remove this log entry?")) return; try { const res = await fetch('/api/punishments/remove-warning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId }) }); if (res.ok) loadLogs(); } catch (err) {} }
 
-        async function removeWarning(logId) { 
-            if (!confirm("Remove this log entry?")) return; 
-            try { 
-                const res = await fetch('/api/punishments/remove-warning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId }) }); 
-                if (res.ok) loadLogs(); 
-            } catch (err) {} 
-        }
-
-        async function requestHigherUpAssistance() { 
-            const reason = prompt("Enter reason for assistance:"); 
-            if (!reason) return; 
-            try { 
-                await fetch('/api/assistance/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); 
-                alert("Assistance requested!"); 
-            } catch (err) {} 
-        }
-
-        function toggleSection(secId, isChecked) { 
-            const el = document.getElementById(secId); 
-            if (el) el.classList.toggle('hidden', !isChecked); 
-        }
+        async function requestHigherUpAssistance() { const reason = prompt("Enter reason for assistance:"); if (!reason) return; try { await fetch('/api/assistance/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); alert("Assistance requested!"); } catch (err) {} }
+        function toggleSection(secId, isChecked) { const el = document.getElementById(secId); if (el) el.classList.toggle('hidden', !isChecked); }
 
         document.addEventListener('click', () => {
             const dropdown = document.getElementById('notifDropdown');
@@ -1828,5 +1325,3 @@
 
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
-</body>
-</html>
