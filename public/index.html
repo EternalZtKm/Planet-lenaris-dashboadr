@@ -20,7 +20,7 @@
 <body class="min-h-screen flex flex-col justify-between">
 
     <div>
-        <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
             <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
                 <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
                     <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -34,32 +34,6 @@
                     <i class="fa-brands fa-discord text-lg"></i>
                     <span>Connect Discord Account</span>
                 </a>
-            </div>
-        </div>
-
-        <div id="modPanelGateModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-            <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
-                <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <img id="gateModalAvatar" class="w-10 h-10 rounded-full border border-indigo-500" alt="Avatar">
-                    <div class="text-left">
-                        <span id="gateModalUsername" class="text-sm font-bold text-white block"></span>
-                        <span class="text-[10px] text-emerald-400 font-medium">Discord Account Connected</span>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
-                    <p class="text-xs text-slate-400 mt-1">Checking your Discord server roles and permissions...</p>
-                </div>
-
-                <button onclick="verifyRoleForModPanel()" id="btnGateVerify" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
-                    <i class="fa-solid fa-shield-check text-lg"></i>
-                    <span>Retry Role Check</span>
-                </button>
-
-                <div id="gateErrorBox" class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-medium hidden"></div>
-
-                <button onclick="closeModPanelGate()" class="text-xs text-slate-400 hover:text-white transition">Return to Main Hub</button>
             </div>
         </div>
 
@@ -111,7 +85,7 @@
                 </div>
 
                 <div id="userProfile" class="flex items-center space-x-3">
-                    <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
+                    <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700 object-cover" alt="Avatar">
                     <div class="hidden sm:block">
                         <span id="userName" class="text-xs font-bold text-white block"></span>
                         <span id="userRoleBadge" class="text-[9px] text-slate-400 font-semibold block">Management Team</span>
@@ -175,18 +149,7 @@
                     </div>
 
                     <div id="hubDepartmentsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full">
-                            <div>
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="font-bold text-xs text-white block truncate pr-2">Lenaris Highway Patrol (LHP)</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">🛠️ Verified Worker</span>
-                                </div>
-                                <p class="text-[11px] text-slate-400">LHP Operations</p>
-                            </div>
-                            <div class="pt-3">
-                                <button onclick="toggleDeptShift('dept_lhp', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>
-                            </div>
-                        </div>
+                        <p class="text-xs text-slate-500 col-span-2 text-center py-4">Checking department permissions...</p>
                     </div>
                 </div>
             </div>
@@ -235,8 +198,7 @@
                 </div>
             </div>
         </main>
-        
-        </div>
+    </div>
     <script>
         <main id="viewModPanel" class="p-6 max-w-7xl mx-auto hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -437,11 +399,38 @@
         </div>
     </div>
 
+    <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400 m-6 mt-0">
+        <div class="flex items-center space-x-2">
+            <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="serverStatusText" class="font-semibold text-white"><span class="txt-server-name">Planet Lenaris</span> Server: Online</span>
+        </div>
+        <div>
+            <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
+        </div>
+    </footer>
+
     <script>
         let cachedPlayers = [];
         let currentUserId = "123456789";
-        let currentUserData = { id: "123456789", username: "LenarisAdmin", displayName: "LenarisAdmin", avatar: "https://cdn.discordapp.com/embed/avatars/0.png", isManager: true };
+        let currentUserData = null;
         let currentServerConfig = { serverName: "Planet Lenaris", serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] };
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/user');
+                const data = await res.json();
+                if (data.success && data.user) {
+                    currentUserId = data.user.id;
+                    currentUserData = data.user;
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('userName').textContent = data.user.username;
+                    document.getElementById('userAvatar').src = data.user.avatar;
+                    document.querySelectorAll('.txt-server-name').forEach(el => el.textContent = currentServerConfig.serverName);
+                    document.querySelectorAll('.img-logo').forEach(img => img.src = currentServerConfig.serverIcon);
+                    loadHubDepartments();
+                }
+            } catch (err) {}
+        }
 
         function switchView(viewName, defaultTab = 'general') {
             document.getElementById('viewHub').classList.add('hidden');
@@ -488,16 +477,48 @@
         function renderActivityLeaderboardTab() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Leaderboard active.</p></div>`; }
         function fetchStaffMembers() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Staff list active.</p></div>`; }
 
-        function openWebhookModal() { document.getElementById('webhookModal').classList.remove('hidden'); }
+        async function openWebhookModal() {
+            try {
+                const res = await fetch('/api/settings/webhooks');
+                const data = await res.json();
+                if (data.success && data.webhooks) {
+                    document.getElementById('webhookShift').value = data.webhooks.shiftWebhook || '';
+                    document.getElementById('webhookPunish').value = data.webhooks.punishmentWebhook || '';
+                    document.getElementById('webhookAssistance').value = data.webhooks.assistanceWebhook || '';
+                    document.getElementById('webhookActivity').value = data.webhooks.activityWebhook || '';
+                    document.getElementById('webhookModal').classList.remove('hidden');
+                }
+            } catch (err) {}
+        }
         function closeWebhookModal() { document.getElementById('webhookModal').classList.add('hidden'); }
-        function saveWebhookSettings(e) { e.preventDefault(); alert('Webhooks saved!'); closeWebhookModal(); }
+        async function saveWebhookSettings(e) {
+            e.preventDefault();
+            const payload = {
+                shiftWebhook: document.getElementById('webhookShift').value.trim(),
+                punishmentWebhook: document.getElementById('webhookPunish').value.trim(),
+                assistanceWebhook: document.getElementById('webhookAssistance').value.trim(),
+                activityWebhook: document.getElementById('webhookActivity').value.trim()
+            };
+            try {
+                const res = await fetch('/api/settings/webhooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { alert('Webhooks updated successfully!'); closeWebhookModal(); }
+            } catch (err) {}
+        }
 
         function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
         function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
 
         function openSupportModal() { document.getElementById('supportModal').classList.remove('hidden'); }
         function closeSupportModal() { document.getElementById('supportModal').classList.add('hidden'); }
-        function submitSupportTicket(e) { e.preventDefault(); alert('Ticket submitted!'); closeSupportModal(); }
+        async function submitSupportTicket(e) {
+            e.preventDefault();
+            const subject = document.getElementById('supportSubject').value.trim();
+            const message = document.getElementById('supportMessage').value.trim();
+            try {
+                const res = await fetch('/api/support/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, message }) });
+                if (res.ok) { alert('Support ticket sent successfully!'); closeSupportModal(); }
+            } catch (err) {}
+        }
 
         function attemptModPanelAccess() { switchView('modPanel'); }
         function toggleShift(action) { alert('Shift ' + action); }
@@ -506,12 +527,7 @@
         function loadActiveShifts() {}
         function requestHigherUpAssistance() { alert('Assistance requested'); }
         function toggleSection(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
-        function logout() { window.location.reload(); }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('loginOverlay').classList.add('hidden');
-            loadHubDepartments();
-        });
+        function logout() { fetch('/api/auth/logout').then(() => window.location.reload()); }
 
         async function loadHubDepartments() {
             try {
@@ -535,6 +551,8 @@
                 }
             } catch (err) {}
         }
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
 </html>
