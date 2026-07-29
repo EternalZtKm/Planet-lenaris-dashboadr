@@ -1244,6 +1244,97 @@
             if(dropdown && !dropdown.classList.contains('hidden')) dropdown.classList.add('hidden');
         });
 
+        // --- WEBHOOK SETTINGS HANDLERS ---
+        async function openWebhookModal() {
+            try {
+                const res = await fetch('/api/settings/webhooks');
+                const data = await res.json();
+                if (data.success && data.webhooks) {
+                    document.getElementById('webhookShift').value = data.webhooks.shiftWebhook || '';
+                    document.getElementById('webhookPunish').value = data.webhooks.punishmentWebhook || '';
+                    document.getElementById('webhookAssistance').value = data.webhooks.assistanceWebhook || '';
+                    document.getElementById('webhookActivity').value = data.webhooks.activityWebhook || '';
+                    document.getElementById('webhookModal').classList.remove('hidden');
+                } else {
+                    alert("Unauthorized or failed to load webhook configuration.");
+                }
+            } catch (err) {
+                alert("Connection error loading webhooks.");
+            }
+        }
+
+        function closeWebhookModal() {
+            document.getElementById('webhookModal').classList.add('hidden');
+        }
+
+        async function saveWebhookSettings(e) {
+            e.preventDefault();
+            const payload = {
+                shiftWebhook: document.getElementById('webhookShift').value.trim(),
+                punishmentWebhook: document.getElementById('webhookPunish').value.trim(),
+                assistanceWebhook: document.getElementById('webhookAssistance').value.trim(),
+                activityWebhook: document.getElementById('webhookActivity').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/settings/webhooks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    alert('Discord webhooks updated successfully!');
+                    closeWebhookModal();
+                } else {
+                    alert('Failed to save webhook settings.');
+                }
+            } catch (err) {
+                alert('Connection error.');
+            }
+        }
+
+        // --- DONATE MODAL HANDLERS ---
+        function openDonateModal() {
+            document.getElementById('donateModal').classList.remove('hidden');
+        }
+
+        function closeDonateModal() {
+            document.getElementById('donateModal').classList.add('hidden');
+        }
+
+        // --- SUPPORT TICKET HANDLERS ---
+        function openSupportModal() {
+            document.getElementById('supportModal').classList.remove('hidden');
+        }
+
+        function closeSupportModal() {
+            document.getElementById('supportModal').classList.add('hidden');
+        }
+
+        async function submitSupportTicket(e) {
+            e.preventDefault();
+            const subject = document.getElementById('supportSubject').value.trim();
+            const message = document.getElementById('supportMessage').value.trim();
+
+            try {
+                const res = await fetch('/api/support/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject, message })
+                });
+
+                if (res.ok) {
+                    alert('Support ticket sent successfully to Discord!');
+                    document.getElementById('supportSubject').value = '';
+                    document.getElementById('supportMessage').value = '';
+                    closeSupportModal();
+                } else {
+                    alert('Failed to send support ticket.');
+                }
+            } catch (err) {
+                alert('Connection error.');
+            }
+        }
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
