@@ -197,6 +197,20 @@ app.get('/api/auth/user', async (req, res) => {
 
 app.get('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
 
+// --- MEMBERS / STAFF LIST ENDPOINT ---
+app.get('/api/members/staff', requireStaffAuth, async (req, res) => {
+    const staffMembers = [
+        {
+            username: req.session.user.username,
+            avatar: req.session.user.avatar,
+            role: req.session.user.isManager ? "Director" : "Junior Moderator",
+            joinedDate: "Recently",
+            status: "Active"
+        }
+    ];
+    res.json({ success: true, staff: staffMembers });
+});
+
 // --- MOD PANEL ROUTES ---
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     const { command } = req.body;
