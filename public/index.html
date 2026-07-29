@@ -668,6 +668,38 @@
 
     <script>
 
+        function selectSidebarItem(tabKey) {
+            document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
+                el.classList.remove('text-emerald-400', 'bg-slate-800/50', 'text-white');
+                if(el.classList.contains('sb-subitem')) el.classList.remove('text-emerald-400');
+            });
+            const activeBtn = document.querySelector(`[onclick="selectSidebarItem('${tabKey}')"]`);
+            if (activeBtn) {
+                if (activeBtn.classList.contains('sb-subitem')) activeBtn.classList.add('text-emerald-400');
+                else activeBtn.classList.add('text-white', 'bg-slate-800/50');
+            }
+
+            const titleEl = document.getElementById('sdActiveTitle');
+            const descEl = document.getElementById('sdActiveDesc');
+
+            if (tabKey === 'general') { titleEl.textContent = "General"; descEl.textContent = "Configure general server branding and display settings."; renderGeneralTab(); return; }
+            if (tabKey === 'panel') { titleEl.textContent = "Panel"; descEl.textContent = "Configure moderator panel access, automation settings, and punishment presets."; renderPanelTab(); return; }
+            if (tabKey === 'members-list') { titleEl.textContent = "Members"; descEl.textContent = "View and manage team members and their ranks."; fetchStaffMembers(); return; }
+            if (tabKey === 'activity-waves') { titleEl.textContent = "Waves"; descEl.textContent = "Configure how long activity waves should last and set hour requirements."; renderActivityWavesTab(); return; }
+            if (tabKey === 'activity-shifts') { titleEl.textContent = "Shift Settings"; descEl.textContent = "Configure shift logging and restrictions."; renderActivityShiftsTab(); return; }
+            if (tabKey === 'infractions-members') { titleEl.textContent = "Infractions Members"; descEl.textContent = "Review staff infraction records and issue strikes."; renderInfractionsMembersTab(); return; }
+            if (tabKey === 'infractions-settings') { titleEl.textContent = "Infraction Settings"; descEl.textContent = "Manage custom infraction levels and configuration."; renderInfractionsSettingsTab(); return; }
+            if (tabKey === 'dept-overview' || tabKey === 'dept-settings') { titleEl.textContent = "Departments"; descEl.textContent = "Manage and view server department settings."; renderDepartmentsOverviewTab(); return; }
+            if (tabKey === 'sessions-overview') { titleEl.textContent = "Sessions Overview"; descEl.textContent = "View and control active roleplay sessions."; renderSessionsOverviewTab(); return; }
+            if (tabKey === 'sessions-settings') { titleEl.textContent = "Sessions Settings"; descEl.textContent = "Configure roleplay session automation tools."; renderSessionsSettingsTab(); return; }
+            if (tabKey === 'activity-leaderboard') { titleEl.textContent = "Activity Leaderboard"; descEl.textContent = "View and compare member activity statistics."; renderActivityLeaderboardTab(); return; }
+
+            const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            titleEl.textContent = formattedTitle;
+            descEl.textContent = `Manage and view ${formattedTitle} details for ${currentServerConfig.serverName}.`;
+            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized next.</p></div>`;
+        }
+
         // --- SIDEBAR & DASHBOARD TABS RENDERER ---
         function selectSidebarItem(tabKey) {
             document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
