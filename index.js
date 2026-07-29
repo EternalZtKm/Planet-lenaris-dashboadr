@@ -464,7 +464,7 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
             let finalBreakMs = existingShift.totalBreakMs;
             if (existingShift.isOnBreak) finalBreakMs += (Date.now() - existingShift.breakStart);
             const durationMs = (Date.now() - existingShift.startTime) - finalBreakMs;
-            completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatar, durationMinutes: Math.max(0, Math.floor(durationMs / 60000)), shiftType: existingShift.department || "Default", waveId: "wave_1" });
+            completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, durationMinutes: Math.max(0, Math.floor(durationMs / 60000)), shiftType: existingShift.department || "Default", waveId: "wave_1" });
             const embed = new EmbedBuilder().setTitle(`🔴 General Shift Clocked Out`).setColor(0xed4245).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
             sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
         }
