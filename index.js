@@ -75,11 +75,26 @@ function addNotification(title, message) {
     if (notificationsList.length > 20) notificationsList.pop();
 }
 
-async function sendDiscordLog(webhookUrl, embed, content = "") {
+async function sendDiscordLog(webhookUrl, embed, content = null) {
     if (!webhookUrl) return;
     try { 
-        await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, embeds: [embed] }) }); 
-    } catch (err) {}
+        let payload = { embeds: [embed] };
+        if (content) {
+            payload.content = content;
+        }
+
+        const response = await fetch(webhookUrl, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        }); 
+        
+        if (!response.ok) {
+            console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
+        }
+    } catch (err) { 
+        console.error("[WEBHOOK FETCH ERROR]:", err.message); 
+    }
 }
 
 async function verifyUserRoleLive(userId) {
