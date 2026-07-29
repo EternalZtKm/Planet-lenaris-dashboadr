@@ -1,377 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="docTitle">Planet Lenaris | Official Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #0b0e14; color: #d0d7de; font-family: 'Inter', sans-serif; }
-        .card { background-color: #161b22; border: 1px solid #21262d; }
-        input, select, textarea { background-color: #0d1117; border: 1px solid #30363d; color: #f0f6fc; }
-        input:focus, select:focus, textarea:focus { border-color: #58a6ff; outline: none; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #0b0e14; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #21262d; border-radius: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #30363d; }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col justify-between">
-
-    <div>
-        <div id="loginOverlay" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
-                <div class="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                    <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-3xl font-bold">L</div>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-white txt-server-name">Planet Lenaris Hub</h2>
-                    <p class="text-xs text-slate-400 mt-1">Connect your Discord account to view server features.</p>
-                </div>
-                <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
-                    <i class="fa-brands fa-discord text-lg"></i>
-                    <span>Connect Discord Account</span>
-                </a>
-            </div>
-        </div>
-
-        <div id="modPanelGateModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-            <div class="card p-8 rounded-2xl max-w-md w-full text-center space-y-6 border border-slate-800 shadow-2xl">
-                <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                    <img id="gateModalAvatar" class="w-10 h-10 rounded-full border border-indigo-500" alt="Avatar">
-                    <div class="text-left">
-                        <span id="gateModalUsername" class="text-sm font-bold text-white block"></span>
-                        <span class="text-[10px] text-emerald-400 font-medium">Discord Account Connected</span>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-base font-bold text-white">Verify Staff Permissions</h3>
-                    <p class="text-xs text-slate-400 mt-1">Checking your Discord server roles and permissions...</p>
-                </div>
-
-                <button onclick="verifyRoleForModPanel()" id="btnGateVerify" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
-                    <i class="fa-solid fa-shield-check text-lg"></i>
-                    <span>Retry Role Check</span>
-                </button>
-
-                <div id="gateErrorBox" class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 font-medium hidden"></div>
-
-                <button onclick="closeModPanelGate()" class="text-xs text-slate-400 hover:text-white transition">Return to Main Hub</button>
-            </div>
-        </div>
-
-        <nav class="bg-[#161b22] border-b border-slate-800 px-6 py-3 flex justify-between items-center sticky top-0 z-40">
-            <div class="flex items-center space-x-8">
-                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('hub')">
-                    <div class="w-9 h-9 rounded-xl overflow-hidden shadow-lg flex items-center justify-center bg-slate-900 border border-slate-800">
-                        <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-lg font-bold">L</div>
-                    </div>
-                    <span class="font-bold text-white text-base tracking-wide txt-server-name">Planet Lenaris</span>
-                </div>
-
-                <div class="hidden md:flex items-center space-x-2 text-xs font-semibold">
-                    <button onclick="switchView('hub')" id="navHub" class="px-3 py-2 rounded-lg bg-slate-800 text-white transition">Main Dashboard</button>
-                    <button onclick="attemptModPanelAccess()" id="navModPanel" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">
-                        Moderator Panel
-                    </button>
-                    <button id="navCad" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">CAD</button>
-                    <button onclick="switchView('serverDashboard'); selectSidebarItem('dept-overview');" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
-                    <button onclick="openSupportModal()" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
-                    
-                    <button id="btnWebhookSettings" onclick="openWebhookModal()" class="px-3 py-2 rounded-lg text-amber-400 bg-amber-950/30 border border-amber-800/50 hover:bg-amber-900/40 transition hidden">
-                        <i class="fa-solid fa-gear mr-1"></i> Webhooks
-                    </button>
-                    
-                    <button onclick="openDonateModal()" class="px-3 py-2 rounded-lg text-emerald-400 bg-emerald-950/40 border border-emerald-800 hover:bg-emerald-900/50 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-dollar-sign"></i> Donate
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-4">
-                <div class="relative">
-                    <button id="notifBellBtn" onclick="toggleNotificationDropdown(event)" class="relative p-2 text-slate-400 hover:text-white transition focus:outline-none">
-                        <i class="fa-regular fa-bell text-lg"></i>
-                        <span id="notifBadge" class="absolute top-1 right-1 w-4 h-4 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center hidden">0</span>
-                    </button>
-
-                    <div id="notifDropdown" class="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 hidden overflow-hidden">
-                        <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
-                            <span class="text-xs font-bold text-white uppercase tracking-wider">Notifications</span>
-                            <button onclick="markNotificationsRead()" class="text-[10px] text-emerald-400 hover:underline">Mark all read</button>
-                        </div>
-                        <div id="notifListContainer" class="max-h-64 overflow-y-auto divide-y divide-slate-800/60">
-                            <p class="text-xs text-slate-500 p-4 text-center">No new notifications.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="userProfile" class="flex items-center space-x-3 hidden">
-                    <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
-                    <div class="hidden sm:block">
-                        <span id="userName" class="text-xs font-bold text-white block"></span>
-                        <span id="userRoleBadge" class="text-[9px] text-slate-400 font-semibold block">Community Member</span>
-                    </div>
-                    <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-1">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
-                </div>
-            </div>
-        </nav>
-
-        <main id="viewHub" class="p-6 max-w-7xl mx-auto space-y-8">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div>
-                    <h1 class="text-xl font-bold text-white">My Servers & Departments</h1>
-                    <p class="text-xs text-slate-400">Select an active panel or department to proceed.</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 hover:border-emerald-500/40 transition">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
-                            <img class="img-logo w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            <div class="w-full h-full bg-emerald-600 hidden items-center justify-center text-white text-xl font-bold">L</div>
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <h2 class="font-bold text-white text-base txt-server-name">Planet Lenaris</h2>
-                                <i class="fa-solid fa-crown text-amber-400 text-xs" title="Official Server"></i>
-                            </div>
-                            <span class="text-[11px] text-slate-400"><i class="fa-solid fa-users text-[10px] text-emerald-400"></i> Active Private Server</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2 pt-2 border-t border-slate-800/80">
-                        <button onclick="attemptModPanelAccess()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
-                            <span><i class="fa-solid fa-shield-halved mr-2"></i> Moderator Panel</span>
-                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </button>
-                        <button class="w-full bg-slate-900 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs text-left flex items-center justify-between border border-slate-800 opacity-80 cursor-default">
-                            <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
-                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </button>
-                        <button id="btnCadCustomize" onclick="alert('CAD Settings Panel')" class="w-full bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-amber-800/50 hidden">
-                            <span><i class="fa-solid fa-sliders mr-2"></i> CAD Customization</span>
-                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </button>
-                        <button id="btnServerDashboard" onclick="switchView('serverDashboard')" class="w-full bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-emerald-800/50 hidden">
-                            <span><i class="fa-solid fa-table-columns mr-2"></i> Server Dashboard</span>
-                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card p-5 rounded-2xl space-y-4 border border-slate-800 lg:col-span-2">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2">
-                            <i class="fa-solid fa-building-shield text-indigo-400"></i> Server Departments
-                        </h2>
-                    </div>
-
-                    <div id="hubDepartmentsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <p class="text-xs text-slate-500 col-span-2 text-center py-4">Checking department permissions...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card p-6 rounded-2xl space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                    <div>
-                        <h2 class="font-bold text-white text-base">Resources & Applications</h2>
-                        <p class="text-xs text-slate-400">Official forms, handbooks, and documentation.</p>
-                    </div>
-                    <button id="btnNewResource" onclick="alert('Add New Resource')" class="text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold transition hidden">
-                        <i class="fa-solid fa-plus mr-1"></i> + New Resource
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Staff Application</span>
-                        <p class="text-xs text-slate-300">Apply to become a staff moderator for Planet Lenaris.</p>
-                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
-                    </div>
-
-                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LHP Department Application</span>
-                        <p class="text-xs text-slate-300">Apply for the Lenaris Highway Patrol division.</p>
-                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
-                    </div>
-
-                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">LFD Department Application</span>
-                        <p class="text-xs text-slate-300">Apply for Fire & EMS response teams.</p>
-                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Form Coming Soon</button>
-                    </div>
-
-                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
-                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider block">Server Rules Handbook</span>
-                        <p class="text-xs text-slate-300">Official community rules and roleplay guidelines.</p>
-                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Read Handbook</button>
-                    </div>
-
-                    <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 hidden">
-                        <span class="text-xs font-bold text-rose-400 uppercase tracking-wider block">Staff Handbook</span>
-                        <p class="text-xs text-slate-300">Dept Comms restricted moderation guide.</p>
-                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Staff Access Only</button>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <main id="viewModPanel" class="p-6 max-w-7xl mx-auto hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-
-                <div class="space-y-6">
-                    <div class="card p-5 rounded-2xl space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">Shift Controls</h2>
-                            <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
-                        </div>
-
-                        <div class="flex space-x-2">
-                            <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                                Start Shift
-                            </button>
-                            <button id="btnToggleBreak" onclick="toggleShift('TOGGLE_BREAK')" class="hidden flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                                Take Break
-                            </button>
-                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="hidden flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                                End Shift
-                            </button>
-                        </div>
-
-                        <div class="pt-3 border-t border-slate-800 space-y-2">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[11px] font-semibold text-slate-400 uppercase">Active Staff On Shift</span>
-                                <button onclick="loadActiveShifts()" class="text-[10px] text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i></button>
-                            </div>
-                            <div id="activeShiftsList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-                                <p class="text-[11px] text-slate-500">No staff currently on shift.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card p-5 rounded-2xl space-y-4">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Toolbox</h2>
-                        
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="alert('LOA request submitted.')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
-                                <i class="fa-solid fa-umbrella-beach"></i>
-                                <span>Manage LOA</span>
-                            </button>
-                            <button onclick="requestHigherUpAssistance()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <span>Request Higher-Up</span>
-                            </button>
-                        </div>
-
-                        <div class="pt-3 border-t border-slate-800 space-y-2">
-                            <span class="text-[11px] font-semibold text-slate-400 uppercase block mb-1">Customize View Layout</span>
-                            <div class="flex items-center justify-between text-xs text-slate-300">
-                                <span>In-Game Commands</span>
-                                <input type="checkbox" id="toggleCmds" checked onchange="toggleSection('secCmds', this.checked)" class="accent-pink-500 cursor-pointer">
-                            </div>
-                            <div class="flex items-center justify-between text-xs text-slate-300">
-                                <span>Punishment System</span>
-                                <input type="checkbox" id="togglePunish" checked onchange="toggleSection('secPunish', this.checked)" class="accent-blue-500 cursor-pointer">
-                            </div>
-                            <div class="flex items-center justify-between text-xs text-slate-300">
-                                <span>Activity Feed</span>
-                                <input type="checkbox" id="toggleActivity" checked onchange="toggleSection('secActivity', this.checked)" class="accent-emerald-500 cursor-pointer">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card p-5 rounded-2xl space-y-3">
-                        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Players</h2>
-                            <span id="playerCountBadge" class="text-xs px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">0 Players</span>
-                        </div>
-
-                        <div id="livePlayersList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
-                            <p class="text-xs text-slate-500">Fetching server players...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="colMiddle" class="space-y-6">
-                    <div id="secCmds" class="card p-5 rounded-2xl space-y-4">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Commands</h2>
-                        <div class="flex space-x-2">
-                            <input type="text" id="erlcCmdInput" placeholder=":pm Username Check Discord" class="flex-1 rounded-lg px-3 py-2 text-xs">
-                            <button onclick="sendErlcCommand()" class="bg-pink-600 hover:bg-pink-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition">Run</button>
-                        </div>
-                    </div>
-
-                    <div id="secPunish" class="card p-5 rounded-2xl space-y-4">
-                        <h2 class="font-bold text-white text-sm uppercase tracking-wider">Create Punishment Log</h2>
-
-                        <form onsubmit="submitInfraction(event)" class="space-y-3">
-                            <div class="relative">
-                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Player Name *</label>
-                                <input type="text" id="targetUser" required autocomplete="off" placeholder="Type username..." oninput="handlePlayerSearch(this.value)" onblur="autoFetchRobloxId(this.value)" class="w-full rounded-lg px-3 py-2 text-xs">
-                                <div id="playerSearchDropdown" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto hidden"></div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Roblox Player ID</label>
-                                <div class="relative">
-                                    <input type="text" id="robloxId" placeholder="Auto-fetches upon entering username" class="w-full rounded-lg px-3 py-2 text-xs pr-8">
-                                    <span id="idLoadingSpinner" class="absolute right-2.5 top-2 text-xs text-slate-400 hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
-                                <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
-                                <textarea id="infractionReason" required rows="3" placeholder="Reason for infraction" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
-                            </div>
-
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Submit Punishment Log</button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="space-y-6">
-                    <div class="card p-5 rounded-2xl space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h2 class="font-bold text-white text-sm uppercase tracking-wider">Punishment Logs</h2>
-                            <button onclick="loadLogs()" class="text-xs text-blue-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
-                        </div>
-
-                        <div id="logsContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                            <p class="text-xs text-slate-500">No punishments logged yet.</p>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <div id="secActivity" class="card p-5 rounded-2xl space-y-4 mb-6">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity Feed</h2>
-                    <button onclick="fetchActivityFeed()" class="text-xs text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
-                </div>
-
-                <div id="activityContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                    <p class="text-xs text-slate-500">Loading server activity...</p>
-                </div>
-            </div>
-        </main>
-
-        <main id="viewServerDashboard" class="hidden flex-1 flex h-[calc(100vh-65px)] overflow-hidden">
+<main id="viewServerDashboard" class="hidden flex-1 flex h-[calc(100vh-65px)] overflow-hidden">
             <aside class="w-64 bg-[#11161d] border-r border-slate-800/80 p-3 space-y-1 overflow-y-auto custom-scroll flex-shrink-0 text-xs font-semibold select-none">
                 
                 <button onclick="selectSidebarItem('general')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
@@ -561,6 +188,140 @@
         </main>
     </div>
 
+    <div id="createPollModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-blue-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-square-poll-horizontal text-blue-400"></i> Create Session Poll
+                </h3>
+                <button onclick="closeCreatePollModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitSessionPoll(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Poll Question *</label>
+                    <input type="text" id="pollQuestion" required placeholder="e.g., Should we start a session?" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Poll Options (One per line) *</label>
+                    <textarea id="pollOptions" required rows="4" placeholder="Yes&#10;No&#10;Maybe later" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                    <p class="text-[10px] text-slate-500 mt-1">Maximum 9 options.</p>
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeCreatePollModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Send Poll</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editDepartmentModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="editDeptTitle" class="text-base font-bold text-white">Edit Department Settings</h3>
+                <button onclick="closeEditDepartmentModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="saveDepartmentSettings(event)" class="space-y-3">
+                <input type="hidden" id="editDeptId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Department Description</label>
+                    <textarea id="editDeptDesc" rows="2" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Discord Server Invite Link</label>
+                    <input type="text" id="editDeptInvite" placeholder="https://discord.gg/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Department Shift Webhook URL</label>
+                    <input type="text" id="editDeptWebhook" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeEditDepartmentModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="issueInfractionModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-rose-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Issue Staff Infraction
+                </h3>
+                <button onclick="closeIssueInfractionModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitStaffInfraction(event)" class="space-y-3">
+                <input type="hidden" id="infractionTargetUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Staff Member</label>
+                    <input type="text" id="infractionTargetUser" readonly class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-slate-300">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Infraction Level</label>
+                    <select id="infractionLevelSelect" class="w-full rounded-lg px-3 py-2 text-xs"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
+                    <textarea id="infractionReasonText" required rows="3" placeholder="Reason for staff infraction..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Proof / Evidence Link</label>
+                    <input type="text" id="infractionProofText" placeholder="https://..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeIssueInfractionModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Issue Infraction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="promoteStaffModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-angles-up text-emerald-400"></i> Promote / Update Staff
+                </h3>
+                <button onclick="closePromoteStaffModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitStaffPromotion(event)" class="space-y-3">
+                <input type="hidden" id="promoteTargetUserId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Staff Member</label>
+                    <input type="text" id="promoteTargetUser" readonly class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-slate-300">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">New Role / Rank Title *</label>
+                    <input type="text" id="promoteNewRole" required placeholder="e.g. Senior Moderator, Administrator..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason / Notes</label>
+                    <textarea id="promoteReason" rows="3" placeholder="Notes for rank change..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closePromoteStaffModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Rank Change</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="webhookModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-amber-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -571,14 +332,38 @@
             </div>
 
             <form onsubmit="saveWebhookSettings(event)" class="space-y-3">
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Shift Logging Webhook</label><input type="text" id="webhookShift" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Logging Webhook</label><input type="text" id="webhookPunish" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Support & Assistance Webhook</label><input type="text" id="webhookAssistance" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">In-Game Activity Webhook</label><input type="text" id="webhookActivity" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Infraction Logging Webhook</label><input type="text" id="webhookInfraction" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Promotions & Rank Changes Webhook</label><input type="text" id="webhookPromotion" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Staff Reviews Webhook</label><input type="text" id="webhookReview" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-amber-400 uppercase mb-1">Audit Logs Webhook</label><input type="text" id="webhookAudit" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs border border-amber-800/50"></div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Shift Logging Webhook</label>
+                    <input type="text" id="webhookShift" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Logging Webhook</label>
+                    <input type="text" id="webhookPunish" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Support & Assistance Webhook</label>
+                    <input type="text" id="webhookAssistance" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">In-Game Activity Webhook</label>
+                    <input type="text" id="webhookActivity" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Infraction Logging Webhook</label>
+                    <input type="text" id="webhookInfraction" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Promotions & Rank Changes Webhook</label>
+                    <input type="text" id="webhookPromotion" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Staff Reviews Webhook</label>
+                    <input type="text" id="webhookReview" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-amber-400 uppercase mb-1">Audit Logs Webhook</label>
+                    <input type="text" id="webhookAudit" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs border border-amber-800/50">
+                </div>
 
                 <div class="flex space-x-2 pt-2 border-t border-slate-800">
                     <button type="button" onclick="closeWebhookModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
@@ -590,9 +375,17 @@
 
     <div id="donateModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-emerald-500/30 shadow-2xl">
-            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl"><i class="fa-solid fa-dollar-sign"></i></div>
-            <div><h3 class="text-lg font-bold text-white">Support Server</h3><p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p></div>
-            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800"><span class="text-xs text-slate-400 block">CashApp Username</span><strong class="text-emerald-400 font-mono text-sm">$EternalZt</strong></div>
+            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl">
+                <i class="fa-solid fa-dollar-sign"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Support Server</h3>
+                <p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                <span class="text-xs text-slate-400 block">CashApp Username</span>
+                <strong class="text-emerald-400 font-mono text-sm">$EternalZt</strong>
+            </div>
             <button onclick="closeDonateModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs transition">Close</button>
         </div>
     </div>
@@ -600,13 +393,26 @@
     <div id="supportModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-md w-full space-y-4 border border-indigo-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-headset text-indigo-400"></i> <span class="txt-server-name">Planet Lenaris</span> Support</h3>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-headset text-indigo-400"></i> <span class="txt-server-name">Planet Lenaris</span> Support
+                </h3>
                 <button onclick="closeSupportModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
+
             <form onsubmit="submitSupportTicket(event)" class="space-y-3">
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Subject / Inquiry Title</label><input type="text" id="supportSubject" required placeholder="e.g. Question about role permissions" class="w-full rounded-lg px-3 py-2 text-xs"></div>
-                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message Details</label><textarea id="supportMessage" required rows="4" placeholder="Describe your issue or request..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea></div>
-                <div class="flex space-x-2 pt-2"><button type="button" onclick="closeSupportModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button><button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Submit Ticket</button></div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Subject / Inquiry Title</label>
+                    <input type="text" id="supportSubject" required placeholder="e.g. Question about role permissions" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message Details</label>
+                    <textarea id="supportMessage" required rows="4" placeholder="Describe your issue or request..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeSupportModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Submit Ticket</button>
+                </div>
             </form>
         </div>
     </div>
@@ -616,7 +422,9 @@
             <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="serverStatusText" class="font-semibold text-white"><span class="txt-server-name">Planet Lenaris</span> Server: Online</span>
         </div>
-        <div><span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span></div>
+        <div>
+            <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
+        </div>
     </footer>
 
     <script>
