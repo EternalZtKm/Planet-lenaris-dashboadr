@@ -174,23 +174,8 @@
                         </h2>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
-                            <span class="font-bold text-xs text-white block">Lenaris Highway Patrol (LHP)</span>
-                            <p class="text-[11px] text-slate-400">Primary state law enforcement division.</p>
-                        </div>
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
-                            <span class="font-bold text-xs text-white block">Lenaris Fire Dept. (LFD)</span>
-                            <p class="text-[11px] text-slate-400">Emergency fire & medical service response.</p>
-                        </div>
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
-                            <span class="font-bold text-xs text-white block">Lenaris Dept. of Transportation (LDOT)</span>
-                            <p class="text-[11px] text-slate-400">Roadway maintenance and traffic safety.</p>
-                        </div>
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800/80 space-y-1">
-                            <span class="font-bold text-xs text-white block">Civilian Operations</span>
-                            <p class="text-[11px] text-slate-400">General RP and civilian registration.</p>
-                        </div>
+                    <div id="hubDepartmentsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <p class="text-xs text-slate-500 col-span-2 text-center py-4">Checking department permissions...</p>
                     </div>
                 </div>
             </div>
@@ -250,11 +235,14 @@
                             <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
                         </div>
 
-                        <div class="flex space-x-3">
+                        <div class="flex space-x-2">
                             <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
                                 Start Shift
                             </button>
-                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg hidden">
+                            <button id="btnToggleBreak" onclick="toggleShift('TOGGLE_BREAK')" class="hidden flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
+                                Take Break
+                            </button>
+                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="hidden flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
                                 End Shift
                             </button>
                         </div>
@@ -412,6 +400,7 @@
                     <div id="menuActivity" class="pl-8 space-y-1 hidden">
                         <button onclick="selectSidebarItem('activity-waves')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Waves</button>
                         <button onclick="selectSidebarItem('activity-shifts')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Shifts</button>
+                        <button onclick="selectSidebarItem('activity-leaderboard')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Leaderboard</button>
                     </div>
                 </div>
 
@@ -667,40 +656,75 @@
     </footer>
 
     <script>
+        let cachedPlayers = [];
+        let currentUserId = null;
+        let currentUserData = null;
 
-        function selectSidebarItem(tabKey) {
-            document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
-                el.classList.remove('text-emerald-400', 'bg-slate-800/50', 'text-white');
-                if(el.classList.contains('sb-subitem')) el.classList.remove('text-emerald-400');
-            });
-            const activeBtn = document.querySelector(`[onclick="selectSidebarItem('${tabKey}')"]`);
-            if (activeBtn) {
-                if (activeBtn.classList.contains('sb-subitem')) activeBtn.classList.add('text-emerald-400');
-                else activeBtn.classList.add('text-white', 'bg-slate-800/50');
-            }
+        let currentServerConfig = { 
+            serverName: "Planet Lenaris", 
+            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", 
+            autoBanBolo: true, 
+            userSeeLogs: false, 
+            punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] 
+        };
 
-            const titleEl = document.getElementById('sdActiveTitle');
-            const descEl = document.getElementById('sdActiveDesc');
-
-            if (tabKey === 'general') { titleEl.textContent = "General"; descEl.textContent = "Configure general server branding and display settings."; renderGeneralTab(); return; }
-            if (tabKey === 'panel') { titleEl.textContent = "Panel"; descEl.textContent = "Configure moderator panel access, automation settings, and punishment presets."; renderPanelTab(); return; }
-            if (tabKey === 'members-list') { titleEl.textContent = "Members"; descEl.textContent = "View and manage team members and their ranks."; fetchStaffMembers(); return; }
-            if (tabKey === 'activity-waves') { titleEl.textContent = "Waves"; descEl.textContent = "Configure how long activity waves should last and set hour requirements."; renderActivityWavesTab(); return; }
-            if (tabKey === 'activity-shifts') { titleEl.textContent = "Shift Settings"; descEl.textContent = "Configure shift logging and restrictions."; renderActivityShiftsTab(); return; }
-            if (tabKey === 'infractions-members') { titleEl.textContent = "Infractions Members"; descEl.textContent = "Review staff infraction records and issue strikes."; renderInfractionsMembersTab(); return; }
-            if (tabKey === 'infractions-settings') { titleEl.textContent = "Infraction Settings"; descEl.textContent = "Manage custom infraction levels and configuration."; renderInfractionsSettingsTab(); return; }
-            if (tabKey === 'dept-overview' || tabKey === 'dept-settings') { titleEl.textContent = "Departments"; descEl.textContent = "Manage and view server department settings."; renderDepartmentsOverviewTab(); return; }
-            if (tabKey === 'sessions-overview') { titleEl.textContent = "Sessions Overview"; descEl.textContent = "View and control active roleplay sessions."; renderSessionsOverviewTab(); return; }
-            if (tabKey === 'sessions-settings') { titleEl.textContent = "Sessions Settings"; descEl.textContent = "Configure roleplay session automation tools."; renderSessionsSettingsTab(); return; }
-            if (tabKey === 'activity-leaderboard') { titleEl.textContent = "Activity Leaderboard"; descEl.textContent = "View and compare member activity statistics."; renderActivityLeaderboardTab(); return; }
-
-            const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            titleEl.textContent = formattedTitle;
-            descEl.textContent = `Manage and view ${formattedTitle} details for ${currentServerConfig.serverName}.`;
-            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized next.</p></div>`;
+        async function fetchGeneralSettings() {
+            try {
+                const res = await fetch('/api/settings/general');
+                const data = await res.json();
+                if (data.success && data.config) {
+                    currentServerConfig = data.config;
+                    document.querySelectorAll('.txt-server-name').forEach(el => el.textContent = currentServerConfig.serverName);
+                    document.querySelectorAll('.img-logo').forEach(img => img.src = currentServerConfig.serverIcon);
+                    document.getElementById('docTitle').textContent = `${currentServerConfig.serverName} | Official Hub`;
+                    const selectEl = document.getElementById('punishmentType');
+                    if (selectEl) {
+                        selectEl.innerHTML = (currentServerConfig.punishmentPresets || []).map(p => `<option value="${p}">${p}</option>`).join('');
+                    }
+                }
+            } catch (err) {}
         }
 
-        // --- SIDEBAR & DASHBOARD TABS RENDERER ---
+        function switchView(viewName, defaultTab = 'general') {
+            document.getElementById('viewHub').classList.add('hidden');
+            document.getElementById('viewModPanel').classList.add('hidden');
+            document.getElementById('viewServerDashboard').classList.add('hidden');
+            
+            const navHub = document.getElementById('navHub');
+            const navMod = document.getElementById('navModPanel');
+
+            if (viewName === 'modPanel') {
+                document.getElementById('viewModPanel').classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
+                loadServerInfo();
+            } else if (viewName === 'serverDashboard') {
+                document.getElementById('viewServerDashboard').classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+                selectSidebarItem(defaultTab);
+            } else {
+                document.getElementById('viewHub').classList.remove('hidden');
+                navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
+                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
+            }
+        }
+
+        function toggleSidebarMenu(menuId) {
+            const el = document.getElementById(menuId);
+            const arrow = document.getElementById('arrow-' + menuId);
+            if (el) { 
+                el.classList.toggle('hidden'); 
+                if (arrow) arrow.classList.toggle('rotate-180'); 
+            }
+        }
+
+        function escapeHtml(str) { 
+            return String(str || '').replace(/[&<>"']/g, function(m) { 
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; 
+            }); 
+        }
+
         function selectSidebarItem(tabKey) {
             document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
                 el.classList.remove('text-emerald-400', 'bg-slate-800/50', 'text-white');
@@ -1081,7 +1105,7 @@
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
                     fetchGeneralSettings(); loadHubDepartments();
-                } else { document.getElementById('loginOverlay').classList.remove('hidden'); }
+                } else { document.getElementById('loginOverlay').classList.add('hidden'); }
             } catch (err) {}
         }
         setInterval(checkAuth, 4000);
