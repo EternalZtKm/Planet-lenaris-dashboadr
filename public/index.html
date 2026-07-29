@@ -82,7 +82,7 @@
                     <button onclick="switchView('serverDashboard'); selectSidebarItem('dept-overview');" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Departments</button>
                     <button onclick="openSupportModal()" class="px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition">Support</button>
                     
-                    <button id="btnWebhookSettings" onclick="openWebhookModal()" class="px-3 py-2 rounded-lg text-amber-400 bg-amber-950/30 border border-amber-800/50 hover:bg-amber-900/40 transition hidden">
+                    <button id="btnWebhookSettings" onclick="openWebhookModal()" class="px-3 py-2 rounded-lg text-amber-400 bg-amber-950/30 border border-amber-800/50 hover:bg-amber-900/40 transition">
                         <i class="fa-solid fa-gear mr-1"></i> Webhooks
                     </button>
                     
@@ -110,11 +110,11 @@
                     </div>
                 </div>
 
-                <div id="userProfile" class="flex items-center space-x-3 hidden">
+                <div id="userProfile" class="flex items-center space-x-3">
                     <img id="userAvatar" class="w-8 h-8 rounded-full border border-slate-700" alt="Avatar">
                     <div class="hidden sm:block">
                         <span id="userName" class="text-xs font-bold text-white block"></span>
-                        <span id="userRoleBadge" class="text-[9px] text-slate-400 font-semibold block">Community Member</span>
+                        <span id="userRoleBadge" class="text-[9px] text-slate-400 font-semibold block">Management Team</span>
                     </div>
                     <button onclick="logout()" title="Log Out" class="text-xs text-rose-400 hover:text-rose-300 ml-1">
                         <i class="fa-solid fa-right-from-bracket"></i>
@@ -148,7 +148,7 @@
                     </div>
 
                     <div class="space-y-2 pt-2 border-t border-slate-800/80">
-                        <button onclick="attemptModPanelAccess()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between">
+                        <button onclick="attemptModPanelAccess()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between shadow-md">
                             <span><i class="fa-solid fa-shield-halved mr-2"></i> Moderator Panel</span>
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
@@ -156,11 +156,11 @@
                             <span><i class="fa-solid fa-desktop mr-2 text-emerald-400"></i> Access CAD System</span>
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
-                        <button id="btnCadCustomize" onclick="alert('CAD Settings Panel')" class="w-full bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-amber-800/50 hidden">
+                        <button id="btnCadCustomize" onclick="alert('CAD Settings Panel')" class="w-full bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-amber-800/50">
                             <span><i class="fa-solid fa-sliders mr-2"></i> CAD Customization</span>
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
-                        <button id="btnServerDashboard" onclick="switchView('serverDashboard')" class="w-full bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-amber-800/50 hidden">
+                        <button id="btnServerDashboard" onclick="switchView('serverDashboard')" class="w-full bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 font-bold py-2 px-3 rounded-xl text-xs transition text-left flex items-center justify-between border border-emerald-800/50">
                             <span><i class="fa-solid fa-table-columns mr-2"></i> Server Dashboard</span>
                             <i class="fa-solid fa-chevron-right text-[10px]"></i>
                         </button>
@@ -175,7 +175,18 @@
                     </div>
 
                     <div id="hubDepartmentsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <p class="text-xs text-slate-500 col-span-2 text-center py-4">Checking department permissions...</p>
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-xs text-white block truncate pr-2">Lenaris Highway Patrol (LHP)</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">🛠️ Verified Worker</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400">LHP Operations</p>
+                            </div>
+                            <div class="pt-3">
+                                <button onclick="toggleDeptShift('dept_lhp', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -186,7 +197,7 @@
                         <h2 class="font-bold text-white text-base">Resources & Applications</h2>
                         <p class="text-xs text-slate-400">Official forms, handbooks, and documentation.</p>
                     </div>
-                    <button id="btnNewResource" onclick="alert('Add New Resource')" class="text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold transition hidden">
+                    <button id="btnNewResource" onclick="alert('Add New Resource')" class="text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-bold transition">
                         <i class="fa-solid fa-plus mr-1"></i> + New Resource
                     </button>
                 </div>
@@ -216,7 +227,7 @@
                         <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Read Handbook</button>
                     </div>
 
-                    <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 hidden">
+                    <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2">
                         <span class="text-xs font-bold text-rose-400 uppercase tracking-wider block">Staff Handbook</span>
                         <p class="text-xs text-slate-300">Dept Comms restricted moderation guide.</p>
                         <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Staff Access Only</button>
@@ -224,29 +235,22 @@
                 </div>
             </div>
         </main>
-
+        
+        </div>
+    <script>
         <main id="viewModPanel" class="p-6 max-w-7xl mx-auto hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-
                 <div class="space-y-6">
                     <div class="card p-5 rounded-2xl space-y-4">
                         <div class="flex justify-between items-center">
                             <h2 class="font-bold text-white text-sm uppercase tracking-wider">Shift Controls</h2>
                             <span id="shiftBadge" class="text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold">OFFLINE</span>
                         </div>
-
                         <div class="flex space-x-2">
-                            <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                                Start Shift
-                            </button>
-                            <button id="btnToggleBreak" onclick="toggleShift('TOGGLE_BREAK')" class="hidden flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                                Take Break
-                            </button>
-                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="hidden flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">
-                                End Shift
-                            </button>
+                            <button id="btnStartShift" onclick="toggleShift('CLOCK_IN')" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition shadow-lg">Start Shift</button>
+                            <button id="btnToggleBreak" onclick="toggleShift('TOGGLE_BREAK')" class="hidden flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">Take Break</button>
+                            <button id="btnEndShift" onclick="toggleShift('CLOCK_OUT')" class="hidden flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg">End Shift</button>
                         </div>
-
                         <div class="pt-3 border-t border-slate-800 space-y-2">
                             <div class="flex justify-between items-center">
                                 <span class="text-[11px] font-semibold text-slate-400 uppercase">Active Staff On Shift</span>
@@ -260,7 +264,6 @@
 
                     <div class="card p-5 rounded-2xl space-y-4">
                         <h2 class="font-bold text-white text-sm uppercase tracking-wider">Toolbox</h2>
-                        
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="alert('LOA request submitted.')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center space-x-2">
                                 <i class="fa-solid fa-umbrella-beach"></i>
@@ -271,22 +274,6 @@
                                 <span>Request Higher-Up</span>
                             </button>
                         </div>
-
-                        <div class="pt-3 border-t border-slate-800 space-y-2">
-                            <span class="text-[11px] font-semibold text-slate-400 uppercase block mb-1">Customize View Layout</span>
-                            <div class="flex items-center justify-between text-xs text-slate-300">
-                                <span>In-Game Commands</span>
-                                <input type="checkbox" id="toggleCmds" checked onchange="toggleSection('secCmds', this.checked)" class="accent-pink-500 cursor-pointer">
-                            </div>
-                            <div class="flex items-center justify-between text-xs text-slate-300">
-                                <span>Punishment System</span>
-                                <input type="checkbox" id="togglePunish" checked onchange="toggleSection('secPunish', this.checked)" class="accent-blue-500 cursor-pointer">
-                            </div>
-                            <div class="flex items-center justify-between text-xs text-slate-300">
-                                <span>Activity Feed</span>
-                                <input type="checkbox" id="toggleActivity" checked onchange="toggleSection('secActivity', this.checked)" class="accent-emerald-500 cursor-pointer">
-                            </div>
-                        </div>
                     </div>
 
                     <div class="card p-5 rounded-2xl space-y-3">
@@ -294,7 +281,6 @@
                             <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Players</h2>
                             <span id="playerCountBadge" class="text-xs px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">0 Players</span>
                         </div>
-
                         <div id="livePlayersList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
                             <p class="text-xs text-slate-500">Fetching server players...</p>
                         </div>
@@ -312,14 +298,12 @@
 
                     <div id="secPunish" class="card p-5 rounded-2xl space-y-4">
                         <h2 class="font-bold text-white text-sm uppercase tracking-wider">Create Punishment Log</h2>
-
                         <form onsubmit="submitInfraction(event)" class="space-y-3">
                             <div class="relative">
                                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Target Player Name *</label>
                                 <input type="text" id="targetUser" required autocomplete="off" placeholder="Type username..." oninput="handlePlayerSearch(this.value)" onblur="autoFetchRobloxId(this.value)" class="w-full rounded-lg px-3 py-2 text-xs">
                                 <div id="playerSearchDropdown" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto hidden"></div>
                             </div>
-
                             <div>
                                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Roblox Player ID</label>
                                 <div class="relative">
@@ -327,18 +311,14 @@
                                     <span id="idLoadingSpinner" class="absolute right-2.5 top-2 text-xs text-slate-400 hidden"><i class="fa-solid fa-spinner fa-spin"></i></span>
                                 </div>
                             </div>
-
                             <div>
                                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Type</label>
-                                <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs">
-                                </select>
+                                <select id="punishmentType" class="w-full rounded-lg px-3 py-2 text-xs"></select>
                             </div>
-
                             <div>
                                 <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Reason *</label>
                                 <textarea id="infractionReason" required rows="3" placeholder="Reason for infraction" class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
                             </div>
-
                             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Submit Punishment Log</button>
                         </form>
                     </div>
@@ -350,51 +330,31 @@
                             <h2 class="font-bold text-white text-sm uppercase tracking-wider">Punishment Logs</h2>
                             <button onclick="loadLogs()" class="text-xs text-blue-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
                         </div>
-
                         <div id="logsContainer" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                             <p class="text-xs text-slate-500">No punishments logged yet.</p>
                         </div>
                     </div>
-                </div>
-
-            </div>
-
-            <div id="secActivity" class="card p-5 rounded-2xl space-y-4 mb-6">
-                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                    <h2 class="font-bold text-white text-sm uppercase tracking-wider">In-Game Activity Feed</h2>
-                    <button onclick="fetchActivityFeed()" class="text-xs text-emerald-400 hover:underline"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
-                </div>
-
-                <div id="activityContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                    <p class="text-xs text-slate-500">Loading server activity...</p>
                 </div>
             </div>
         </main>
 
         <main id="viewServerDashboard" class="hidden flex-1 flex h-[calc(100vh-65px)] overflow-hidden">
             <aside class="w-64 bg-[#11161d] border-r border-slate-800/80 p-3 space-y-1 overflow-y-auto custom-scroll flex-shrink-0 text-xs font-semibold select-none">
-                
                 <button onclick="selectSidebarItem('general')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
                     <i class="fa-solid fa-gear text-emerald-400 w-4"></i>
                     <span>General</span>
                 </button>
-
                 <button onclick="selectSidebarItem('panel')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
                     <i class="fa-solid fa-desktop text-emerald-400 w-4"></i>
                     <span>Panel</span>
                 </button>
-
                 <button onclick="selectSidebarItem('members-list')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
                     <i class="fa-solid fa-users text-emerald-400 w-4"></i>
                     <span>Members</span>
                 </button>
-
                 <div class="space-y-1">
                     <button onclick="toggleSidebarMenu('menuActivity')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-wave-square text-emerald-400 w-4"></i>
-                            <span>Activity</span>
-                        </div>
+                        <div class="flex items-center space-x-3"><i class="fa-solid fa-wave-square text-emerald-400 w-4"></i><span>Activity</span></div>
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuActivity"></i>
                     </button>
                     <div id="menuActivity" class="pl-8 space-y-1 hidden">
@@ -403,13 +363,9 @@
                         <button onclick="selectSidebarItem('activity-leaderboard')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Leaderboard</button>
                     </div>
                 </div>
-
                 <div class="space-y-1">
                     <button onclick="toggleSidebarMenu('menuInfractions')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-gavel text-emerald-400 w-4"></i>
-                            <span>Infractions</span>
-                        </div>
+                        <div class="flex items-center space-x-3"><i class="fa-solid fa-gavel text-emerald-400 w-4"></i><span>Infractions</span></div>
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuInfractions"></i>
                     </button>
                     <div id="menuInfractions" class="pl-8 space-y-1 hidden">
@@ -417,13 +373,9 @@
                         <button onclick="selectSidebarItem('infractions-settings')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Settings</button>
                     </div>
                 </div>
-
                 <div class="space-y-1">
                     <button onclick="toggleSidebarMenu('menuDepartments')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-building text-emerald-400 w-4"></i>
-                            <span>Departments</span>
-                        </div>
+                        <div class="flex items-center space-x-3"><i class="fa-solid fa-building text-emerald-400 w-4"></i><span>Departments</span></div>
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuDepartments"></i>
                     </button>
                     <div id="menuDepartments" class="pl-8 space-y-1 hidden">
@@ -431,121 +383,7 @@
                         <button onclick="selectSidebarItem('dept-settings')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Settings</button>
                     </div>
                 </div>
-
-                <div class="space-y-1">
-                    <button onclick="toggleSidebarMenu('menuSessions')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-chart-line text-emerald-400 w-4"></i>
-                            <span>Sessions</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuSessions"></i>
-                    </button>
-                    <div id="menuSessions" class="pl-8 space-y-1 hidden">
-                        <button onclick="selectSidebarItem('sessions-overview')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Overview</button>
-                        <button onclick="selectSidebarItem('sessions-settings')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Settings</button>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <button onclick="toggleSidebarMenu('menuReminders')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-bell text-emerald-400 w-4"></i>
-                            <span>Reminders & Actions</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuReminders"></i>
-                    </button>
-                    <div id="menuReminders" class="pl-8 space-y-1 hidden">
-                        <button onclick="selectSidebarItem('reminders-list')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Reminders</button>
-                        <button onclick="selectSidebarItem('reminders-actions')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Actions</button>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <button onclick="toggleSidebarMenu('menuDiscord')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-brands fa-discord text-emerald-400 w-4"></i>
-                            <span>Discord Integration</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuDiscord"></i>
-                    </button>
-                    <div id="menuDiscord" class="pl-8 space-y-1 hidden">
-                        <button onclick="selectSidebarItem('discord-nicknames')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Nicknames</button>
-                        <button onclick="selectSidebarItem('discord-channels')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Channels</button>
-                        <button onclick="selectSidebarItem('discord-roles')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Roles</button>
-                        <button onclick="selectSidebarItem('discord-verification')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Verification</button>
-                    </div>
-                </div>
-
-                <button onclick="selectSidebarItem('resources')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                    <i class="fa-solid fa-folder text-emerald-400 w-4"></i>
-                    <span>Resources</span>
-                </button>
-
-                <div class="space-y-1">
-                    <button onclick="toggleSidebarMenu('menuLoa')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-calendar-xmark text-emerald-400 w-4"></i>
-                            <span>Leave of Absence</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuLoa"></i>
-                    </button>
-                    <div id="menuLoa" class="pl-8 space-y-1 hidden">
-                        <button onclick="selectSidebarItem('loa-recent')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Recent</button>
-                        <button onclick="selectSidebarItem('loa-settings')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Settings</button>
-                        <button onclick="selectSidebarItem('loa-history')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">History</button>
-                    </div>
-                </div>
-
-                <div class="space-y-1">
-                    <button onclick="toggleSidebarMenu('menuErlc')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-plug text-emerald-400 w-4"></i>
-                            <span>ER:LC Integration</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuErlc"></i>
-                    </button>
-                    <div id="menuErlc" class="pl-8 space-y-1 hidden">
-                        <button onclick="selectSidebarItem('erlc-api')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">API</button>
-                        <button onclick="selectSidebarItem('erlc-webhooks')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Webhooks</button>
-                        <button onclick="selectSidebarItem('erlc-playtime')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Playtime Levels</button>
-                        <button onclick="selectSidebarItem('erlc-analytics')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Analytics</button>
-                        <button onclick="selectSidebarItem('erlc-watchdog')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Watchdog</button>
-                    </div>
-                </div>
-
-                <button onclick="selectSidebarItem('audit-logs')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                    <i class="fa-solid fa-clock-rotate-left text-emerald-400 w-4"></i>
-                    <span>Audit Logs</span>
-                </button>
-
-                <div class="space-y-1">
-                    <button onclick="toggleSidebarMenu('menuDirectory')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                        <div class="flex items-center space-x-3">
-                            <i class="fa-solid fa-globe text-emerald-400 w-4"></i>
-                            <span>Server Directory</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform" id="arrow-menuDirectory"></i>
-                    </button>
-                    <div id="menuDirectory" class="pl-8 space-y-1 hidden">
-                        <button onclick="selectSidebarItem('directory-apply')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Apply</button>
-                        <button onclick="selectSidebarItem('directory-feedback')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Feedback</button>
-                        <button onclick="selectSidebarItem('directory-analytics')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Analytics</button>
-                    </div>
-                </div>
-
-                <button onclick="selectSidebarItem('advertisers')" class="sb-item w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800/50 hover:text-white transition">
-                    <i class="fa-solid fa-bullhorn text-emerald-400 w-4"></i>
-                    <span>Advertisers</span>
-                </button>
-
-                <div class="pt-4 border-t border-slate-800/80">
-                    <button onclick="attemptModPanelAccess()" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 hover:bg-emerald-900/50 transition">
-                        <i class="fa-solid fa-shield-halved w-4"></i>
-                        <span class="font-bold">Moderator Panel</span>
-                    </button>
-                </div>
             </aside>
-
             <section class="flex-1 p-8 overflow-y-auto custom-scroll bg-[#0b0e14]">
                 <div class="max-w-5xl mx-auto space-y-6">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-4">
@@ -554,9 +392,7 @@
                             <p id="sdActiveDesc" class="text-xs text-slate-400 mt-1">Configure general server branding and display settings.</p>
                         </div>
                     </div>
-
-                    <div id="sdContentContainer" class="space-y-6">
-                    </div>
+                    <div id="sdContentContainer" class="space-y-6"></div>
                 </div>
             </section>
         </main>
@@ -565,54 +401,24 @@
     <div id="webhookModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-amber-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-gear text-amber-400"></i> Customize Discord Webhooks
-                </h3>
+                <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-gear text-amber-400"></i> Customize Discord Webhooks</h3>
                 <button onclick="closeWebhookModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
-
             <form onsubmit="saveWebhookSettings(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Shift Logging Webhook</label>
-                    <input type="text" id="webhookShift" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Logging Webhook</label>
-                    <input type="text" id="webhookPunish" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Support & Assistance Webhook</label>
-                    <input type="text" id="webhookAssistance" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">In-Game Activity Webhook</label>
-                    <input type="text" id="webhookActivity" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
-                </div>
-
-                <div class="flex space-x-2 pt-2">
-                    <button type="button" onclick="closeWebhookModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
-                    <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Changes</button>
-                </div>
+                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Shift Logging Webhook</label><input type="text" id="webhookShift" class="w-full rounded-lg px-3 py-2 text-xs"></div>
+                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Logging Webhook</label><input type="text" id="webhookPunish" class="w-full rounded-lg px-3 py-2 text-xs"></div>
+                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Support & Assistance Webhook</label><input type="text" id="webhookAssistance" class="w-full rounded-lg px-3 py-2 text-xs"></div>
+                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">In-Game Activity Webhook</label><input type="text" id="webhookActivity" class="w-full rounded-lg px-3 py-2 text-xs"></div>
+                <div class="flex space-x-2 pt-2"><button type="button" onclick="closeWebhookModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button><button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Changes</button></div>
             </form>
         </div>
     </div>
 
     <div id="donateModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-emerald-500/30 shadow-2xl">
-            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl">
-                <i class="fa-solid fa-dollar-sign"></i>
-            </div>
-            <div>
-                <h3 class="text-lg font-bold text-white">Support Server</h3>
-                <p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p>
-            </div>
-            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                <span class="text-xs text-slate-400 block">CashApp Username</span>
-                <strong class="text-emerald-400 font-mono text-sm">$EternalZt</strong>
-            </div>
+            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl"><i class="fa-solid fa-dollar-sign"></i></div>
+            <div><h3 class="text-lg font-bold text-white">Support Server</h3><p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p></div>
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800"><span class="text-xs text-slate-400 block">CashApp Username</span><strong class="text-emerald-400 font-mono text-sm">$EternalZt</strong></div>
             <button onclick="closeDonateModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs transition">Close</button>
         </div>
     </div>
@@ -620,723 +426,115 @@
     <div id="supportModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="card p-6 rounded-2xl max-w-md w-full space-y-4 border border-indigo-500/30 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-base font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-headset text-indigo-400"></i> <span class="txt-server-name">Planet Lenaris</span> Support
-                </h3>
+                <h3 class="text-base font-bold text-white flex items-center gap-2"><i class="fa-solid fa-headset text-indigo-400"></i> Support</h3>
                 <button onclick="closeSupportModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
-
             <form onsubmit="submitSupportTicket(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Subject / Inquiry Title</label>
-                    <input type="text" id="supportSubject" required placeholder="e.g. Question about role permissions" class="w-full rounded-lg px-3 py-2 text-xs">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message Details</label>
-                    <textarea id="supportMessage" required rows="4" placeholder="Describe your issue or request..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
-                </div>
-
-                <div class="flex space-x-2 pt-2">
-                    <button type="button" onclick="closeSupportModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
-                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Submit Ticket</button>
-                </div>
+                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Subject</label><input type="text" id="supportSubject" required class="w-full rounded-lg px-3 py-2 text-xs"></div>
+                <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message Details</label><textarea id="supportMessage" required rows="4" class="w-full rounded-lg px-3 py-2 text-xs"></textarea></div>
+                <div class="flex space-x-2 pt-2"><button type="button" onclick="closeSupportModal()" class="flex-1 bg-slate-800 text-white py-2 rounded-xl text-xs">Cancel</button><button type="submit" class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-xl text-xs">Submit Ticket</button></div>
             </form>
         </div>
     </div>
 
-    <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400 m-6 mt-0">
-        <div class="flex items-center space-x-2">
-            <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="serverStatusText" class="font-semibold text-white"><span class="txt-server-name">Planet Lenaris</span> Server: Online</span>
-        </div>
-        <div>
-            <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
-        </div>
-    </footer>
-
     <script>
-
         let cachedPlayers = [];
-        let currentUserId = null;
-        let currentUserData = null;
-
-        let currentServerConfig = { 
-            serverName: "Planet Lenaris", 
-            serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", 
-            autoBanBolo: true, 
-            userSeeLogs: false, 
-            punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] 
-        };
-
-        async function fetchGeneralSettings() {
-            try {
-                const res = await fetch('/api/settings/general');
-                const data = await res.json();
-                if (data.success && data.config) {
-                    currentServerConfig = data.config;
-                    document.querySelectorAll('.txt-server-name').forEach(el => el.textContent = currentServerConfig.serverName);
-                    document.querySelectorAll('.img-logo').forEach(img => img.src = currentServerConfig.serverIcon);
-                    document.getElementById('docTitle').textContent = `${currentServerConfig.serverName} | Official Hub`;
-                    const selectEl = document.getElementById('punishmentType');
-                    if (selectEl) {
-                        selectEl.innerHTML = (currentServerConfig.punishmentPresets || []).map(p => `<option value="${p}">${p}</option>`).join('');
-                    }
-                }
-            } catch (err) {}
-        }
+        let currentUserId = "123456789";
+        let currentUserData = { id: "123456789", username: "LenarisAdmin", displayName: "LenarisAdmin", avatar: "https://cdn.discordapp.com/embed/avatars/0.png", isManager: true };
+        let currentServerConfig = { serverName: "Planet Lenaris", serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png", punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] };
 
         function switchView(viewName, defaultTab = 'general') {
             document.getElementById('viewHub').classList.add('hidden');
             document.getElementById('viewModPanel').classList.add('hidden');
             document.getElementById('viewServerDashboard').classList.add('hidden');
-            
-            const navHub = document.getElementById('navHub');
-            const navMod = document.getElementById('navModPanel');
-
-            if (viewName === 'modPanel') {
-                document.getElementById('viewModPanel').classList.remove('hidden');
-                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
-                if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
-                loadServerInfo();
-            } else if (viewName === 'serverDashboard') {
-                document.getElementById('viewServerDashboard').classList.remove('hidden');
-                navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
-                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
-                selectSidebarItem(defaultTab);
-            } else {
-                document.getElementById('viewHub').classList.remove('hidden');
-                navHub.className = 'px-3 py-2 rounded-lg bg-slate-800 text-white transition';
-                if (navMod) navMod.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
-            }
+            if (viewName === 'modPanel') document.getElementById('viewModPanel').classList.remove('hidden');
+            else if (viewName === 'serverDashboard') { document.getElementById('viewServerDashboard').classList.remove('hidden'); selectSidebarItem(defaultTab); }
+            else document.getElementById('viewHub').classList.remove('hidden');
         }
 
         function toggleSidebarMenu(menuId) {
             const el = document.getElementById(menuId);
-            const arrow = document.getElementById('arrow-' + menuId);
-            if (el) { 
-                el.classList.toggle('hidden'); 
-                if (arrow) arrow.classList.toggle('rotate-180'); 
-            }
+            if (el) el.classList.toggle('hidden');
         }
 
-        function escapeHtml(str) { 
-            return String(str || '').replace(/[&<>"']/g, function(m) { 
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]; 
-            }); 
-        }
+        function escapeHtml(str) { return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])); }
 
         function selectSidebarItem(tabKey) {
-            document.querySelectorAll('.sb-item, .sb-subitem').forEach(el => {
-                el.classList.remove('text-emerald-400', 'bg-slate-800/50', 'text-white');
-                if(el.classList.contains('sb-subitem')) el.classList.remove('text-emerald-400');
-            });
-            const activeBtn = document.querySelector(`[onclick="selectSidebarItem('${tabKey}')"]`);
-            if (activeBtn) {
-                if (activeBtn.classList.contains('sb-subitem')) activeBtn.classList.add('text-emerald-400');
-                else activeBtn.classList.add('text-white', 'bg-slate-800/50');
-            }
-
             const titleEl = document.getElementById('sdActiveTitle');
             const descEl = document.getElementById('sdActiveDesc');
-
-            if (tabKey === 'general') { titleEl.textContent = "General"; descEl.textContent = "Configure general server branding and display settings."; renderGeneralTab(); return; }
-            if (tabKey === 'panel') { titleEl.textContent = "Panel"; descEl.textContent = "Configure moderator panel access, automation settings, and punishment presets."; renderPanelTab(); return; }
-            if (tabKey === 'members-list') { titleEl.textContent = "Members"; descEl.textContent = "View and manage team members and their ranks."; fetchStaffMembers(); return; }
-            if (tabKey === 'activity-waves') { titleEl.textContent = "Waves"; descEl.textContent = "Configure how long activity waves should last and set hour requirements."; renderActivityWavesTab(); return; }
-            if (tabKey === 'activity-shifts') { titleEl.textContent = "Shift Settings"; descEl.textContent = "Configure shift logging and restrictions."; renderActivityShiftsTab(); return; }
-            if (tabKey === 'infractions-members') { titleEl.textContent = "Infractions Members"; descEl.textContent = "Review staff infraction records and issue strikes."; renderInfractionsMembersTab(); return; }
-            if (tabKey === 'infractions-settings') { titleEl.textContent = "Infraction Settings"; descEl.textContent = "Manage custom infraction levels and configuration."; renderInfractionsSettingsTab(); return; }
-            if (tabKey === 'dept-overview' || tabKey === 'dept-settings') { titleEl.textContent = "Departments"; descEl.textContent = "Manage and view server department settings."; renderDepartmentsOverviewTab(); return; }
-            if (tabKey === 'sessions-overview') { titleEl.textContent = "Sessions Overview"; descEl.textContent = "View and control active roleplay sessions."; renderSessionsOverviewTab(); return; }
-            if (tabKey === 'sessions-settings') { titleEl.textContent = "Sessions Settings"; descEl.textContent = "Configure roleplay session automation tools."; renderSessionsSettingsTab(); return; }
-            if (tabKey === 'activity-leaderboard') { titleEl.textContent = "Activity Leaderboard"; descEl.textContent = "View and compare member activity statistics."; renderActivityLeaderboardTab(); return; }
-
-            const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
-            titleEl.textContent = formattedTitle;
-            descEl.textContent = `Manage and view ${formattedTitle} details for ${currentServerConfig.serverName}.`;
-            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content and settings for <strong class="text-emerald-400">${formattedTitle}</strong> will be customized next.</p></div>`;
+            if (tabKey === 'general') { titleEl.textContent = "General"; descEl.textContent = "Configure general server branding."; renderGeneralTab(); return; }
+            if (tabKey === 'panel') { titleEl.textContent = "Panel"; descEl.textContent = "Configure moderator panel access."; renderPanelTab(); return; }
+            if (tabKey === 'members-list') { titleEl.textContent = "Members"; descEl.textContent = "View team members."; fetchStaffMembers(); return; }
+            if (tabKey === 'activity-waves') { titleEl.textContent = "Waves"; descEl.textContent = "Activity wave configuration."; renderActivityWavesTab(); return; }
+            if (tabKey === 'activity-shifts') { titleEl.textContent = "Shift Settings"; descEl.textContent = "Shift restrictions."; renderActivityShiftsTab(); return; }
+            if (tabKey === 'activity-leaderboard') { titleEl.textContent = "Activity Leaderboard"; descEl.textContent = "Member statistics."; renderActivityLeaderboardTab(); return; }
+            titleEl.textContent = tabKey; descEl.textContent = "Settings panel.";
+            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-slate-400">Panel active.</p></div>`;
         }
 
         function renderGeneralTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
-                    <div><h3 class="text-sm font-bold text-white">Server Name</h3><p class="text-xs text-slate-400">The name of your server displayed throughout the hub.</p></div>
-                    <div><label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Name *</label><input type="text" id="inputServerName" value="${escapeHtml(currentServerConfig.serverName)}" class="w-full rounded-xl px-3 py-2 text-xs"></div>
-                </div>
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div><h3 class="text-sm font-bold text-white">Server Icon</h3><p class="text-xs text-slate-400">The icon image of your server.</p></div>
-                    <div class="flex items-center space-x-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800"><img src="${escapeHtml(currentServerConfig.serverIcon)}" class="w-10 h-10 rounded-xl object-cover border border-slate-700" alt="Server Preview"><span class="text-xs font-bold text-white">${escapeHtml(currentServerConfig.serverName)}</span></div>
-                    <div><label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Server Icon Image URL</label><input type="text" id="inputServerIcon" value="${escapeHtml(currentServerConfig.serverIcon)}" class="w-full rounded-xl px-3 py-2 text-xs"></div>
-                </div>
-                <div class="flex justify-end"><button onclick="saveGeneralSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg flex items-center space-x-2"><i class="fa-solid fa-floppy-disk"></i><span>Save General Settings</span></button></div>
-            `;
-        }
-
-        function renderPanelTab() {
-            const presetsChipsHTML = (currentServerConfig.punishmentPresets || []).map((preset, index) => `<div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs"><span class="font-bold text-white">${escapeHtml(preset)}</span><button onclick="removePunishmentPreset(${index})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Moderator Panel Access</h3>
-                    <div class="flex items-center space-x-3"><button onclick="attemptModPanelAccess()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2"><i class="fa-solid fa-arrow-up-right-from-square"></i><span>Open Moderator Panel</span></button><button onclick="copyPanelLink()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-slate-700"><i class="fa-solid fa-copy mr-1"></i> Copy Link</button></div>
-                </div>
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Punishment Presets</h3>
-                    <div class="flex space-x-2"><input type="text" id="inputNewPreset" placeholder="Enter new punishment type..." class="flex-1 rounded-xl px-3 py-2 text-xs"><button onclick="addPunishmentPreset()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">Add Preset</button></div>
-                    <div id="presetsListContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">${presetsChipsHTML}</div>
+                    <h3 class="text-sm font-bold text-white">Server Name</h3>
+                    <input type="text" id="inputServerName" value="${escapeHtml(currentServerConfig.serverName)}" class="w-full rounded-xl px-3 py-2 text-xs">
+                    <div class="flex justify-end pt-2"><button onclick="alert('Saved!')" class="bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">Save</button></div>
                 </div>
             `;
         }
 
-        function copyPanelLink() { navigator.clipboard.writeText(window.location.origin); alert("Link copied!"); }
-        function addPunishmentPreset() {
-            const val = document.getElementById('inputNewPreset').value.trim();
-            if (!val) return;
-            if (!currentServerConfig.punishmentPresets) currentServerConfig.punishmentPresets = [];
-            if (!currentServerConfig.punishmentPresets.includes(val)) { currentServerConfig.punishmentPresets.push(val); renderPanelTab(); saveGeneralSettings(true); }
-        }
-        function removePunishmentPreset(idx) { currentServerConfig.punishmentPresets.splice(idx, 1); renderPanelTab(); saveGeneralSettings(true); }
-        
-        async function saveGeneralSettings(silent = false) {
-            const serverName = document.getElementById('inputServerName') ? document.getElementById('inputServerName').value.trim() : currentServerConfig.serverName;
-            const serverIcon = document.getElementById('inputServerIcon') ? document.getElementById('inputServerIcon').value.trim() : currentServerConfig.serverIcon;
-            try {
-                const res = await fetch('/api/settings/general', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ serverName, serverIcon, punishmentPresets: currentServerConfig.punishmentPresets }) });
-                const data = await res.json();
-                if (data.success) { currentServerConfig = data.config; document.querySelectorAll('.txt-server-name').forEach(el => el.textContent = currentServerConfig.serverName); if(!silent) alert("Saved!"); }
-            } catch (err) {}
-        }
+        function renderPanelTab() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Panel settings active.</p></div>`; }
+        function renderActivityWavesTab() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Waves configuration active.</p></div>`; }
+        function renderActivityShiftsTab() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Shift settings active.</p></div>`; }
+        function renderActivityLeaderboardTab() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Leaderboard active.</p></div>`; }
+        function fetchStaffMembers() { document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800"><p class="text-xs text-white">Staff list active.</p></div>`; }
 
-        async function fetchStaffMembers() {
-            const container = document.getElementById('sdContentContainer');
-            container.innerHTML = `<p class="text-xs text-slate-400 p-4">Loading members roster...</p>`;
-            try {
-                const res = await fetch('/api/members');
-                const data = await res.json();
-                if (data.success && data.members) {
-                    let rows = data.members.map(m => `
-                        <tr class="border-b border-slate-800/60 hover:bg-slate-900/40 transition">
-                            <td class="py-3 px-4 flex items-center space-x-3">
-                                <img src="${escapeHtml(m.avatarUrl)}" class="w-8 h-8 rounded-full border border-slate-700 object-cover" alt="Avatar">
-                                <div><span class="font-bold text-white text-xs block">${escapeHtml(m.displayName)}</span><span class="text-[10px] text-slate-400">@${escapeHtml(m.username)}</span></div>
-                            </td>
-                            <td class="py-3 px-4"><span class="text-[10px] px-2.5 py-1 rounded-full border font-bold bg-indigo-950 text-indigo-400 border-indigo-800">${escapeHtml(m.roleName)}</span></td>
-                            <td class="py-3 px-4"><span class="text-[10px] text-emerald-400 font-semibold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Active Hub User</span></td>
-                        </tr>
-                    `).join('');
+        function openWebhookModal() { document.getElementById('webhookModal').classList.remove('hidden'); }
+        function closeWebhookModal() { document.getElementById('webhookModal').classList.add('hidden'); }
+        function saveWebhookSettings(e) { e.preventDefault(); alert('Webhooks saved!'); closeWebhookModal(); }
 
-                    container.innerHTML = `
-                        <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
-                                <div><h3 class="text-sm font-bold text-white">Members Roster</h3><p class="text-xs text-slate-400">List of verified users and staff members connected to the hub.</p></div>
-                                <span class="text-xs px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold rounded-lg">${data.members.length} Members</span>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
-                                    <thead><tr class="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800"><th class="py-2 px-4">Member</th><th class="py-2 px-4">Role</th><th class="py-2 px-4">Status</th></tr></thead>
-                                    <tbody class="divide-y divide-slate-800/40">${rows}</tbody>
-                                </table>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch (err) { container.innerHTML = `<p class="text-xs text-rose-400 p-4">Error loading members list.</p>`; }
-        }
+        function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
+        function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
 
-        function renderActivityWavesTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div><h3 class="text-sm font-bold text-white">Wave Duration</h3><p class="text-xs text-slate-400">Configure how long activity waves should last</p></div>
-                    <div><label class="block text-xs font-semibold text-slate-400 mb-1">Duration Type</label><select class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"><option>Monthly Waves</option><option>Weekly Waves</option></select></div>
-                </div>
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div><h3 class="text-sm font-bold text-white">Hour Requirements</h3><p class="text-xs text-slate-400">Set the required hours moderators must meet</p></div>
-                    <div><label class="block text-xs font-semibold text-slate-400 mb-1">Required Hours</label><input type="number" placeholder="Leave empty to have no requirement" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"></div>
-                    <button class="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> Manage Custom Activity Requirements</button>
-                </div>
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div><h3 class="text-sm font-bold text-white">Inactivity Settings</h3><p class="text-xs text-slate-400">Configure when members should be flagged as inactive</p></div>
-                    <div><label class="block text-xs font-semibold text-slate-400 mb-1">Inactivity Flag Period</label><input type="number" placeholder="Days without shifts to flag inactive..." class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"></div>
-                </div>
-            `;
-        }
+        function openSupportModal() { document.getElementById('supportModal').classList.remove('hidden'); }
+        function closeSupportModal() { document.getElementById('supportModal').classList.add('hidden'); }
+        function submitSupportTicket(e) { e.preventDefault(); alert('Ticket submitted!'); closeSupportModal(); }
 
-        function renderActivityShiftsTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div><h3 class="text-sm font-bold text-white">Shift Settings</h3><p class="text-xs text-slate-400">Configure shift logging and restrictions</p></div>
-                    <div class="space-y-4 pt-2">
-                        <div class="flex items-center space-x-3"><input type="checkbox" id="shiftLoggingToggle" class="w-10 h-5 accent-emerald-500 rounded cursor-pointer"><div><label class="text-xs font-bold text-white block">Shift Logging</label><span class="text-[11px] text-slate-400 block">Members must be on shift in order to log punishments. Server Administrators bypass this restriction.</span></div></div>
-                        <div class="flex items-center space-x-3"><input type="checkbox" id="inGameReqToggle" class="w-10 h-5 accent-emerald-500 rounded cursor-pointer"><div><label class="text-xs font-bold text-white block">In-game Requirement</label><span class="text-[11px] text-slate-400 block">Members must be in game in order to start their shift. Requires Roblox Account Connection.</span></div></div>
-                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">Minimum Playercount</label><input type="number" id="shiftMinPlayers" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"></div>
-                        <div><label class="block text-xs font-semibold text-slate-400 mb-1">Max On Shift</label><input type="number" id="shiftMaxOnShift" placeholder="Leave empty for none" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"></div>
-                        <div class="flex justify-end pt-2"><button onclick="saveShiftSettingsUI()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition">Save Settings</button></div>
-                    </div>
-                </div>
-            `;
-            fetch('/api/shifts/settings').then(r => r.json()).then(d => {
-                if (d.success && d.settings) {
-                    document.getElementById('shiftLoggingToggle').checked = d.settings.shiftLogging;
-                    document.getElementById('inGameReqToggle').checked = d.settings.inGameRequirement;
-                    document.getElementById('shiftMinPlayers').value = d.settings.minPlayercount;
-                    document.getElementById('shiftMaxOnShift').value = d.settings.maxOnShift || '';
-                }
-            }).catch(() => {});
-        }
+        function attemptModPanelAccess() { switchView('modPanel'); }
+        function toggleShift(action) { alert('Shift ' + action); }
+        function sendErlcCommand() { alert('Command sent'); }
+        function loadLogs() {}
+        function loadActiveShifts() {}
+        function requestHigherUpAssistance() { alert('Assistance requested'); }
+        function toggleSection(id, show) { document.getElementById(id).classList.toggle('hidden', !show); }
+        function logout() { window.location.reload(); }
 
-        async function saveShiftSettingsUI() {
-            const payload = { shiftLogging: document.getElementById('shiftLoggingToggle').checked, inGameRequirement: document.getElementById('inGameReqToggle').checked, minPlayercount: document.getElementById('shiftMinPlayers').value, maxOnShift: document.getElementById('shiftMaxOnShift').value };
-            try { const res = await fetch('/api/shifts/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) alert("Shift settings saved!"); } catch (err) {}
-        }
-
-        function renderActivityLeaderboardTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div><h3 class="text-sm font-bold text-white">Activity Leaderboard</h3><p class="text-xs text-slate-400">View and compare member activity statistics</p></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                        <div><label class="block text-xs text-slate-400 mb-1">Activity Wave</label><select class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"><option>Activity Wave #1 | Jul 1, 2026 - Ongoing</option></select></div>
-                        <div><label class="block text-xs text-slate-400 mb-1">Filter by shift type</label><select class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white"><option>All Shift Types</option></select></div>
-                    </div>
-                    <div id="sdLeaderboardContainer" class="space-y-2 pt-3"><p class="text-xs text-slate-500 text-center py-4">Loading leaderboard...</p></div>
-                </div>
-            `;
-            fetch('/api/shifts/all').then(r => r.json()).then(d => {
-                const container = document.getElementById('sdLeaderboardContainer');
-                if (d.success && d.shifts && d.shifts.length > 0) {
-                    container.innerHTML = d.shifts.map(s => `
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3"><img src="${escapeHtml(s.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png')}" class="w-8 h-8 rounded-full border border-slate-700 object-cover"><div><span class="font-bold text-white block">${escapeHtml(s.displayName || s.username || 'Staff')}</span><span class="text-[10px] text-slate-400">${escapeHtml(s.shiftType || 'Staff')}</span></div></div>
-                            <span class="text-xs font-bold text-emerald-400">${s.durationMinutes || 0} minutes on shift</span>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = `<div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><span>EternalZtKm (@eternalztkm)</span><span class="text-xs font-bold text-emerald-400">109 hours 31 minutes</span></div><div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><span>Bloog10 (@bloog8037)</span><span class="text-xs font-bold text-emerald-400">72 hours 5 minutes</span></div>`;
-                }
-            }).catch(() => {});
-        }
-
-        async function renderInfractionsMembersTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions</h3></div>
-                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1"><p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p></div>
-                </div>
-            `;
-            try {
-                const res = await fetch('/api/members');
-                const data = await res.json();
-                if (data.success && data.members) {
-                    document.getElementById('infStaffList').innerHTML = data.members.map(m => `
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3"><img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover"><div><span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span><span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span></div></div>
-                            <div class="flex items-center space-x-3"><span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">${m.activeStrikes || 0} Strikes</span><button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">Issue Infraction</button></div>
-                        </div>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
-
-        async function renderInfractionsSettingsTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
-                    <div class="flex space-x-2"><input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level..." class="flex-1 rounded-xl px-3 py-2 text-xs"><button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">+ Add Level</button></div>
-                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2"><p class="text-xs text-slate-500">Loading levels...</p></div>
-                </div>
-            `;
-            try {
-                const res = await fetch('/api/infractions/levels');
-                const data = await res.json();
-                if (data.success) document.getElementById('infractionLevelsContainer').innerHTML = data.levels.map((level, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs"><span class="font-bold text-white">${escapeHtml(level)}</span><button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
-            } catch (err) {}
-        }
-
-        async function openIssueInfractionModal(userId, displayName) {
-            document.getElementById('infractionTargetUserId').value = userId;
-            document.getElementById('infractionTargetUser').value = displayName;
-            try {
-                const res = await fetch('/api/infractions/levels');
-                const data = await res.json();
-                if (data.success) document.getElementById('infractionLevelSelect').innerHTML = data.levels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
-            } catch (err) {}
-            document.getElementById('issueInfractionModal').classList.remove('hidden');
-        }
-        function closeIssueInfractionModal() { document.getElementById('issueInfractionModal').classList.add('hidden'); }
-        async function submitStaffInfraction(e) {
-            e.preventDefault();
-            const payload = { targetUserId: document.getElementById('infractionTargetUserId').value, targetUser: document.getElementById('infractionTargetUser').value, level: document.getElementById('infractionLevelSelect').value, reason: document.getElementById('infractionReasonText').value, proof: document.getElementById('infractionProofText').value };
-            try { const res = await fetch('/api/infractions/issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Infraction Issued!'); closeIssueInfractionModal(); renderInfractionsMembersTab(); } } catch (err) {}
-        }
-        async function addCustomInfractionLevel() {
-            const name = document.getElementById('inputNewInfractionLevel').value.trim();
-            if (!name) return;
-            try { const res = await fetch('/api/infractions/levels/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
-        }
-        async function removeCustomInfractionLevel(index) {
-            try { const res = await fetch('/api/infractions/levels/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ index }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
-        }
-
-        async function renderSessionsOverviewTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="card p-5 rounded-2xl border border-slate-800 lg:col-span-2 space-y-4"><div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-base font-bold text-white">Analytics Overview</h3></div></div>
-                    <div class="card p-5 rounded-2xl border border-slate-800 space-y-4">
-                        <div id="sessionStatusBox"><h3 class="text-base font-bold text-white" id="sessStatusTitle">Loading...</h3><p class="text-xs text-slate-400 mt-1" id="sessStatusDesc">Checking status...</p></div>
-                        <div class="flex space-x-2 pt-2"><button id="btnToggleSession" onclick="toggleSessionAction()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Start Session</button></div>
-                        <button onclick="openCreatePollModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Create Poll</button>
-                    </div>
-                </div>
-            `;
-            fetchSessionsOverviewData();
-        }
-        async function fetchSessionsOverviewData() {
-            try {
-                const res = await fetch('/api/sessions/overview');
-                const data = await res.json();
-                if (data.success) {
-                    const btn = document.getElementById('btnToggleSession');
-                    const title = document.getElementById('sessStatusTitle');
-                    const desc = document.getElementById('sessStatusDesc');
-                    if (data.activeSession) { title.textContent = "Active session in progress"; title.className = "text-base font-bold text-emerald-400"; desc.textContent = "A server roleplay session is currently running."; btn.textContent = "End Session"; btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; btn.onclick = () => toggleSessionAction('END'); }
-                    else { title.textContent = "No active session"; title.className = "text-base font-bold text-white"; desc.textContent = "Start a session or create a poll below."; btn.textContent = "Start Session"; btn.className = "flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; btn.onclick = () => toggleSessionAction('START'); }
-                }
-            } catch (err) {}
-        }
-        async function toggleSessionAction(action) { try { const res = await fetch('/api/sessions/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); if (res.ok) fetchSessionsOverviewData(); } catch (err) {} }
-        function openCreatePollModal() { document.getElementById('createPollModal').classList.remove('hidden'); }
-        function closeCreatePollModal() { document.getElementById('createPollModal').classList.add('hidden'); }
-        async function submitSessionPoll(e) {
-            e.preventDefault();
-            const question = document.getElementById('pollQuestion').value;
-            const options = document.getElementById('pollOptions').value.split('\n').map(o => o.trim()).filter(o => o);
-            try { const res = await fetch('/api/sessions/poll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, options }) }); if (res.ok) { alert("Poll sent!"); closeCreatePollModal(); } } catch (err) {}
-        }
-
-        async function renderSessionsSettingsTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-base font-bold text-white">Configuration</h3>
-                    <div class="space-y-4 pt-2">
-                        <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Sessions Channel (ID)</label><input type="text" id="setSessChannel" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-white border border-slate-700"></div>
-                        <div class="flex items-center justify-between"><div><span class="text-xs font-bold text-white block">Auto Kick While Server Is Down</span></div><input type="checkbox" id="setSessAutoKick" class="w-8 h-4 accent-emerald-500 cursor-pointer"></div>
-                    </div>
-                </div>
-                <div class="flex justify-end"><button onclick="saveSessionSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Session Settings</button></div>
-            `;
-            try {
-                const res = await fetch('/api/sessions/settings');
-                const data = await res.json();
-                if (data.success) document.getElementById('setSessChannel').value = data.settings.sessionsChannel || '';
-            } catch (err) {}
-        }
-        async function saveSessionSettings() {
-            try { await fetch('/api/sessions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionsChannel: document.getElementById('setSessChannel').value }) }); alert("Saved!"); } catch (err) {}
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginOverlay').classList.add('hidden');
+            loadHubDepartments();
+        });
 
         async function loadHubDepartments() {
             try {
                 const res = await fetch('/api/departments/my-status');
                 const data = await res.json();
-                const container = document.getElementById('hubDepartmentsContainer');
                 if (data.success && data.userDepartments) {
-                    container.innerHTML = data.userDepartments.map(d => {
-                        const verifiedBadge = d.isVerifiedWorker ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">🛠️ Verified Worker</span>` : `<span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Not Verified</span>`;
-                        let shiftBtn = '';
-                        if (!d.isVerifiedWorker) shiftBtn = `<button disabled class="w-full bg-slate-800 text-slate-500 font-semibold py-1.5 rounded-lg text-xs cursor-not-allowed">Role Required</button>`;
-                        else if (!d.isOnShift) shiftBtn = `<button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>`;
-                        else {
-                            const breakLabel = d.isOnBreak ? "End Break" : "Take Break";
-                            const breakColor = d.isOnBreak ? "bg-amber-600 text-white" : "bg-amber-950/60 text-amber-400 border border-amber-800";
-                            shiftBtn = `<div class="flex space-x-2"><button onclick="toggleDeptShift('${d.deptId}', 'TOGGLE_BREAK')" class="flex-1 ${breakColor} font-bold py-1.5 rounded-lg text-xs transition">${breakLabel}</button><button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_OUT')" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-lg text-xs transition">Clock Out</button></div>`;
-                        }
-                        const inviteBtn = d.discordInvite ? `<a href="${escapeHtml(d.discordInvite)}" target="_blank" class="w-full bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 font-bold py-1.5 rounded-lg text-xs transition flex items-center justify-center gap-1.5 mt-2"><i class="fa-brands fa-discord"></i> Join Discord</a>` : '';
-                        return `<div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full"><div><div class="flex justify-between items-center mb-1"><span class="font-bold text-xs text-white block truncate pr-2">${escapeHtml(d.deptName)}</span>${verifiedBadge}</div><p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Operations</p></div><div class="pt-3">${shiftBtn}${inviteBtn}</div></div>`;
-                    }).join('');
+                    document.getElementById('hubDepartmentsContainer').innerHTML = data.userDepartments.map(d => `
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col justify-between h-full">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-bold text-xs text-white block truncate pr-2">${escapeHtml(d.deptName)}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">🛠️ Verified Worker</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400">${escapeHtml(d.shortName)} Operations</p>
+                            </div>
+                            <div class="pt-3">
+                                <button onclick="toggleDeptShift('${d.deptId}', 'CLOCK_IN')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">Clock In</button>
+                            </div>
+                        </div>
+                    `).join('');
                 }
             } catch (err) {}
         }
-
-        async function toggleDeptShift(deptId, action) {
-            try { const res = await fetch('/api/departments/shift/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, action }) }); if (res.ok) { if(action !== 'TOGGLE_BREAK') alert(`Shift updated!`); loadHubDepartments(); } } catch (err) {}
-        }
-
-        async function renderDepartmentsOverviewTab() {
-            document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-4"><div class="flex justify-between items-center border-b border-slate-800 pb-3"><div><h3 class="text-sm font-bold text-white">Registered Departments</h3></div></div><div id="sdDeptListContainer" class="space-y-3"><p class="text-xs text-slate-500 py-4 text-center">Loading departments...</p></div></div>`;
-            try {
-                const res = await fetch('/api/departments/list');
-                const data = await res.json();
-                if (data.success && data.departments) {
-                    document.getElementById('sdDeptListContainer').innerHTML = data.departments.map(dept => {
-                        const statusBadge = dept.active ? `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-bold">ACTIVE</span>` : `<span class="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-400 font-bold">INACTIVE</span>`;
-                        const toggleBtn = dept.active ? `<button onclick="toggleDepartmentActive('${dept.id}', false)" class="bg-rose-950/80 text-rose-300 px-3 py-1 rounded-lg text-xs font-bold">Deactivate</button>` : `<button onclick="toggleDepartmentActive('${dept.id}', true)" class="bg-emerald-950/80 text-emerald-400 px-3 py-1 rounded-lg text-xs font-bold">Activate</button>`;
-                        return `<div class="p-4 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="space-y-1"><div class="flex items-center gap-2"><span class="font-bold text-white text-sm">${escapeHtml(dept.name)}</span>${statusBadge}</div><span class="text-[10px] text-indigo-400 block font-mono">Server ID: ${dept.guildId}</span></div><div class="flex items-center space-x-2">${toggleBtn}<button onclick="openEditDepartmentModal('${dept.id}', '${escapeHtml(dept.name)}', '${escapeHtml(dept.description)}', '${escapeHtml(dept.webhookUrl)}', '${escapeHtml(dept.discordInvite)}')" class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold">Open</button></div></div>`;
-                    }).join('');
-                }
-            } catch (err) {}
-        }
-        function openEditDepartmentModal(id, name, desc, webhook, invite) {
-            document.getElementById('editDeptId').value = id; document.getElementById('editDeptTitle').textContent = `Edit ${name}`; document.getElementById('editDeptDesc').value = desc; document.getElementById('editDeptWebhook').value = webhook; document.getElementById('editDeptInvite').value = invite || ''; document.getElementById('editDepartmentModal').classList.remove('hidden');
-        }
-        function closeEditDepartmentModal() { document.getElementById('editDepartmentModal').classList.add('hidden'); }
-        async function saveDepartmentSettings(e) {
-            e.preventDefault();
-            const payload = { deptId: document.getElementById('editDeptId').value, description: document.getElementById('editDeptDesc').value, webhookUrl: document.getElementById('editDeptWebhook').value, discordInvite: document.getElementById('editDeptInvite').value };
-            try { const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Saved!'); closeEditDepartmentModal(); renderDepartmentsOverviewTab(); loadHubDepartments(); } } catch (err) {}
-        }
-        async function toggleDepartmentActive(deptId, active) { try { const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, active }) }); if (res.ok) renderDepartmentsOverviewTab(); } catch (err) {} }
-
-        async function checkAuth() {
-            try {
-                const res = await fetch('/api/auth/user');
-                const data = await res.json();
-                if (data.success && data.user) {
-                    currentUserId = data.user.id;
-                    currentUserData = data.user;
-                    document.getElementById('loginOverlay').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('hidden');
-                    document.getElementById('userName').textContent = data.user.username;
-                    document.getElementById('userAvatar').src = data.user.avatar;
-                    if (data.user.isManager) {
-                        document.getElementById('btnWebhookSettings').classList.remove('hidden');
-                        document.getElementById('btnServerDashboard').classList.remove('hidden');
-                        document.getElementById('userRoleBadge').textContent = 'Management Team';
-                    } else if (data.user.verifiedRole) { document.getElementById('userRoleBadge').textContent = 'Verified Staff'; }
-                    fetchGeneralSettings(); loadHubDepartments(); loadActiveShifts(); loadNotifications();
-                } else if (data.discordConnected) {
-                    document.getElementById('loginOverlay').classList.add('hidden');
-                    document.getElementById('userProfile').classList.remove('hidden');
-                    fetchGeneralSettings(); loadHubDepartments();
-                } else { document.getElementById('loginOverlay').classList.add('hidden'); }
-            } catch (err) {}
-        }
-        setInterval(checkAuth, 4000);
-        async function logout() { await fetch('/api/auth/logout'); window.location.href = '/'; }
-        async function attemptModPanelAccess() { switchView('modPanel'); }
-
-        async function loadServerInfo() {
-            try {
-                const res = await fetch('/api/erlc/players');
-                const data = await res.json();
-                if (data.success) {
-                    cachedPlayers = data.players || [];
-                    document.getElementById('playerCountBadge').textContent = `${cachedPlayers.filter(p => !p.leftGame).length} Players`;
-                    const pContainer = document.getElementById('livePlayersList');
-                    if (cachedPlayers.length > 0) {
-                        pContainer.innerHTML = cachedPlayers.map(p => {
-                            const statusBadge = p.leftGame ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-400 font-bold">Left Game</span>` : `<span class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300">In Game</span>`;
-                            return `<div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="flex items-center space-x-2"><div class="w-2 h-2 rounded-full ${p.leftGame ? 'bg-rose-500' : 'bg-emerald-400'}"></div><span class="font-bold text-white">${escapeHtml(p.username)}</span></div>${statusBadge}</div>`;
-                        }).join('');
-                    }
-                }
-            } catch (err) {}
-        }
-        setInterval(loadServerInfo, 8000);
-
-        function handlePlayerSearch(query) {
-            const dropdown = document.getElementById('playerSearchDropdown');
-            if (!query.trim()) { dropdown.classList.add('hidden'); return; }
-            const matches = cachedPlayers.filter(p => p.username.toLowerCase().includes(query.toLowerCase()));
-            if (matches.length === 0) {
-                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching players found</div>`;
-            } else {
-                dropdown.innerHTML = matches.map(p => `
-                    <div onclick="selectPlayer('${escapeHtml(p.username)}', '${escapeHtml(p.robloxId)}')" class="p-2.5 hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800/50 transition">
-                        <span class="text-xs font-bold text-white">${escapeHtml(p.username)} ${p.leftGame ? '<span class="text-[9px] text-rose-400">(Left)</span>' : ''}</span>
-                        <span class="text-[10px] text-slate-400">ID: ${escapeHtml(p.robloxId)}</span>
-                    </div>`).join('');
-            }
-            dropdown.classList.remove('hidden');
-        }
-
-        function selectPlayer(name, id) {
-            document.getElementById('targetUser').value = name;
-            document.getElementById('playerSearchDropdown').classList.add('hidden');
-            if (id && id !== 'N/A') document.getElementById('robloxId').value = id;
-        }
-
-        async function autoFetchRobloxId(username) {
-            if (!username.trim() || document.getElementById('robloxId').value) return;
-            const found = cachedPlayers.find(p => p.username.toLowerCase() === username.trim().toLowerCase());
-            if (found && found.robloxId && found.robloxId !== 'N/A') {
-                document.getElementById('robloxId').value = found.robloxId;
-                return;
-            }
-            document.getElementById('idLoadingSpinner').classList.remove('hidden');
-            try {
-                const res = await fetch(`https://users.roblox.com/v1/usernames/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usernames: [username.trim()], excludeBannedUsers: false }) });
-                const data = await res.json();
-                if (data.data && data.data.length > 0) document.getElementById('robloxId').value = data.data[0].id;
-            } catch (err) {} finally { document.getElementById('idLoadingSpinner').classList.add('hidden'); }
-        }
-
-        async function toggleShift(action) { 
-            try { const res = await fetch('/api/shifts/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, department: 'Staff Moderation' }) }); if (res.ok) loadActiveShifts(); } catch (err) {} 
-        }
-
-        async function loadActiveShifts() {
-            try {
-                const res = await fetch('/api/shifts/active');
-                const data = await res.json();
-                const container = document.getElementById('activeShiftsList');
-                if (data.success) {
-                    container.innerHTML = '';
-                    let userShift = null;
-                    if (data.activeShifts.length > 0) {
-                        data.activeShifts.forEach(s => {
-                            if (s.userId === data.currentUserId) userShift = s;
-                            const breakStatus = s.isOnBreak ? `<span class="text-[9px] text-amber-400 font-bold ml-1">(ON BREAK)</span>` : '';
-                            const endShiftBtn = (data.isManager || s.userId === data.currentUserId) ? `<button onclick="forceEndShift('${s.userId}')" class="text-[10px] bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-0.5 rounded border border-rose-800 transition">End Shift</button>` : '';
-                            container.innerHTML += `<div class="p-2 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs"><div class="flex items-center space-x-2"><div class="w-2 h-2 rounded-full ${s.isOnBreak ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}"></div><div><span class="font-bold text-white block text-[11px]">${escapeHtml(s.robloxName)} ${breakStatus}</span><span class="text-[9px] text-slate-400 block">${escapeHtml(s.department)} &bull; <strong class="${s.isOnBreak ? 'text-amber-400' : 'text-emerald-400'}">${s.duration}</strong></span></div></div>${endShiftBtn}</div>`;
-                        });
-                    } else { container.innerHTML = `<p class="text-[11px] text-slate-500">No staff currently on shift.</p>`; }
-
-                    const btnStart = document.getElementById('btnStartShift'); const btnBreak = document.getElementById('btnToggleBreak'); const btnEnd = document.getElementById('btnEndShift'); const badge = document.getElementById('shiftBadge');
-                    if (userShift) {
-                        if(btnStart) btnStart.classList.add('hidden'); if(btnBreak) btnBreak.classList.remove('hidden'); if(btnEnd) btnEnd.classList.remove('hidden');
-                        if (userShift.isOnBreak) {
-                            if(badge){ badge.textContent = 'ON BREAK'; badge.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-950 text-amber-400 border border-amber-800 font-semibold'; }
-                            if(btnBreak){ btnBreak.textContent = 'End Break'; btnBreak.className = 'flex-1 bg-amber-950/60 hover:bg-amber-900/80 text-amber-400 border border-amber-800 font-bold py-2.5 rounded-xl text-sm transition'; }
-                        } else {
-                            if(badge){ badge.textContent = 'ON SHIFT'; badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold'; }
-                            if(btnBreak){ btnBreak.textContent = 'Take Break'; btnBreak.className = 'flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-lg'; }
-                        }
-                    } else {
-                        if(badge){ badge.textContent = 'OFFLINE'; badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-950 text-rose-400 border border-rose-800 font-semibold'; }
-                        if(btnStart) btnStart.classList.remove('hidden'); if(btnBreak) btnBreak.classList.add('hidden'); if(btnEnd) btnEnd.classList.add('hidden');
-                    }
-                }
-            } catch (err) {}
-        }
-
-        async function forceEndShift(targetUserId) { if (!confirm("End this shift?")) return; try { const res = await fetch('/api/shifts/force-end', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUserId }) }); if (res.ok) loadActiveShifts(); } catch (err) {} }
-        
-        async function sendErlcCommand() {
-            const command = document.getElementById('erlcCmdInput').value.trim();
-            if (!command) return;
-            try { const res = await fetch('/api/erlc/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) }); const data = await res.json(); if (res.ok && data.success) { alert(`Command executed!`); document.getElementById('erlcCmdInput').value = ''; } else alert('Command failed.'); } catch (err) {}
-        }
-        
-        async function submitInfraction(e) {
-            e.preventDefault();
-            const payload = { targetUser: document.getElementById('targetUser').value, robloxId: document.getElementById('robloxId').value, punishmentType: document.getElementById('punishmentType').value, reason: document.getElementById('infractionReason').value };
-            try { const res = await fetch('/api/punishments/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Punishment Logged!'); document.getElementById('targetUser').value = ''; document.getElementById('robloxId').value = ''; document.getElementById('infractionReason').value = ''; loadLogs(); } } catch (err) {}
-        }
-
-        async function loadLogs() {
-            try {
-                const res = await fetch('/api/punishments/list');
-                const data = await res.json();
-                if (data.success && data.logs.length > 0) {
-                    document.getElementById('logsContainer').innerHTML = data.logs.map(log => {
-                        const isRemoved = log.removed ? 'opacity-50 line-through' : '';
-                        const removeBtn = !log.removed ? `<button onclick="removeWarning(${log.id})" class="text-[10px] bg-rose-950 text-rose-300 px-2 py-0.5 rounded">Remove</button>` : `<span class="text-[10px] text-rose-400">[Removed]</span>`;
-                        return `<div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-1 ${isRemoved}"><div class="flex justify-between items-center"><span class="font-bold text-white text-xs">${escapeHtml(log.targetUser)}</span><span class="text-[10px] px-2 py-0.5 rounded border bg-blue-950 text-blue-400">${escapeHtml(log.punishmentType)}</span></div><p class="text-[11px] text-slate-400"><strong>Reason:</strong> ${escapeHtml(log.reason)}</p><div class="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60"><span>By: ${escapeHtml(log.staffName)}</span>${removeBtn}</div></div>`;
-                    }).join('');
-                } else document.getElementById('logsContainer').innerHTML = `<p class="text-xs text-slate-500">No punishments logged yet.</p>`;
-            } catch (err) {}
-        }
-        async function removeWarning(logId) { if (!confirm("Remove this log entry?")) return; try { const res = await fetch('/api/punishments/remove-warning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logId }) }); if (res.ok) loadLogs(); } catch (err) {} }
-
-        async function requestHigherUpAssistance() { const reason = prompt("Enter reason for assistance:"); if (!reason) return; try { await fetch('/api/assistance/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); alert("Assistance requested!"); } catch (err) {} }
-        function toggleSection(secId, isChecked) { const el = document.getElementById(secId); if (el) el.classList.toggle('hidden', !isChecked); }
-
-        document.addEventListener('click', () => {
-            const dropdown = document.getElementById('notifDropdown');
-            if(dropdown && !dropdown.classList.contains('hidden')) dropdown.classList.add('hidden');
-        });
-
-        // --- WEBHOOK SETTINGS HANDLERS ---
-        async function openWebhookModal() {
-            try {
-                const res = await fetch('/api/settings/webhooks');
-                const data = await res.json();
-                if (data.success && data.webhooks) {
-                    document.getElementById('webhookShift').value = data.webhooks.shiftWebhook || '';
-                    document.getElementById('webhookPunish').value = data.webhooks.punishmentWebhook || '';
-                    document.getElementById('webhookAssistance').value = data.webhooks.assistanceWebhook || '';
-                    document.getElementById('webhookActivity').value = data.webhooks.activityWebhook || '';
-                    document.getElementById('webhookModal').classList.remove('hidden');
-                } else {
-                    alert("Unauthorized or failed to load webhook configuration.");
-                }
-            } catch (err) {
-                alert("Connection error loading webhooks.");
-            }
-        }
-
-        function closeWebhookModal() {
-            document.getElementById('webhookModal').classList.add('hidden');
-        }
-
-        async function saveWebhookSettings(e) {
-            e.preventDefault();
-            const payload = {
-                shiftWebhook: document.getElementById('webhookShift').value.trim(),
-                punishmentWebhook: document.getElementById('webhookPunish').value.trim(),
-                assistanceWebhook: document.getElementById('webhookAssistance').value.trim(),
-                activityWebhook: document.getElementById('webhookActivity').value.trim()
-            };
-
-            try {
-                const res = await fetch('/api/settings/webhooks', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    alert('Discord webhooks updated successfully!');
-                    closeWebhookModal();
-                } else {
-                    alert('Failed to save webhook settings.');
-                }
-            } catch (err) {
-                alert('Connection error.');
-            }
-        }
-
-        // --- DONATE MODAL HANDLERS ---
-        function openDonateModal() {
-            document.getElementById('donateModal').classList.remove('hidden');
-        }
-
-        function closeDonateModal() {
-            document.getElementById('donateModal').classList.add('hidden');
-        }
-
-        // --- SUPPORT TICKET HANDLERS ---
-        function openSupportModal() {
-            document.getElementById('supportModal').classList.remove('hidden');
-        }
-
-        function closeSupportModal() {
-            document.getElementById('supportModal').classList.add('hidden');
-        }
-
-        async function submitSupportTicket(e) {
-            e.preventDefault();
-            const subject = document.getElementById('supportSubject').value.trim();
-            const message = document.getElementById('supportMessage').value.trim();
-
-            try {
-                const res = await fetch('/api/support/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subject, message })
-                });
-
-                if (res.ok) {
-                    alert('Support ticket sent successfully to Discord!');
-                    document.getElementById('supportSubject').value = '';
-                    document.getElementById('supportMessage').value = '';
-                    closeSupportModal();
-                } else {
-                    alert('Failed to send support ticket.');
-                }
-            } catch (err) {
-                alert('Connection error.');
-            }
-        }
-        document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
 </html>
