@@ -61,7 +61,7 @@ let sessionHistory = [];
 let punishmentLogs = [];
 let activeShifts = [];
 let completedShifts = [];
-let historicalPlayers = {}; // Stores currently in-game and past players with left flags and Roblox IDs
+let historicalPlayers = {};
 let staffInfractionLevels = ["Notice", "Warning", "Strike 1", "Strike 2", "Demotion", "Termination"];
 let staffInfractionLogs = [];
 let staffPromotionLogs = [];
@@ -76,13 +76,8 @@ function addNotification(title, message) {
 async function sendDiscordLog(webhookUrl, embed, content = "") {
     if (!webhookUrl) return;
     try { 
-        const response = await fetch(webhookUrl, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ content, embeds: [embed] }) 
-        }); 
-        if (!response.ok) console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
-    } catch (err) { console.error("[WEBHOOK FETCH ERROR]:", err.message); }
+        await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, embeds: [embed] }) }); 
+    } catch (err) {}
 }
 
 async function verifyUserRoleLive(userId) {
@@ -126,7 +121,7 @@ app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret',
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serverConfig.serverIcon));
 
-// --- ER:LC API PLAYER SYNC BACKGROUND WORKER ---
+// --- ER:LC PLAYER POLLING WORKER ---
 async function pollErlcPlayers() {
     if (!ERLC_API_KEY) return;
     try {
@@ -150,7 +145,6 @@ async function pollErlcPlayers() {
             }
         });
 
-        // Mark players who left
         Object.keys(historicalPlayers).forEach(key => {
             if (!currentActiveNames.has(key)) {
                 historicalPlayers[key].leftGame = true;
@@ -158,7 +152,7 @@ async function pollErlcPlayers() {
         });
     } catch (err) {}
 }
-setInterval(pollErlcPlayers, 10000); // Poll every 10 seconds
+setInterval(pollErlcPlayers, 10000);
 
 // --- AUTH ROUTES ---
 app.get('/api/auth/discord/login', (req, res) => res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`));
@@ -217,8 +211,7 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
 });
 
 app.get('/api/erlc/players', requireStaffAuth, async (req, res) => {
-    const list = Object.values(historicalPlayers);
-    res.json({ success: true, players: list });
+    res.json({ success: true, players: Object.values(historicalPlayers) });
 });
 
 app.post('/api/punishments/create', requireStaffAuth, (req, res) => {
@@ -317,12 +310,12 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
                 existingShift.isOnBreak = false; 
                 existingShift.totalBreakMs += (Date.now() - existingShift.breakStart); 
                 existingShift.breakStart = null; 
-                const embed = new EmbedBuilder().setTitle(`☕ Department Break Ended: ${dept.shortName}`).setColor(0x3498db).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true });
+                const embed = new EmbedBuilder().setTitle(`☕ Department Break Ended: ${dept.shortName}`).setColor(0x3498db).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Department", value: dept.name, inline: true });
                 sendDiscordLog(targetWebhook, embed.toJSON());
             } else { 
                 existingShift.isOnBreak = true; 
                 existingShift.breakStart = Date.now(); 
-                const embed = new EmbedBuilder().setTitle(`☕ Department Break Started: ${dept.shortName}`).setColor(0xf1c40f).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true });
+                const embed = new EmbedBuilder().setTitle(`☕ Department Break Started: ${dept.shortName}`).setColor(0xf1c40f).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Department", value: dept.name, inline: true });
                 sendDiscordLog(targetWebhook, embed.toJSON());
             }
         }
@@ -391,7 +384,7 @@ app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
     res.json({ success: true, activeSession: activeServerSession });
 });
 
-// --- SHIFTS & SETTINGS API ---
+// --- SHIFTS API ---
 app.get('/api/shifts/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: shiftSettings }));
 app.post('/api/shifts/settings', requireManagerAuth, (req, res) => { 
     Object.assign(shiftSettings, req.body); 
@@ -497,7 +490,6 @@ app.post('/api/infractions/levels/remove', requireManagerAuth, (req, res) => { i
 app.post('/api/infractions/issue', requireManagerAuth, (req, res) => {
     const { targetUserId, targetUser, level, reason, proof } = req.body;
     staffInfractionLogs.unshift({ id: `inf_${Date.now()}`, targetUserId, targetUser, level, reason, proof: proof || "None Provided", issuedBy: req.session.user.displayName, createdAt: new Date().toLocaleString() });
-
     const embed = new EmbedBuilder().setTitle(`⚠️ Staff Infraction Issued`).setColor(0xed4245).addFields({ name: "Staff Member", value: targetUser, inline: true }, { name: "Level", value: level, inline: true }, { name: "Issued By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason, inline: false }, { name: "Proof", value: proof || "None Provided", inline: false });
     sendDiscordLog(botConfig.infractionWebhook, embed.toJSON());
     res.json({ success: true });
@@ -506,7 +498,6 @@ app.post('/api/infractions/issue', requireManagerAuth, (req, res) => {
 app.post('/api/infractions/promote', requireManagerAuth, (req, res) => {
     const { targetUserId, targetUser, newRole, reason } = req.body;
     staffPromotionLogs.unshift({ id: `prom_${Date.now()}`, targetUserId, targetUser, newRole, reason, promotedBy: req.session.user.displayName, createdAt: new Date().toLocaleString() });
-
     const embed = new EmbedBuilder().setTitle(`📈 Staff Promotion`).setColor(0x57f287).addFields({ name: "Staff Member", value: targetUser, inline: true }, { name: "New Rank", value: newRole, inline: true }, { name: "Updated By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason || "None Provided", inline: false });
     sendDiscordLog(botConfig.promotionWebhook, embed.toJSON());
     res.json({ success: true });
