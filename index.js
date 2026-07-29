@@ -61,6 +61,7 @@ let sessionHistory = [];
 let punishmentLogs = [];
 let activeShifts = [];
 let completedShifts = [];
+let historicalPlayers = {}; // Stores currently in-game and past players with left flags and Roblox IDs
 let staffInfractionLevels = ["Notice", "Warning", "Strike 1", "Strike 2", "Demotion", "Termination"];
 let staffInfractionLogs = [];
 let staffPromotionLogs = [];
@@ -80,12 +81,8 @@ async function sendDiscordLog(webhookUrl, embed, content = "") {
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ content, embeds: [embed] }) 
         }); 
-        if (!response.ok) {
-            console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
-        }
-    } catch (err) {
-        console.error("[WEBHOOK FETCH ERROR]:", err.message);
-    }
+        if (!response.ok) console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
+    } catch (err) { console.error("[WEBHOOK FETCH ERROR]:", err.message); }
 }
 
 async function verifyUserRoleLive(userId) {
@@ -128,6 +125,40 @@ app.use(express.json());
 app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret', resave: true, saveUninitialized: true, cookie: { maxAge: 86400000, secure: true, sameSite: 'lax' } }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serverConfig.serverIcon));
+
+// --- ER:LC API PLAYER SYNC BACKGROUND WORKER ---
+async function pollErlcPlayers() {
+    if (!ERLC_API_KEY) return;
+    try {
+        const resp = await fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const livePlayers = data.players || data || [];
+        
+        const currentActiveNames = new Set();
+        livePlayers.forEach(p => {
+            let rawName = p.Player || p.Name || p.username || '';
+            let rawId = p.UserId || p.id || '';
+            if (rawName.includes(':')) {
+                const parts = rawName.split(':');
+                rawName = parts[0].trim();
+                if (!rawId || rawId === 'N/A') rawId = parts[1].trim();
+            }
+            if (rawName) {
+                currentActiveNames.add(rawName.toLowerCase());
+                historicalPlayers[rawName.toLowerCase()] = { username: rawName, robloxId: rawId || 'N/A', leftGame: false };
+            }
+        });
+
+        // Mark players who left
+        Object.keys(historicalPlayers).forEach(key => {
+            if (!currentActiveNames.has(key)) {
+                historicalPlayers[key].leftGame = true;
+            }
+        });
+    } catch (err) {}
+}
+setInterval(pollErlcPlayers, 10000); // Poll every 10 seconds
 
 // --- AUTH ROUTES ---
 app.get('/api/auth/discord/login', (req, res) => res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`));
@@ -185,6 +216,11 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
+app.get('/api/erlc/players', requireStaffAuth, async (req, res) => {
+    const list = Object.values(historicalPlayers);
+    res.json({ success: true, players: list });
+});
+
 app.post('/api/punishments/create', requireStaffAuth, (req, res) => {
     const { targetUser, robloxId, punishmentType, reason } = req.body;
     const log = { id: Date.now(), targetUser, robloxId: robloxId || "N/A", punishmentType, reason, staffName: req.session.user.displayName, removed: false, createdAt: new Date().toLocaleString() };
@@ -223,7 +259,7 @@ app.post('/api/support/create', async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => { res.json({ success: true, players: [] }); });
+app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => { res.json({ success: true, players: Object.values(historicalPlayers).filter(p => !p.leftGame) }); });
 app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => { res.json({ success: true, logs: [] }); });
 
 // --- DEPARTMENTS API ---
@@ -268,16 +304,27 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
     if (!isVerified && !user.isManager) return res.status(403).json({ success: false });
 
     const existingShift = activeShifts.find(s => s.userId === user.id && s.deptId === deptId);
+    const targetWebhook = dept.webhookUrl || botConfig.shiftWebhook;
 
     if (action === 'CLOCK_IN') {
         activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
         activeShifts.push({ userId: user.id, username: user.username, robloxName: user.displayName || user.username, avatar: user.avatar, startTime: Date.now(), department: dept.shortName, deptId: dept.id, isOnBreak: false, breakStart: null, totalBreakMs: 0 });
-        const embed = new EmbedBuilder().setTitle(`🟢 Department Shift Clocked In: ${dept.shortName}`).setColor(0x57f287).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true });
-        if (dept.webhookUrl) sendDiscordLog(dept.webhookUrl, embed.toJSON());
+        const embed = new EmbedBuilder().setTitle(`🟢 Department Shift Clocked In: ${dept.shortName}`).setColor(0x57f287).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Department", value: dept.name, inline: true });
+        sendDiscordLog(targetWebhook, embed.toJSON());
     } else if (action === 'TOGGLE_BREAK') {
         if (existingShift) {
-            if (existingShift.isOnBreak) { existingShift.isOnBreak = false; existingShift.totalBreakMs += (Date.now() - existingShift.breakStart); existingShift.breakStart = null; } 
-            else { existingShift.isOnBreak = true; existingShift.breakStart = Date.now(); }
+            if (existingShift.isOnBreak) { 
+                existingShift.isOnBreak = false; 
+                existingShift.totalBreakMs += (Date.now() - existingShift.breakStart); 
+                existingShift.breakStart = null; 
+                const embed = new EmbedBuilder().setTitle(`☕ Department Break Ended: ${dept.shortName}`).setColor(0x3498db).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true });
+                sendDiscordLog(targetWebhook, embed.toJSON());
+            } else { 
+                existingShift.isOnBreak = true; 
+                existingShift.breakStart = Date.now(); 
+                const embed = new EmbedBuilder().setTitle(`☕ Department Break Started: ${dept.shortName}`).setColor(0xf1c40f).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true });
+                sendDiscordLog(targetWebhook, embed.toJSON());
+            }
         }
     } else if (action === 'CLOCK_OUT') {
         if (existingShift) {
@@ -287,8 +334,8 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
             completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatar, startTime: existingShift.startTime, endTime: Date.now(), durationMinutes: Math.max(0, Math.floor(durationMs / 60000)), shiftType: dept.shortName, waveId: "wave_1" });
         }
         activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
-        const embed = new EmbedBuilder().setTitle(`🔴 Department Shift Clocked Out: ${dept.shortName}`).setColor(0xed4245).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true });
-        if (dept.webhookUrl) sendDiscordLog(dept.webhookUrl, embed.toJSON());
+        const embed = new EmbedBuilder().setTitle(`🔴 Department Shift Clocked Out: ${dept.shortName}`).setColor(0xed4245).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Department", value: dept.name, inline: true });
+        sendDiscordLog(targetWebhook, embed.toJSON());
     }
     res.json({ success: true });
 });
@@ -375,8 +422,18 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
         sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
     } else if (action === 'TOGGLE_BREAK') {
         if (existingShift) {
-            if (existingShift.isOnBreak) { existingShift.isOnBreak = false; existingShift.totalBreakMs += (Date.now() - existingShift.breakStart); existingShift.breakStart = null; } 
-            else { existingShift.isOnBreak = true; existingShift.breakStart = Date.now(); }
+            if (existingShift.isOnBreak) { 
+                existingShift.isOnBreak = false; 
+                existingShift.totalBreakMs += (Date.now() - existingShift.breakStart); 
+                existingShift.breakStart = null; 
+                const embed = new EmbedBuilder().setTitle(`☕ General Break Ended`).setColor(0x3498db).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
+                sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+            } else { 
+                existingShift.isOnBreak = true; 
+                existingShift.breakStart = Date.now(); 
+                const embed = new EmbedBuilder().setTitle(`☕ General Break Started`).setColor(0xf1c40f).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
+                sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+            }
         }
     } else if (action === 'CLOCK_OUT') {
         if (existingShift) {
