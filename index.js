@@ -199,16 +199,33 @@ app.get('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ s
 
 // --- MEMBERS / STAFF LIST ENDPOINT ---
 app.get('/api/members/staff', requireStaffAuth, async (req, res) => {
-    const staffMembers = [
-        {
-            username: req.session.user.username,
-            avatar: req.session.user.avatar,
-            role: req.session.user.isManager ? "Director" : "Junior Moderator",
-            joinedDate: "Recently",
-            status: "Active"
-        }
-    ];
-    res.json({ success: true, staff: staffMembers });
+    if (!discordClient || !discordClient.isReady()) {
+        return res.json({ success: true, staff: [{ username: req.session.user.username, avatar: req.session.user.avatar, role: req.session.user.isManager ? "Director" : "Junior Moderator", joinedDate: "Recently", status: "Active" }] });
+    }
+    try {
+        const guild = await discordClient.guilds.fetch(GUILD_ID);
+        const members = await guild.members.fetch();
+        const staff = [];
+        members.forEach(m => {
+            if (m.user.bot) return;
+            const idxs = m.roles.cache.map(r => STAFF_ROLE_IDS_ASC.indexOf(r.id)).filter(i => i !== -1);
+            if (idxs.length > 0) {
+                const highIdx = Math.max(...idxs);
+                staff.push({
+                    username: m.user.username,
+                    displayName: m.displayName,
+                    avatar: m.user.displayAvatarURL(),
+                    role: guild.roles.cache.get(STAFF_ROLE_IDS_ASC[highIdx])?.name || "Staff",
+                    rankIndex: highIdx,
+                    joinedDate: m.joinedAt ? m.joinedAt.toLocaleDateString() : "Recently",
+                    status: "Active"
+                });
+            }
+        });
+        res.json({ success: true, staff: staff.sort((a, b) => b.rankIndex - a.rankIndex) });
+    } catch (e) {
+        res.json({ success: true, staff: [{ username: req.session.user.username, avatar: req.session.user.avatar, role: req.session.user.isManager ? "Director" : "Junior Moderator", joinedDate: "Recently", status: "Active" }] });
+    }
 });
 
 // --- MOD PANEL ROUTES ---
@@ -447,7 +464,7 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
             let finalBreakMs = existingShift.totalBreakMs;
             if (existingShift.isOnBreak) finalBreakMs += (Date.now() - existingShift.breakStart);
             const durationMs = (Date.now() - existingShift.startTime) - finalBreakMs;
-            completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, durationMinutes: Math.max(0, Math.floor(durationMs / 60000)), shiftType: existingShift.department || "Default", waveId: "wave_1" });
+            completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatar, durationMinutes: Math.max(0, Math.floor(durationMs / 60000)), shiftType: existingShift.department || "Default", waveId: "wave_1" });
             const embed = new EmbedBuilder().setTitle(`🔴 General Shift Clocked Out`).setColor(0xed4245).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
             sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
         }
