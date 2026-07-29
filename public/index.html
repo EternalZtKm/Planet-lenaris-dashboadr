@@ -561,7 +561,102 @@
             </section>
         </main>
     </div>
+
+    <div id="webhookModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-amber-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-amber-400"></i> Customize Discord Webhooks
+                </h3>
+                <button onclick="closeWebhookModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="saveWebhookSettings(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Shift Logging Webhook</label>
+                    <input type="text" id="webhookShift" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Punishment Logging Webhook</label>
+                    <input type="text" id="webhookPunish" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Support & Assistance Webhook</label>
+                    <input type="text" id="webhookAssistance" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">In-Game Activity Webhook</label>
+                    <input type="text" id="webhookActivity" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeWebhookModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="donateModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-sm w-full text-center space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-700 flex items-center justify-center mx-auto text-emerald-400 text-xl">
+                <i class="fa-solid fa-dollar-sign"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Support Server</h3>
+                <p class="text-xs text-slate-400 mt-1">Donations keep the server online!</p>
+            </div>
+            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                <span class="text-xs text-slate-400 block">CashApp Username</span>
+                <strong class="text-emerald-400 font-mono text-sm">$EternalZt</strong>
+            </div>
+            <button onclick="closeDonateModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded-xl text-xs transition">Close</button>
+        </div>
+    </div>
+
+    <div id="supportModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-md w-full space-y-4 border border-indigo-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-headset text-indigo-400"></i> <span class="txt-server-name">Planet Lenaris</span> Support
+                </h3>
+                <button onclick="closeSupportModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitSupportTicket(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Subject / Inquiry Title</label>
+                    <input type="text" id="supportSubject" required placeholder="e.g. Question about role permissions" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message Details</label>
+                    <textarea id="supportMessage" required rows="4" placeholder="Describe your issue or request..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeSupportModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Submit Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="card p-3 rounded-xl flex justify-between items-center text-xs text-slate-400 m-6 mt-0">
+        <div class="flex items-center space-x-2">
+            <span id="serverStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="serverStatusText" class="font-semibold text-white"><span class="txt-server-name">Planet Lenaris</span> Server: Online</span>
+        </div>
+        <div>
+            <span>ER:LC API: <strong class="text-emerald-400">Connected</strong></span>
+        </div>
+    </footer>
+
     <script>
+
         let cachedPlayers = [];
         let currentUserId = null;
         let currentUserData = null;
