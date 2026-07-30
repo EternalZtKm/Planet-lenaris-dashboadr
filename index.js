@@ -138,7 +138,7 @@ app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serv
 async function pollErlcPlayers() {
     if (!ERLC_API_KEY) return;
     try {
-        const resp = await fetch('https://api.erlc.gg/api/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
+        const resp = await fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
         if (!resp.ok) return;
         const data = await resp.json();
         const livePlayers = data.players || data || [];
@@ -215,7 +215,7 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     const { command } = req.body;
     if (!ERLC_API_KEY) return res.status(400).json({ success: false, error: "No API Key configured." });
     try {
-        const resp = await fetch('https://api.erlc.gg/api/v1/server/command', { 
+        const resp = await fetch('https://api.erlc.gg/v1/server/command', { 
             method: 'POST', 
             headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ command: command }) 
@@ -254,7 +254,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
         const pmMessage = `:pm ${targetUser} You have been warned ${warnCount} times. You have been warned by ${req.session.user.displayName}. Reason: ${reason}`;
         
         try {
-            await fetch('https://api.erlc.gg/api/v1/server/command', {
+            await fetch('https://api.erlc.gg/v1/server/command', {
                 method: 'POST',
                 headers: { 
                     'Server-Key': ERLC_API_KEY, 
@@ -302,7 +302,7 @@ app.post('/api/support/create', async (req, res) => {
 app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
     if (!ERLC_API_KEY) return res.json({ success: true, logs: [] });
     try {
-        const resp = await fetch('https://api.erlc.gg/api/v1/server/modlogs', { headers: { 'Server-Key': ERLC_API_KEY } });
+        const resp = await fetch('https://api.erlc.gg/v1/server/modlogs', { headers: { 'Server-Key': ERLC_API_KEY } });
         if (resp.ok) {
             const data = await resp.json();
             res.json({ success: true, logs: Array.isArray(data) ? data.slice(0, 20) : (data.logs ? data.logs.slice(0,20) : []) });
@@ -431,7 +431,7 @@ app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
             activeServerSession = null;
             if (sessionSettings.shutdownAutoErlc && ERLC_API_KEY) {
                 const kickCmd = `:m ${sessionSettings.shutdownIngameMsg || "The server is now shutting down."}`;
-                fetch('https://api.erlc.gg/api/v1/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
+                fetch('https://api.erlc.gg/v1/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
             }
             if (sessionSettings.endShiftsOnShutdown) {
                 activeShifts.forEach(s => completedShifts.unshift({ id: `shift_${Date.now()}`, userId: s.userId, durationMinutes: Math.floor((Date.now() - s.startTime) / 60000), shiftType: s.department || "Default", waveId: "wave_1" }));
