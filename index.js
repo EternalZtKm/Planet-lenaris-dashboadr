@@ -102,7 +102,7 @@ async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${deptGuildId}/members/${userId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
         if (!memberRes.ok) {
-            console.error(`[DEPT VERIFY FAILED] User: ${userId} | Guild: ${deptGuildId} | Status: ${memberRes.status}`);
+            console.error(`[DEPT VERIFY FAILED] User: ${userId} | Guild: ${deptGuildId} | Status: ${memberRes.status} | Details: ${await memberRes.text()}`);
             return false;
         }
         const memberData = await memberRes.json();
@@ -217,10 +217,7 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const resp = await fetch('https://api.erlc.gg/api/v1/server/command', { 
             method: 'POST', 
-            headers: { 
-                'Server-Key': ERLC_API_KEY, 
-                'Content-Type': 'application/json' 
-            }, 
+            headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ command: command }) 
         });
         
@@ -229,11 +226,11 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
             res.json({ success: true }); 
         } else {
             console.error("[ERLC API ERROR] Command Failed:", await resp.text());
-            res.status(400).json({ success: false, error: "Command rejected by ER:LC" });
+            res.status(400).json({ success: false, error: "ER:LC API rejected the command." });
         }
     } catch (err) { 
-        console.error("ERLC Fetch Error:", err);
-        res.status(500).json({ success: false }); 
+        console.error("ER:LC Command Error:", err);
+        res.status(500).json({ success: false, error: "Internal Server Error" }); 
     }
 });
 
@@ -624,4 +621,17 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
     console.log("⚠️ [DISCORD] Skipping bot startup: Missing Tokens in Render/Railway");
 }
 
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Lenaris Dashboard running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Lenaris Dashboard running on port ${PORT}`);
+    
+    // Fetch and log the external IP for ER:LC Whitelisting
+    fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => {
+            console.log('\n======================================================');
+            console.log(`🌐 [NETWORK] Your Railway Public IP is: ${data.ip}`);
+            console.log(`   -> Copy this IP and paste it into your ER:LC API Settings!`);
+            console.log('======================================================\n');
+        })
+        .catch(() => console.log("⚠️ Could not fetch public IP automatically."));
+});
