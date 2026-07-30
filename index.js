@@ -102,7 +102,7 @@ async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${deptGuildId}/members/${userId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
         if (!memberRes.ok) {
-            console.error(`[DEPT VERIFY FAILED] User: ${userId} | Guild: ${deptGuildId} | Status: ${memberRes.status} | Details: ${await memberRes.text()}`);
+            console.error(`[DEPT VERIFY FAILED] User: ${userId} | Guild: ${deptGuildId} | Status: ${memberRes.status}`);
             return false;
         }
         const memberData = await memberRes.json();
@@ -217,7 +217,10 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     try {
         const resp = await fetch('https://api.erlc.gg/api/v1/server/command', { 
             method: 'POST', 
-            headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, 
+            headers: { 
+                'Server-Key': ERLC_API_KEY, 
+                'Content-Type': 'application/json' 
+            }, 
             body: JSON.stringify({ command: command }) 
         });
         
@@ -226,11 +229,11 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
             res.json({ success: true }); 
         } else {
             console.error("[ERLC API ERROR] Command Failed:", await resp.text());
-            res.status(400).json({ success: false, error: "ER:LC API rejected the command." });
+            res.status(400).json({ success: false, error: "Command rejected by ER:LC" });
         }
     } catch (err) { 
-        console.error("ER:LC Command Error:", err);
-        res.status(500).json({ success: false, error: "Internal Server Error" }); 
+        console.error("ERLC Fetch Error:", err);
+        res.status(500).json({ success: false }); 
     }
 });
 
