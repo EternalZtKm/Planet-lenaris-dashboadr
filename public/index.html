@@ -813,6 +813,7 @@
             punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] 
         };
 
+        // --- DASHBOARD INITIALIZATION ---
         async function fetchGeneralSettings() {
             try {
                 const res = await fetch('/api/settings/general');
@@ -843,6 +844,7 @@
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
                 if (navMod) navMod.className = 'px-3 py-2 rounded-lg bg-indigo-600 text-white transition';
                 loadServerInfo();
+                fetchActivityFeed();
             } else if (viewName === 'serverDashboard') {
                 document.getElementById('viewServerDashboard').classList.remove('hidden');
                 navHub.className = 'px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition';
@@ -897,6 +899,7 @@
             document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is active.</p></div>`;
         }
 
+        // --- DASHBOARD ADMIN TAB RENDERING ---
         function renderGeneralTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
@@ -1257,6 +1260,26 @@
             } catch (err) {} finally { document.getElementById('idLoadingSpinner').classList.add('hidden'); }
         }
 
+        // --- NEW: IN-GAME ACTIVITY FEED FETCHING ---
+        async function fetchActivityFeed() {
+            try {
+                const res = await fetch('/api/erlc/activity');
+                const data = await res.json();
+                const container = document.getElementById('activityContainer');
+                if (data.success && data.logs && data.logs.length > 0) {
+                    container.innerHTML = data.logs.map(log => {
+                        const logText = log.Log || log.Action || JSON.stringify(log);
+                        return `<div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs">
+                                    <span class="text-slate-300 block">${escapeHtml(logText)}</span>
+                                </div>`;
+                    }).join('');
+                } else {
+                    container.innerHTML = `<p class="text-xs text-slate-500 col-span-2 text-center py-4">No recent in-game activity found.</p>`;
+                }
+            } catch (err) {}
+        }
+        setInterval(fetchActivityFeed, 10000); // Check for new activity every 10 seconds
+
         // --- SHIFTS & MOD PANEL ACTIONS ---
         async function toggleShift(action) { 
             try { const res = await fetch('/api/shifts/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, department: 'Staff Moderation' }) }); if (res.ok) loadActiveShifts(); } catch (err) {} 
@@ -1328,6 +1351,113 @@
 
         async function requestHigherUpAssistance() { const reason = prompt("Enter reason for assistance:"); if (!reason) return; try { await fetch('/api/assistance/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); alert("Assistance requested!"); } catch (err) {} }
         function toggleSection(secId, isChecked) { const el = document.getElementById(secId); if (el) el.classList.toggle('hidden', !isChecked); }
+
+        // --- MODALS, WEBHOOKS, & SUPPORT ---
+        function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
+        function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
+        function openSupportModal() { document.getElementById('supportModal').classList.remove('hidden'); }
+        function closeSupportModal() { document.getElementById('supportModal').classList.add('hidden'); }
+
+        async function submitSupportTicket(e) {
+            e.preventDefault();
+            const subject = document.getElementById('supportSubject').value;
+            const message = document.getElementById('supportMessage').value;
+            try {
+                const res = await fetch('/api/support/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, message }) });
+                if (res.ok) { 
+                    alert('Support ticket submitted successfully!'); 
+                    document.getElementById('supportSubject').value = ''; 
+                    document.getElementById('supportMessage').value = ''; 
+                    closeSupportModal(); 
+                }
+            } catch (err) { alert('Connection error.'); }
+        }
+
+        async function openWebhookModal() {
+            try {
+                const res = await fetch('/api/settings/webhooks');
+                const data = await res.json();
+                if (data.success) {
+                    const w = data.webhooks;
+                    document.getElementById('webhookShift').value = w.shiftWebhook || '';
+                    document.getElementById('webhookPunish').value = w.punishmentWebhook || '';
+                    document.getElementById('webhookAssistance').value = w.assistanceWebhook || '';
+                    document.getElementById('webhookActivity').value = w.activityWebhook || '';
+                    document.getElementById('webhookInfraction').value = w.infractionWebhook || '';
+                    document.getElementById('webhookPromotion').value = w.promotionWebhook || '';
+                    document.getElementById('webhookReview').value = w.reviewWebhook || '';
+                    document.getElementById('webhookAudit').value = w.auditWebhook || '';
+                    document.getElementById('webhookModal').classList.remove('hidden');
+                }
+            } catch (err) {}
+        }
+
+        function closeWebhookModal() { document.getElementById('webhookModal').classList.add('hidden'); }
+
+        async function saveWebhookSettings(e) {
+            e.preventDefault();
+            const payload = {
+                shiftWebhook: document.getElementById('webhookShift').value, 
+                punishmentWebhook: document.getElementById('webhookPunish').value,
+                assistanceWebhook: document.getElementById('webhookAssistance').value, 
+                activityWebhook: document.getElementById('webhookActivity').value,
+                infractionWebhook: document.getElementById('webhookInfraction').value, 
+                promotionWebhook: document.getElementById('webhookPromotion').value,
+                reviewWebhook: document.getElementById('webhookReview').value,
+                auditWebhook: document.getElementById('webhookAudit').value
+            };
+            try { 
+                const res = await fetch('/api/settings/webhooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+                if (res.ok) { alert('Webhooks saved!'); closeWebhookModal(); } 
+            } catch (err) {}
+        }
+
+        // --- NOTIFICATIONS ---
+        function toggleNotificationDropdown(e) {
+            if (e) e.stopPropagation();
+            const dropdown = document.getElementById('notifDropdown');
+            dropdown.classList.toggle('hidden');
+            if (!dropdown.classList.contains('hidden')) loadNotifications();
+        }
+
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/api/notifications/list');
+                const data = await res.json();
+                if (data.success) {
+                    const listContainer = document.getElementById('notifListContainer');
+                    const badge = document.getElementById('notifBadge');
+                    const unreadCount = data.notifications.filter(n => !n.read).length;
+
+                    if (unreadCount > 0) { 
+                        badge.textContent = unreadCount; 
+                        badge.classList.remove('hidden'); 
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+
+                    if (!data.notifications || data.notifications.length === 0) {
+                        listContainer.innerHTML = `<p class="text-xs text-slate-500 p-4 text-center">No notifications.</p>`;
+                    } else {
+                        listContainer.innerHTML = data.notifications.map(n => `
+                            <div class="p-3 hover:bg-slate-800/50 transition flex items-start space-x-2.5">
+                                ${!n.read ? `<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1"></span>` : ''}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-center">
+                                        <strong class="text-xs text-white block truncate">${escapeHtml(n.title)}</strong>
+                                        <span class="text-[9px] text-slate-500">${n.time}</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(n.message)}</p>
+                                </div>
+                            </div>`).join('');
+                    }
+                }
+            } catch (err) {}
+        }
+
+        async function markNotificationsRead() { 
+            try { await fetch('/api/notifications/read', { method: 'POST' }); loadNotifications(); } catch (err) {} 
+        }
 
         document.addEventListener('click', () => {
             const dropdown = document.getElementById('notifDropdown');
