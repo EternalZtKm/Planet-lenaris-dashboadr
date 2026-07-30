@@ -1,6 +1,6 @@
 // ============================================================================
 // PLANET LENARIS - ENTERPRISE CONTROL CORE & DISCORD DASHBOARD SYSTEM
-// FILE: index.js (Extended Modular Architecture & Telemetry Pipeline)
+// FILE: index.js
 // ============================================================================
 
 const express = require('express');
@@ -15,9 +15,7 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 
-// ============================================================================
-// SECTION 1: GLOBAL ENVIRONMENT & TELEMETRY CONFIGURATION
-// ============================================================================
+// --- ENVIRONMENT VARIABLES ---
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "";
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "";
@@ -25,88 +23,21 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 
 const REQUIRED_ROLE_ID = "1427083014147407995"; 
 const REVIEW_CHANNEL_ID = "1424047205517492375"; 
-
-// Active Railway Redirect URI
 const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.up.railway.app/api/auth/discord/callback";
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
 
-// ============================================================================
-// SECTION 2: DEPARTMENT & HIERARCHY REGISTRY DATABASES
-// ============================================================================
+// --- GLOBAL STORES ---
 let departmentsData = [
-    { 
-        id: "dept_ldot", 
-        name: "Lenaris Dept. of Transportation (LDOT)", 
-        shortName: "LDOT", 
-        guildId: "1530625507857662062", 
-        verifiedRoleId: "1531761795402829945", 
-        active: true, 
-        webhookUrl: "", 
-        discordInvite: "", 
-        inGameReq: true, 
-        autoClockOutHours: 4, 
-        description: "Roadway maintenance, traffic infrastructure, and vehicle safety operations." 
-    },
-    { 
-        id: "dept_staff", 
-        name: "Lenaris Staff Dept.", 
-        shortName: "Staff Dept", 
-        guildId: "1530626035148919045", 
-        verifiedRoleId: "1531763587687645195", 
-        active: true, 
-        webhookUrl: "", 
-        discordInvite: "", 
-        inGameReq: false, 
-        autoClockOutHours: 6, 
-        description: "Official community moderation, support desk, and internal server staff." 
-    },
-    { 
-        id: "dept_lhp", 
-        name: "Lenaris Highway Patrol (LHP)", 
-        shortName: "LHP", 
-        guildId: "1530625253405884507", 
-        verifiedRoleId: "1531763499582361600", 
-        active: true, 
-        webhookUrl: "", 
-        discordInvite: "", 
-        inGameReq: true, 
-        autoClockOutHours: 4, 
-        description: "State traffic enforcement, highway safety, and high-speed interdictions." 
-    },
-    { 
-        id: "dept_lfd", 
-        name: "Lenaris Fire Dept. (LFD)", 
-        shortName: "LFD", 
-        guildId: "1530624317220585773", 
-        verifiedRoleId: "1531763395919872132", 
-        active: true, 
-        webhookUrl: "", 
-        discordInvite: "", 
-        inGameReq: true, 
-        autoClockOutHours: 4, 
-        description: "Emergency medical response, fire suppression, and rescue operations." 
-    },
-    { 
-        id: "dept_lledp", 
-        name: "Lenaris Law Enforcement Dept. (LLEDP)", 
-        shortName: "LLEDP", 
-        guildId: "1530623381156659401", 
-        verifiedRoleId: "1531763322175619152", 
-        active: true, 
-        webhookUrl: "", 
-        discordInvite: "", 
-        inGameReq: true, 
-        autoClockOutHours: 4, 
-        description: "Primary municipal law enforcement and city patrol operations." 
-    }
+    { id: "dept_ldot", name: "Lenaris Dept. of Transportation (LDOT)", shortName: "LDOT", guildId: "1530625507857662062", verifiedRoleId: "1531761795402829945", active: true, webhookUrl: "", discordInvite: "", inGameReq: true, autoClockOutHours: 4, description: "Roadway maintenance, traffic infrastructure, and vehicle safety operations." },
+    { id: "dept_staff", name: "Lenaris Staff Dept.", shortName: "Staff Dept", guildId: "1530626035148919045", verifiedRoleId: "1531763587687645195", active: true, webhookUrl: "", discordInvite: "", inGameReq: false, autoClockOutHours: 6, description: "Official community moderation, support desk, and internal server staff." },
+    { id: "dept_lhp", name: "Lenaris Highway Patrol (LHP)", shortName: "LHP", guildId: "1530625253405884507", verifiedRoleId: "1531763499582361600", active: true, webhookUrl: "", discordInvite: "", inGameReq: true, autoClockOutHours: 4, description: "State traffic enforcement, highway safety, and high-speed interdictions." },
+    { id: "dept_lfd", name: "Lenaris Fire Dept. (LFD)", shortName: "LFD", guildId: "1530624317220585773", verifiedRoleId: "1531763395919872132", active: true, webhookUrl: "", discordInvite: "", inGameReq: true, autoClockOutHours: 4, description: "Emergency medical response, fire suppression, and rescue operations." },
+    { id: "dept_lledp", name: "Lenaris Law Enforcement Dept. (LLEDP)", shortName: "LLEDP", guildId: "1530623381156659401", verifiedRoleId: "1531763322175619152", active: true, webhookUrl: "", discordInvite: "", inGameReq: true, autoClockOutHours: 4, description: "Primary municipal law enforcement and city patrol operations." }
 ];
 
 const SUPPORT_ROLE_IDS = ["1425618034214699078", "1425618073917853796", "1425618356912001135", "1425618591637835797", "1425632069479960686", "1425618454337028116"];
 const STAFF_ROLE_IDS_ASC = ["1425619421719695500", "1425619419081474079", "1425619416229613578", "1425619413566095493", "1425619286864695306", "1425617466092032112", "1425617463051030578", "1425617456432414781", "1425617453102137364", "1425617450023784559", "1425617405073424514", "1425617401826775101", "1425617398924447896", "1425617395762073740", "1425617392423276708", "1425617114298978324", "1425617110826090567", "1425617102567641138", "1424244176236711946", "1425616980345487380", "1425616349920755772", "1425616338831016088", "1425616334569341089", "1425616324121596054", "1425616282295861298", "1425616084496814180", "1425616019874906223", "1425615977495920721", "1425615914061008990", "1425615745727074405", "1425615423025578005", "1425615381283737610", "1425615346764742686", "1425615265277673612", "1425615123069927444", "1425614333957636138", "1425614322603655231", "1425614286499086396", "1425614245973983322", "1425614210624389244", "1425613708222267472", "1425613620829491372", "1425613579931095051"];
 
-// ============================================================================
-// SECTION 3: SYSTEM CONFIGURATION STORES & CACHES
-// ============================================================================
 let serverConfig = {
     serverName: "Planet Lenaris",
     serverIcon: "https://cdn.discordapp.com/attachments/1423913605102829691/1531394062173606049/bxrprtr.png",
@@ -127,24 +58,8 @@ let botConfig = {
     managerRoleIds: ["1425618356912001135", "1425618591637835797", "1425632069479960686"]
 };
 
-let sessionSettings = { 
-    sessionsChannel: "", 
-    autoKickDown: true, 
-    endShiftsOnShutdown: false, 
-    startupMessage: "A new roleplay session is starting now!", 
-    pollMinVotes: 10, 
-    pollMessage: "React below if you want to start a session!", 
-    shutdownAutoEnd: true, 
-    shutdownAutoErlc: true, 
-    shutdownIngameMsg: "The server is now shutting down." 
-};
-
-let shiftSettings = { 
-    shiftLogging: false, 
-    inGameRequirement: true, 
-    minPlayercount: 2, 
-    maxOnShift: null 
-};
+let sessionSettings = { sessionsChannel: "", autoKickDown: true, endShiftsOnShutdown: false, startupMessage: "A new roleplay session is starting now!", pollMinVotes: 10, pollMessage: "React below if you want to start a session!", shutdownAutoEnd: true, shutdownAutoErlc: true, shutdownIngameMsg: "The server is now shutting down." };
+let shiftSettings = { shiftLogging: false, inGameRequirement: true, minPlayercount: 2, maxOnShift: null };
 
 let activeServerSession = null; 
 let sessionHistory = [];
@@ -157,9 +72,7 @@ let staffInfractionLogs = [];
 let staffPromotionLogs = [];
 let notificationsList = [];
 
-// ============================================================================
-// SECTION 4: CORE HELPER & DISPATCH MODULES
-// ============================================================================
+// --- HELPER FUNCTIONS ---
 function addNotification(title, message) {
     notificationsList.unshift({ id: Date.now(), title, message, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), read: false });
     if (notificationsList.length > 20) notificationsList.pop();
@@ -168,24 +81,11 @@ function addNotification(title, message) {
 async function sendDiscordLog(webhookUrl, embed, content = null) {
     if (!webhookUrl) return;
     try { 
-        // Prevent "Invalid Form Body" by only passing content if it exists
         let payload = { embeds: [embed] };
-        if (content) {
-            payload.content = content;
-        }
-
-        const response = await fetch(webhookUrl, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(payload) 
-        }); 
-        
-        if (!response.ok) {
-            console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
-        }
-    } catch (err) { 
-        console.error("[WEBHOOK FETCH ERROR]:", err.message); 
-    }
+        if (content) payload.content = content;
+        const response = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+        if (!response.ok) console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
+    } catch (err) { console.error("[WEBHOOK FETCH ERROR]:", err.message); }
 }
 
 async function verifyUserRoleLive(userId) {
@@ -194,35 +94,30 @@ async function verifyUserRoleLive(userId) {
         if (!memberRes.ok) return false;
         const memberData = await memberRes.json();
         const userRoles = memberData.roles || [];
-        return { 
-            hasRole: userRoles.includes(REQUIRED_ROLE_ID), 
-            isManager: userRoles.some(r => botConfig.managerRoleIds.includes(r)), 
-            roles: userRoles, 
-            nickname: memberData.nick || null 
-        };
-    } catch (err) { 
-        return false; 
-    }
+        return { hasRole: userRoles.includes(REQUIRED_ROLE_ID), isManager: userRoles.some(r => botConfig.managerRoleIds.includes(r)), roles: userRoles, nickname: memberData.nick || null };
+    } catch (err) { return false; }
 }
 
 async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${deptGuildId}/members/${userId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
-        if (!memberRes.ok) return false;
+        if (!memberRes.ok) {
+            // DEBUG LOGGING: Tells Railway exactly why Discord denied the verification
+            console.error(`[DEPT VERIFY FAILED] User: ${userId} | Guild: ${deptGuildId} | Status: ${memberRes.status} | Details: ${await memberRes.text()}`);
+            return false;
+        }
         const memberData = await memberRes.json();
         return (memberData.roles || []).includes(verifiedRoleId);
     } catch (err) { 
+        console.error(`[DEPT VERIFY CRASH]: ${err.message}`);
         return false; 
     }
 }
 
-// ============================================================================
-// SECTION 5: SECURITY & AUTHORIZATION MIDDLEWARE
-// ============================================================================
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
     const check = await verifyUserRoleLive(req.session.user.id);
-    if (!check || !check.hasRole) return res.status(403).json({ success: false, error: "Access Denied: Missing Staff Role" });
+    if (!check || !check.hasRole) return res.status(403).json({ success: false, error: "Access Denied" });
     req.session.user.isManager = check.isManager;
     next();
 }
@@ -230,25 +125,17 @@ async function requireStaffAuth(req, res, next) {
 async function requireManagerAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
     const check = await verifyUserRoleLive(req.session.user.id);
-    if (!check || !check.isManager) return res.status(403).json({ success: false, error: "Access Denied: Management Privileges Required" });
+    if (!check || !check.isManager) return res.status(403).json({ success: false, error: "Management Access Required" });
     next();
 }
 
-// ============================================================================
-// SECTION 6: EXPRESS APP SETUP & ROUTING PIPELINE
-// ============================================================================
 app.use(cors());
 app.use(express.json());
-app.use(session({ 
-    secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key-2026', 
-    resave: true, 
-    saveUninitialized: true, 
-    cookie: { maxAge: 86400000, secure: true, sameSite: 'lax' } 
-}));
+app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key', resave: true, saveUninitialized: true, cookie: { maxAge: 86400000, secure: true, sameSite: 'lax' } }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serverConfig.serverIcon));
 
-// --- BACKGROUND ER:LC PLAYER TELEMETRY WORKER ---
+// --- ER:LC PLAYER POLLING WORKER ---
 async function pollErlcPlayers() {
     if (!ERLC_API_KEY) return;
     try {
@@ -281,7 +168,7 @@ async function pollErlcPlayers() {
 }
 setInterval(pollErlcPlayers, 10000);
 
-// --- AUTHENTICATION & OAUTH2 ENDPOINTS ---
+// --- AUTHENTICATION ROUTES ---
 app.get('/api/auth/discord/login', (req, res) => res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`));
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
@@ -295,12 +182,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         if (!tokenData.access_token) return res.redirect('/?auth=failed');
         const userRes = await fetch('https://discord.com/api/v10/users/@me', { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
         const userData = await userRes.json();
-        req.session.user = { 
-            id: userData.id, 
-            username: userData.username, 
-            displayName: userData.global_name || userData.username, 
-            avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' 
-        };
+        req.session.user = { id: userData.id, username: userData.username, displayName: userData.global_name || userData.username, avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' };
         req.session.save(() => res.redirect('/?discord=connected'));
     } catch (err) { res.redirect('/?auth=failed'); }
 });
@@ -338,7 +220,10 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
         if (resp.ok) {
             sendDiscordLog(botConfig.auditWebhook, { title: "💻 ER:LC Command Executed", color: 0x3498db, description: `**Command:** \`${command}\`\n**Executed By:** <@${req.session.user.id}>` });
             res.json({ success: true }); 
-        } else res.status(400).json({ success: false });
+        } else {
+            console.error("[ERLC API ERROR] Command Failed:", await resp.text());
+            res.status(400).json({ success: false });
+        }
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -346,13 +231,32 @@ app.get('/api/erlc/players', requireStaffAuth, async (req, res) => {
     res.json({ success: true, players: Object.values(historicalPlayers) });
 });
 
-app.post('/api/punishments/create', requireStaffAuth, (req, res) => {
+// UPGRADED PUNISHMENT ROUTE - SENDS ROBLOX IN-GAME WARNS
+app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     const { targetUser, robloxId, punishmentType, reason } = req.body;
     const log = { id: Date.now(), targetUser, robloxId: robloxId || "N/A", punishmentType, reason, staffName: req.session.user.displayName, removed: false, createdAt: new Date().toLocaleString() };
     punishmentLogs.unshift(log);
 
+    // Send Discord Logging Webhook
     const embed = new EmbedBuilder().setTitle(`🔨 Punishment Logged: ${punishmentType}`).setColor(0xed4245).addFields({ name: "Target Player", value: targetUser, inline: true }, { name: "Roblox ID", value: log.robloxId, inline: true }, { name: "Issued By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason || "No reason provided", inline: false });
     sendDiscordLog(botConfig.punishmentWebhook, embed.toJSON());
+
+    // Send ER:LC In-Game Warning
+    if (punishmentType.toLowerCase().includes("warn") && ERLC_API_KEY) {
+        const warnCount = punishmentLogs.filter(l => l.targetUser.toLowerCase() === targetUser.toLowerCase() && l.punishmentType.toLowerCase().includes("warn") && !l.removed).length;
+        const pmMessage = `:pm ${targetUser} You have been warned ${warnCount} times. You have been warned by ${req.session.user.displayName}. Reason: ${reason}`;
+        
+        try {
+            await fetch('https://api.erlc.gg/v1/server/command', {
+                method: 'POST',
+                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: pmMessage })
+            });
+        } catch(err) { 
+            console.error("[ERLC WARN PM FAILED]:", err.message); 
+        }
+    }
+
     res.json({ success: true });
 });
 
@@ -384,8 +288,19 @@ app.post('/api/support/create', async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/api/erlc/server-info', requireStaffAuth, async (req, res) => { res.json({ success: true, players: Object.values(historicalPlayers).filter(p => !p.leftGame) }); });
-app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => { res.json({ success: true, logs: [] }); });
+// FIXED IN-GAME ACTIVITY FEED ROUTE
+app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
+    if (!ERLC_API_KEY) return res.json({ success: true, logs: [] });
+    try {
+        const resp = await fetch('https://api.erlc.gg/v1/server/modlogs', { headers: { 'Server-Key': ERLC_API_KEY } });
+        if (resp.ok) {
+            const data = await resp.json();
+            res.json({ success: true, logs: Array.isArray(data) ? data.slice(0, 20) : [] });
+        } else {
+            res.json({ success: true, logs: [] });
+        }
+    } catch (err) { res.json({ success: true, logs: [] }); }
+});
 
 // --- DEPARTMENTS API ENDPOINTS ---
 app.get('/api/departments/list', async (req, res) => { res.json({ success: true, departments: departmentsData }); });
