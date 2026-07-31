@@ -114,16 +114,10 @@ async function verifyUserRoleLive(userId) {
 async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${deptGuildId}/members/${userId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
-        if (!memberRes.ok) {
-            console.error(`[DEPT VERIFY FAILED] User: ${userId} | Guild: ${deptGuildId} | Status: ${memberRes.status} | Details: ${await memberRes.text()}`);
-            return false;
-        }
+        if (!memberRes.ok) return false;
         const memberData = await memberRes.json();
         return (memberData.roles || []).includes(verifiedRoleId);
-    } catch (err) { 
-        console.error(`[DEPT VERIFY CRASH]: ${err.message}`);
-        return false; 
-    }
+    } catch (err) { return false; }
 }
 
 async function requireStaffAuth(req, res, next) {
@@ -311,6 +305,49 @@ app.post('/api/sessions/settings', requireManagerAuth, (req, res) => {
     sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Session Settings Updated", color: 0xf1c40f, description: `Session settings were updated by <@${req.session.user.id}>.` });
     res.json({ success: true, settings: sessionSettings });
 });
+app.get('/api/sessions/overview', requireStaffAuth, (req, res) => { res.json({ success: true, activeSession: activeServerSession, history: sessionHistory, analytics: { uniquePlayers: 1, modCalls: 0, modCommands: 1 } }); });
+app.post('/api/sessions/poll', requireManagerAuth, async (req, res) => {
+    const { question, options } = req.body;
+    if (!sessionSettings.sessionsChannel || !discordClient) return res.status(400).json({ success: false, error: "Sessions channel not configured or bot offline." });
+    try {
+        const channel = await discordClient.channels.fetch(sessionSettings.sessionsChannel);
+        if (!channel) return res.status(404).json({ success: false, error: "Channel not found." });
+        const embed = new EmbedBuilder().setTitle(`📊 Server Poll: ${question}`).setColor(0x3498db).setDescription(options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n\n'));
+        const msg = await channel.send({ content: sessionSettings.pollMessage, embeds: [embed] });
+        const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+        for (let i = 0; i < options.length && i < emojis.length; i++) await msg.react(emojis[i]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ success: false }); }
+});
+app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
+    const { action } = req.body;
+    if (action === 'START') {
+        activeServerSession = { startTime: Date.now() };
+        if (sessionSettings.sessionsChannel && discordClient) {
+            try {
+                const channel = await discordClient.channels.fetch(sessionSettings.sessionsChannel);
+                if (channel) {
+                    const embed = new EmbedBuilder().setTitle("🟢 Roleplay Session Started").setColor(0x57f287).setDescription(sessionSettings.startupMessage);
+                    await channel.send({ content: "@everyone", embeds: [embed] });
+                }
+            } catch (err) {}
+        }
+    } else {
+        if (activeServerSession) {
+            sessionHistory.unshift({ id: Date.now(), startTime: activeServerSession.startTime, endTime: Date.now() });
+            activeServerSession = null;
+            if (sessionSettings.shutdownAutoErlc && ERLC_API_KEY) {
+                const kickCmd = `:m ${sessionSettings.shutdownIngameMsg || "The server is now shutting down."}`;
+                fetch('https://api.erlc.gg/v1/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
+            }
+            if (sessionSettings.endShiftsOnShutdown) {
+                activeShifts.forEach(s => completedShifts.unshift({ id: `shift_${Date.now()}`, userId: s.userId, durationMinutes: Math.floor((Date.now() - s.startTime) / 60000), shiftType: s.department || "Default", waveId: "wave_1" }));
+                activeShifts = [];
+            }
+        }
+    }
+    res.json({ success: true, activeSession: activeServerSession });
+});
 
 // --- REMINDERS API ENDPOINTS ---
 app.get('/api/reminders/list', requireManagerAuth, (req, res) => res.json({ success: true, reminders: serverReminders }));
@@ -349,11 +386,9 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
             sendDiscordLog(botConfig.auditWebhook, { title: "💻 ER:LC Command Executed", color: 0x3498db, description: `**Command:** \`${command}\`\n**Executed By:** <@${req.session.user.id}>` });
             res.json({ success: true }); 
         } else {
-            console.error("[ERLC API ERROR] Command Failed:", await resp.text());
             res.status(400).json({ success: false, error: "ER:LC API rejected the command." });
         }
     } catch (err) { 
-        console.error("ER:LC Command Error:", err);
         res.status(500).json({ success: false, error: "Internal Server Error" }); 
     }
 });
@@ -645,17 +680,36 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
         new SlashCommandBuilder().setName('erlc-command').setDescription('Execute an in-game command').addStringOption(opt => opt.setName('command').setDescription('The exact in-game command text').setRequired(true)),
         new SlashCommandBuilder().setName('log-punishment').setDescription('Log an in-game player punishment').addStringOption(opt => opt.setName('player').setDescription('Target player username').setRequired(true)).addStringOption(opt => opt.setName('type').setDescription('Type of punishment').setRequired(true)).addStringOption(opt => opt.setName('reason').setDescription('Reason for punishment').setRequired(true)).addStringOption(opt => opt.setName('roblox_id').setDescription('Roblox player User ID').setRequired(false)),
         new SlashCommandBuilder().setName('assistance').setDescription('Request higher-up staff assistance').addStringOption(opt => opt.setName('reason').setDescription('Details for assistance request').setRequired(true)),
-        new SlashCommandBuilder().setName('infract').setDescription('Issue an official staff infraction').addUserOption(opt => opt.setName('staff').setDescription('The staff member to infract').setRequired(true)).addStringOption(opt => opt.setName('level').setDescription('Infraction level').setRequired(true)).addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(true)).addStringOption(opt => opt.setName('proof').setDescription('Evidence').setRequired(false)),
+        new SlashCommandBuilder().setName('infract').setDescription('Issue an official staff infraction')
+            .addUserOption(opt => {
+                opt.setName('staff').setDescription('The staff member to infract').setRequired(true);
+                return opt;
+            })
+            .addStringOption(opt => {
+                opt.setName('level').setDescription('Infraction level').setRequired(true);
+                staffInfractionLevels.forEach(lvl => opt.addChoices({ name: lvl, value: lvl }));
+                return opt;
+            })
+            .addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(true))
+            .addStringOption(opt => opt.setName('proof').setDescription('Evidence').setRequired(false)),
         new SlashCommandBuilder().setName('promote').setDescription('Promote or update a staff member rank').addUserOption(opt => opt.setName('staff').setDescription('The staff member').setRequired(true)).addStringOption(opt => opt.setName('new_role').setDescription('The new staff role name').setRequired(true)).addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(true)),
         new SlashCommandBuilder().setName('force-end-shift').setDescription('Forcefully end an active staff shift').addUserOption(opt => opt.setName('staff').setDescription('The staff member whose shift to end').setRequired(true))
     ];
 
     const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
-    (async () => { try { await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands }); } catch (err) {} })();
+    (async () => { 
+        try { 
+            const guildObj = await discordClient.guilds.fetch(GUILD_ID).catch(() => null);
+            if (guildObj) {
+                await guildObj.members.fetch();
+            }
+            await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands }); 
+        } catch (err) {} 
+    })();
 
     discordClient.on('interactionCreate', async interaction => {
         if (!interaction.isChatInputCommand()) return;
-        const { commandName, options, channelId, member } = interaction;
+        const { commandName, options, channelId, member, guild } = interaction;
         const isStaff = member.roles.cache.has(REQUIRED_ROLE_ID);
         const isManager = member.roles.cache.some(r => botConfig.managerRoleIds.includes(r.id));
 
@@ -669,13 +723,33 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             return;
         }
 
+        if (commandName === 'infract') {
+            if (!isManager) return interaction.reply({ content: '❌ Management permissions required.', ephemeral: true });
+            const targetUser = options.getUser('staff');
+            try {
+                const targetMember = await guild.members.fetch(targetUser.id).catch(() => null);
+                if (!targetMember || !targetMember.roles.cache.has(REQUIRED_ROLE_ID)) {
+                    return interaction.reply({ content: '❌ The specified user does not have the required Staff role.', ephemeral: true });
+                }
+            } catch (e) {
+                return interaction.reply({ content: '❌ Could not verify target user roles.', ephemeral: true });
+            }
+            const level = options.getString('level');
+            const reason = options.getString('reason');
+            const proof = options.getString('proof') || 'None Provided';
+
+            staffInfractionLogs.unshift({ id: `inf_${Date.now()}`, targetUserId: targetUser.id, targetUser: targetUser.tag, level, reason, proof, issuedBy: interaction.user.tag, createdAt: new Date().toLocaleString() });
+            const embed = new EmbedBuilder().setTitle(`⚠️ Staff Infraction Issued`).setColor(0xed4245).addFields({ name: "Staff Member", value: `<@${targetUser.id}>`, inline: true }, { name: "Level", value: level, inline: true }, { name: "Issued By", value: `<@${interaction.user.id}>`, inline: true }, { name: "Reason", value: reason, inline: false }, { name: "Proof", value: proof, inline: false });
+            sendDiscordLog(botConfig.infractionWebhook, embed.toJSON());
+            return interaction.reply({ content: `✅ Successfully issued ${level} infraction to <@${targetUser.id}>.`, ephemeral: true });
+        }
+
         if (['shift', 'active-shifts', 'erlc-command', 'log-punishment', 'assistance'].includes(commandName) && !isStaff && !isManager) return interaction.reply({ content: '❌ Staff Role required.', ephemeral: true });
-        if (['infract', 'promote', 'force-end-shift'].includes(commandName) && !isManager) return interaction.reply({ content: '❌ Management permissions required.', ephemeral: true });
+        if (['promote', 'force-end-shift'].includes(commandName) && !isManager) return interaction.reply({ content: '❌ Management permissions required.', ephemeral: true });
         
         if (commandName === 'active-shifts') return interaction.reply({ content: `Currently tracking ${activeShifts.length} active shifts.`, ephemeral: true });
         if (commandName === 'erlc-command') return interaction.reply({ content: `ER:LC Commands execution sent!`, ephemeral: true });
         if (commandName === 'assistance') return interaction.reply({ content: `Assistance requested!`, ephemeral: true });
-        if (commandName === 'infract') return interaction.reply({ content: `Infraction logged!`, ephemeral: true });
         if (commandName === 'promote') return interaction.reply({ content: `Promotion logged!`, ephemeral: true });
         if (commandName === 'force-end-shift') return interaction.reply({ content: `Shift ended!`, ephemeral: true });
     });
