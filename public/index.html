@@ -215,12 +215,6 @@
                         <p class="text-xs text-slate-300">Official community rules and roleplay guidelines.</p>
                         <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Read Handbook</button>
                     </div>
-
-                    <div id="resStaffHandbook" class="p-4 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 hidden">
-                        <span class="text-xs font-bold text-rose-400 uppercase tracking-wider block">Staff Handbook</span>
-                        <p class="text-xs text-slate-300">Dept Comms restricted moderation guide.</p>
-                        <button class="w-full bg-slate-800 text-slate-300 font-semibold py-1.5 rounded-lg text-xs opacity-75 cursor-not-allowed">Staff Access Only</button>
-                    </div>
                 </div>
             </div>
         </main>
@@ -505,7 +499,7 @@
                     </button>
                     <div id="menuErlc" class="pl-8 space-y-1 hidden">
                         <button onclick="selectSidebarItem('erlc-api')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">API</button>
-                        <button onclick="selectSidebarItem('erlc-webhooks')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Webhooks</button>
+                        <button onclick="selectSidebarItem('erlc-webhooks')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Heading Webhooks</button>
                         <button onclick="selectSidebarItem('erlc-playtime')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Playtime Levels</button>
                         <button onclick="selectSidebarItem('erlc-analytics')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Analytics</button>
                         <button onclick="selectSidebarItem('erlc-watchdog')" class="sb-subitem w-full text-left py-1.5 px-2 rounded-lg text-slate-400 hover:text-emerald-400 transition block">Watchdog</button>
@@ -737,10 +731,66 @@
                     <label class="block text-xs font-semibold text-amber-400 uppercase mb-1">Audit Logs Webhook</label>
                     <input type="text" id="webhookAudit" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs border border-amber-800/50">
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-indigo-400 uppercase mb-1">Comms Check Webhook</label>
+                    <input type="text" id="webhookComms" placeholder="https://discord.com/api/webhooks/..." class="w-full rounded-lg px-3 py-2 text-xs border border-indigo-800/50">
+                </div>
 
                 <div class="flex space-x-2 pt-2 border-t border-slate-800">
                     <button type="button" onclick="closeWebhookModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
                     <button type="submit" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="createReminderModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="card p-6 rounded-2xl max-w-lg w-full space-y-4 border border-emerald-500/30 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bell text-emerald-400"></i> Create New Reminder
+                </h3>
+                <button onclick="closeCreateReminderModal()" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onsubmit="submitNewReminder(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Title *</label>
+                    <input type="text" id="remTitle" required placeholder="e.g. Rules, Mod Call" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Interval (minutes) *</label>
+                    <input type="number" id="remInterval" required min="1" value="5" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message *</label>
+                    <textarea id="remMessage" required rows="3" placeholder="Reminder message content..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">ER:LC Type *</label>
+                    <select id="remErlcType" class="w-full rounded-lg px-3 py-2 text-xs">
+                        <option value=":h Hint">:h Hint</option>
+                        <option value=":m Announcement">:m Announcement</option>
+                        <option value=":pm Membercheck">:pm Membercheck</option>
+                        <option value=":pm Vehiclecheck">:pm Vehiclecheck</option>
+                        <option value=":pm & :load Membercheck">:pm & :load Membercheck</option>
+                        <option value=":pm & :load Vehiclecheck">:pm & :load Vehiclecheck</option>
+                        <option value=":pm Livery Vehiclecheck">:pm Livery Vehiclecheck</option>
+                        <option value=":pm & :load Livery Vehiclecheck">:pm & :load Livery Vehiclecheck</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Minimum ER:LC Players</label>
+                    <input type="number" id="remMinPlayers" min="0" value="1" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div class="flex space-x-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeCreateReminderModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 rounded-xl text-xs transition">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2 rounded-xl text-xs transition shadow-lg">Save Reminder</button>
                 </div>
             </form>
         </div>
@@ -813,7 +863,6 @@
             punishmentPresets: ["Warning", "Kick", "Ban", "Ban BOLO", "Staff Warning"] 
         };
 
-        // --- DASHBOARD INITIALIZATION ---
         async function fetchGeneralSettings() {
             try {
                 const res = await fetch('/api/settings/general');
@@ -830,6 +879,35 @@
                 }
             } catch (err) {}
         }
+
+        async function attemptModPanelAccess() {
+            if (!currentUserData) { alert("Please wait, still loading user data..."); return; }
+            document.getElementById('gateModalUsername').textContent = currentUserData.displayName || currentUserData.username;
+            document.getElementById('gateModalAvatar').src = currentUserData.avatar;
+            document.getElementById('gateErrorBox').classList.add('hidden');
+            document.getElementById('modPanelGateModal').classList.remove('hidden');
+        }
+
+        async function verifyRoleForModPanel() {
+            const btn = document.getElementById('btnGateVerify');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i><span>Verifying...</span>`;
+            try {
+                const res = await fetch('/api/auth/verify-role', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { closeModPanelGate(); switchView('modPanel'); }
+                else {
+                    document.getElementById('gateErrorBox').textContent = "Access Denied: You do not have the required Staff role in the Discord server.";
+                    document.getElementById('gateErrorBox').classList.remove('hidden');
+                }
+            } catch (err) {
+                document.getElementById('gateErrorBox').textContent = "Network error while verifying role.";
+                document.getElementById('gateErrorBox').classList.remove('hidden');
+            }
+            btn.innerHTML = originalHtml;
+        }
+
+        function closeModPanelGate() { document.getElementById('modPanelGateModal').classList.add('hidden'); }
 
         function switchView(viewName, defaultTab = 'general') {
             document.getElementById('viewHub').classList.add('hidden');
@@ -892,6 +970,7 @@
             if (tabKey === 'dept-overview' || tabKey === 'dept-settings') { titleEl.textContent = "Departments"; descEl.textContent = "Manage your server departments."; renderDepartmentsOverviewTab(); return; }
             if (tabKey === 'sessions-overview') { titleEl.textContent = "Sessions Overview"; descEl.textContent = "View session analytics."; renderSessionsOverviewTab(); return; }
             if (tabKey === 'sessions-settings') { titleEl.textContent = "Sessions Settings"; descEl.textContent = "Configure session settings."; renderSessionsSettingsTab(); return; }
+            if (tabKey === 'reminders-list' || tabKey === 'reminders-actions') { titleEl.textContent = "Server Reminders"; descEl.textContent = "Set up automated reminders for your server."; renderRemindersTab(); return; }
 
             const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
             titleEl.textContent = formattedTitle;
@@ -899,7 +978,6 @@
             document.getElementById('sdContentContainer').innerHTML = `<div class="card p-6 rounded-2xl border border-slate-800 space-y-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider">${formattedTitle} Panel</h3><p class="text-xs text-slate-400">Content for <strong class="text-emerald-400">${formattedTitle}</strong> is active.</p></div>`;
         }
 
-        // --- DASHBOARD ADMIN TAB RENDERING ---
         function renderGeneralTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-3">
@@ -1004,122 +1082,73 @@
             try { const res = await fetch('/api/shifts/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) alert("Shift settings saved!"); } catch (err) {}
         }
 
-        async function renderInfractionsMembersTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions</h3></div>
-                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1"><p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p></div>
-                </div>
-            `;
+        async function renderRemindersTab() {
             try {
-                const res = await fetch('/api/members');
+                const res = await fetch('/api/reminders/list');
                 const data = await res.json();
-                if (data.success && data.members) {
-                    document.getElementById('infStaffList').innerHTML = data.members.map(m => `
-                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                            <div class="flex items-center space-x-3"><img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover"><div><span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span><span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span></div></div>
-                            <div class="flex items-center space-x-3"><span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">${m.activeStrikes || 0} Strikes</span><button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">Issue Infraction</button></div>
+                const reminders = (data.success && data.reminders) ? data.reminders : [];
+
+                document.getElementById('sdContentContainer').innerHTML = `
+                    <div class="card p-6 rounded-2xl border border-slate-800 space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white">Server Reminders</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Set up automated reminders for your server</p>
+                            </div>
+                            <button onclick="openCreateReminderModal()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2 shadow-lg">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Create new Reminder</span>
+                            </button>
                         </div>
-                    `).join('');
-                }
-            } catch (err) {}
-        }
+                        <p class="text-xs text-slate-400">This server has currently made ${reminders.length}/5 reminders</p>
 
-        async function renderInfractionsSettingsTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
-                    <div class="flex space-x-2"><input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level..." class="flex-1 rounded-xl px-3 py-2 text-xs"><button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">+ Add Level</button></div>
-                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2"><p class="text-xs text-slate-500">Loading levels...</p></div>
-                </div>
-            `;
-            try {
-                const res = await fetch('/api/infractions/levels');
-                const data = await res.json();
-                if (data.success) document.getElementById('infractionLevelsContainer').innerHTML = data.levels.map((level, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs"><span class="font-bold text-white">${escapeHtml(level)}</span><button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
-            } catch (err) {}
-        }
-
-        async function openIssueInfractionModal(userId, displayName) {
-            document.getElementById('infractionTargetUserId').value = userId;
-            document.getElementById('infractionTargetUser').value = displayName;
-            try {
-                const res = await fetch('/api/infractions/levels');
-                const data = await res.json();
-                if (data.success) document.getElementById('infractionLevelSelect').innerHTML = data.levels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
-            } catch (err) {}
-            document.getElementById('issueInfractionModal').classList.remove('hidden');
-        }
-        function closeIssueInfractionModal() { document.getElementById('issueInfractionModal').classList.add('hidden'); }
-        async function submitStaffInfraction(e) {
-            e.preventDefault();
-            const payload = { targetUserId: document.getElementById('infractionTargetUserId').value, targetUser: document.getElementById('infractionTargetUser').value, level: document.getElementById('infractionLevelSelect').value, reason: document.getElementById('infractionReasonText').value, proof: document.getElementById('infractionProofText').value };
-            try { const res = await fetch('/api/infractions/issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Infraction Issued!'); closeIssueInfractionModal(); renderInfractionsMembersTab(); } } catch (err) {}
-        }
-        async function addCustomInfractionLevel() {
-            const name = document.getElementById('inputNewInfractionLevel').value.trim();
-            if (!name) return;
-            try { const res = await fetch('/api/infractions/levels/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
-        }
-        async function removeCustomInfractionLevel(index) {
-            try { const res = await fetch('/api/infractions/levels/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ index }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
-        }
-
-        async function renderSessionsOverviewTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="card p-5 rounded-2xl border border-slate-800 lg:col-span-2 space-y-4"><div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-base font-bold text-white">Analytics Overview</h3></div></div>
-                    <div class="card p-5 rounded-2xl border border-slate-800 space-y-4">
-                        <div id="sessionStatusBox"><h3 class="text-base font-bold text-white" id="sessStatusTitle">Loading...</h3><p class="text-xs text-slate-400 mt-1" id="sessStatusDesc">Checking status...</p></div>
-                        <div class="flex space-x-2 pt-2"><button id="btnToggleSession" onclick="toggleSessionAction()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Start Session</button></div>
-                        <button onclick="openCreatePollModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">Create Poll</button>
+                        <div id="remindersGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${reminders.length === 0 ? `<p class="text-xs text-slate-500 col-span-2 py-4 text-center">No reminders configured yet.</p>` : reminders.map(r => `
+                                <div class="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 space-y-3 flex flex-col justify-between">
+                                    <div class="space-y-2">
+                                        <h4 class="font-bold text-white text-sm capitalize">${escapeHtml(r.title)}</h4>
+                                        <div class="text-xs text-slate-300 space-y-1">
+                                            <p><span class="text-slate-500">Interval:</span> ${Math.round(r.intervalMs / 60000)}m</p>
+                                            <p><span class="text-slate-500">Message:</span><br>${escapeHtml(r.message)}</p>
+                                            <p><span class="text-slate-500">ER:LC:</span> ${escapeHtml(r.erlcType)}</p>
+                                            <p><span class="text-slate-500">Min Players:</span> ${r.minPlayers}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800/80">
+                                        <button onclick="deleteReminder('${r.id}')" class="p-2 text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
-            `;
-            fetchSessionsOverviewData();
-        }
-        async function fetchSessionsOverviewData() {
-            try {
-                const res = await fetch('/api/sessions/overview');
-                const data = await res.json();
-                if (data.success) {
-                    const btn = document.getElementById('btnToggleSession');
-                    const title = document.getElementById('sessStatusTitle');
-                    const desc = document.getElementById('sessStatusDesc');
-                    if (data.activeSession) { title.textContent = "Active session in progress"; title.className = "text-base font-bold text-emerald-400"; desc.textContent = "A server roleplay session is currently running."; btn.textContent = "End Session"; btn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; btn.onclick = () => toggleSessionAction('END'); }
-                    else { title.textContent = "No active session"; title.className = "text-base font-bold text-white"; desc.textContent = "Start a session or create a poll below."; btn.textContent = "Start Session"; btn.className = "flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg"; btn.onclick = () => toggleSessionAction('START'); }
-                }
+                `;
             } catch (err) {}
-        }
-        async function toggleSessionAction(action) { try { const res = await fetch('/api/sessions/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); if (res.ok) fetchSessionsOverviewData(); } catch (err) {} }
-        function openCreatePollModal() { document.getElementById('createPollModal').classList.remove('hidden'); }
-        function closeCreatePollModal() { document.getElementById('createPollModal').classList.add('hidden'); }
-        async function submitSessionPoll(e) {
-            e.preventDefault();
-            const question = document.getElementById('pollQuestion').value;
-            const options = document.getElementById('pollOptions').value.split('\n').map(o => o.trim()).filter(o => o);
-            try { const res = await fetch('/api/sessions/poll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question, options }) }); if (res.ok) { alert("Poll sent!"); closeCreatePollModal(); } } catch (err) {}
         }
 
-        async function renderSessionsSettingsTab() {
-            document.getElementById('sdContentContainer').innerHTML = `
-                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
-                    <h3 class="text-base font-bold text-white">Configuration</h3>
-                    <div class="space-y-4 pt-2">
-                        <div><label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Sessions Channel (ID)</label><input type="text" id="setSessChannel" class="w-full rounded-lg px-3 py-2 text-xs bg-slate-900 text-white border border-slate-700"></div>
-                        <div class="flex items-center justify-between"><div><span class="text-xs font-bold text-white block">Auto Kick While Server Is Down</span></div><input type="checkbox" id="setSessAutoKick" class="w-8 h-4 accent-emerald-500 cursor-pointer"></div>
-                    </div>
-                </div>
-                <div class="flex justify-end"><button onclick="saveSessionSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Session Settings</button></div>
-            `;
+        function openCreateReminderModal() { document.getElementById('createReminderModal').classList.remove('hidden'); }
+        function closeCreateReminderModal() { document.getElementById('createReminderModal').classList.add('hidden'); }
+
+        async function submitNewReminder(e) {
+            e.preventDefault();
+            const payload = {
+                title: document.getElementById('remTitle').value,
+                intervalMinutes: document.getElementById('remInterval').value,
+                message: document.getElementById('remMessage').value,
+                erlcType: document.getElementById('remErlcType').value,
+                minPlayers: document.getElementById('remMinPlayers').value
+            };
             try {
-                const res = await fetch('/api/sessions/settings');
-                const data = await res.json();
-                if (data.success) document.getElementById('setSessChannel').value = data.settings.sessionsChannel || '';
+                const res = await fetch('/api/reminders/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { closeCreateReminderModal(); renderRemindersTab(); }
             } catch (err) {}
         }
-        async function saveSessionSettings() {
-            try { await fetch('/api/sessions/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionsChannel: document.getElementById('setSessChannel').value }) }); alert("Saved!"); } catch (err) {}
+
+        async function deleteReminder(id) {
+            if(!confirm("Delete this reminder?")) return;
+            try {
+                const res = await fetch('/api/reminders/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+                if (res.ok) renderRemindersTab();
+            } catch (err) {}
         }
 
         async function loadHubDepartments() {
@@ -1174,7 +1203,6 @@
         }
         async function toggleDepartmentActive(deptId, active) { try { const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, active }) }); if (res.ok) renderDepartmentsOverviewTab(); } catch (err) {} }
 
-        // --- AUTH & MISC ---
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/user');
@@ -1201,9 +1229,7 @@
         }
         setInterval(checkAuth, 4000);
         async function logout() { await fetch('/api/auth/logout'); window.location.href = '/'; }
-        async function attemptModPanelAccess() { switchView('modPanel'); }
 
-        // --- MOD PANEL PLAYER AUTOCOMPLETE & LEFTHANDLING ---
         async function loadServerInfo() {
             try {
                 const res = await fetch('/api/erlc/players');
@@ -1260,7 +1286,6 @@
             } catch (err) {} finally { document.getElementById('idLoadingSpinner').classList.add('hidden'); }
         }
 
-        // --- NEW: IN-GAME ACTIVITY FEED FETCHING ---
         async function fetchActivityFeed() {
             try {
                 const res = await fetch('/api/erlc/activity');
@@ -1280,7 +1305,6 @@
         }
         setInterval(fetchActivityFeed, 10000); 
 
-        // --- SHIFTS & MOD PANEL ACTIONS ---
         async function toggleShift(action) { 
             try { const res = await fetch('/api/shifts/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, department: 'Staff Moderation' }) }); if (res.ok) loadActiveShifts(); } catch (err) {} 
         }
@@ -1325,7 +1349,12 @@
         async function sendErlcCommand() {
             const command = document.getElementById('erlcCmdInput').value.trim();
             if (!command) return;
-            try { const res = await fetch('/api/erlc/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) }); const data = await res.json(); if (res.ok && data.success) { alert(`Command executed!`); document.getElementById('erlcCmdInput').value = ''; } else alert('Command failed.'); } catch (err) {}
+            try { 
+                const res = await fetch('/api/erlc/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) }); 
+                const data = await res.json(); 
+                if (res.ok && data.success) { alert(`Command executed!`); document.getElementById('erlcCmdInput').value = ''; } 
+                else { alert('Command failed. Please check the ER:LC API Key and IP Whitelist.'); }
+            } catch (err) {}
         }
         
         async function submitInfraction(e) {
@@ -1352,7 +1381,6 @@
         async function requestHigherUpAssistance() { const reason = prompt("Enter reason for assistance:"); if (!reason) return; try { await fetch('/api/assistance/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) }); alert("Assistance requested!"); } catch (err) {} }
         function toggleSection(secId, isChecked) { const el = document.getElementById(secId); if (el) el.classList.toggle('hidden', !isChecked); }
 
-        // --- MODALS, WEBHOOKS, & SUPPORT ---
         function openDonateModal() { document.getElementById('donateModal').classList.remove('hidden'); }
         function closeDonateModal() { document.getElementById('donateModal').classList.add('hidden'); }
         function openSupportModal() { document.getElementById('supportModal').classList.remove('hidden'); }
@@ -1364,12 +1392,7 @@
             const message = document.getElementById('supportMessage').value;
             try {
                 const res = await fetch('/api/support/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, message }) });
-                if (res.ok) { 
-                    alert('Support ticket submitted successfully!'); 
-                    document.getElementById('supportSubject').value = ''; 
-                    document.getElementById('supportMessage').value = ''; 
-                    closeSupportModal(); 
-                }
+                if (res.ok) { alert('Support ticket submitted successfully!'); document.getElementById('supportSubject').value = ''; document.getElementById('supportMessage').value = ''; closeSupportModal(); }
             } catch (err) { alert('Connection error.'); }
         }
 
@@ -1387,6 +1410,7 @@
                     document.getElementById('webhookPromotion').value = w.promotionWebhook || '';
                     document.getElementById('webhookReview').value = w.reviewWebhook || '';
                     document.getElementById('webhookAudit').value = w.auditWebhook || '';
+                    document.getElementById('webhookComms').value = w.commsWebhook || '';
                     document.getElementById('webhookModal').classList.remove('hidden');
                 }
             } catch (err) {}
@@ -1404,7 +1428,8 @@
                 infractionWebhook: document.getElementById('webhookInfraction').value, 
                 promotionWebhook: document.getElementById('webhookPromotion').value,
                 reviewWebhook: document.getElementById('webhookReview').value,
-                auditWebhook: document.getElementById('webhookAudit').value
+                auditWebhook: document.getElementById('webhookAudit').value,
+                commsWebhook: document.getElementById('webhookComms').value
             };
             try { 
                 const res = await fetch('/api/settings/webhooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
@@ -1412,7 +1437,6 @@
             } catch (err) {}
         }
 
-        // --- NOTIFICATIONS ---
         function toggleNotificationDropdown(e) {
             if (e) e.stopPropagation();
             const dropdown = document.getElementById('notifDropdown');
@@ -1428,25 +1452,14 @@
                     const listContainer = document.getElementById('notifListContainer');
                     const badge = document.getElementById('notifBadge');
                     const unreadCount = data.notifications.filter(n => !n.read).length;
-
-                    if (unreadCount > 0) { 
-                        badge.textContent = unreadCount; 
-                        badge.classList.remove('hidden'); 
-                    } else {
-                        badge.classList.add('hidden');
-                    }
-
-                    if (!data.notifications || data.notifications.length === 0) {
-                        listContainer.innerHTML = `<p class="text-xs text-slate-500 p-4 text-center">No notifications.</p>`;
-                    } else {
+                    if (unreadCount > 0) { badge.textContent = unreadCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+                    if (!data.notifications || data.notifications.length === 0) { listContainer.innerHTML = `<p class="text-xs text-slate-500 p-4 text-center">No notifications.</p>`; }
+                    else {
                         listContainer.innerHTML = data.notifications.map(n => `
                             <div class="p-3 hover:bg-slate-800/50 transition flex items-start space-x-2.5">
                                 ${!n.read ? `<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1"></span>` : ''}
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-center">
-                                        <strong class="text-xs text-white block truncate">${escapeHtml(n.title)}</strong>
-                                        <span class="text-[9px] text-slate-500">${n.time}</span>
-                                    </div>
+                                    <div class="flex justify-between items-center"><strong class="text-xs text-white block truncate">${escapeHtml(n.title)}</strong><span class="text-[9px] text-slate-500">${n.time}</span></div>
                                     <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(n.message)}</p>
                                 </div>
                             </div>`).join('');
@@ -1455,9 +1468,7 @@
             } catch (err) {}
         }
 
-        async function markNotificationsRead() { 
-            try { await fetch('/api/notifications/read', { method: 'POST' }); loadNotifications(); } catch (err) {} 
-        }
+        async function markNotificationsRead() { try { await fetch('/api/notifications/read', { method: 'POST' }); loadNotifications(); } catch (err) {} }
 
         document.addEventListener('click', () => {
             const dropdown = document.getElementById('notifDropdown');
