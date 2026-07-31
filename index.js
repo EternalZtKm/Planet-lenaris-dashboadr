@@ -60,6 +60,7 @@ let botConfig = {
 
 let sessionSettings = { sessionsChannel: "", autoKickDown: true, endShiftsOnShutdown: false, startupMessage: "A new roleplay session is starting now!", pollMinVotes: 10, pollMessage: "React below if you want to start a session!", shutdownAutoEnd: true, shutdownAutoErlc: true, shutdownIngameMsg: "The server is now shutting down." };
 let shiftSettings = { shiftLogging: false, inGameRequirement: true, minPlayercount: 2, maxOnShift: null };
+let waveSettings = { durationType: "Weekly", requiredHours: 10, inactivityDays: 7 };
 let serverReminders = [];
 
 let activeServerSession = null; 
@@ -283,6 +284,14 @@ app.get('/api/auth/user', async (req, res) => {
 });
 
 app.get('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
+
+// --- ACTIVITY WAVES API ENDPOINTS ---
+app.get('/api/waves/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: waveSettings }));
+app.post('/api/waves/settings', requireManagerAuth, (req, res) => {
+    Object.assign(waveSettings, req.body);
+    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Wave Settings Updated", color: 0xf1c40f, description: `Activity wave configuration was updated by <@${req.session.user.id}>.` });
+    res.json({ success: true, settings: waveSettings });
+});
 
 // --- REMINDERS API ENDPOINTS ---
 app.get('/api/reminders/list', requireManagerAuth, (req, res) => res.json({ success: true, reminders: serverReminders }));
