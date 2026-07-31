@@ -1598,7 +1598,7 @@
             } catch (err) {}
         }
 
-        function closeWebhookModal() { document.getElementById('webhookModal').classList.add('hidden'); }
+        function closeWebhookModal() { document.getElementById('webhookModal'].classList.add('hidden'); }
 
         async function saveWebhookSettings(e) {
             e.preventDefault();
@@ -1650,7 +1650,7 @@
             } catch (err) {}
         }
 
-        async function markNotificationsRead() { try { await fetch('/api/notifications/read', { method: 'POST' }); loadNotifications(); } catch (err) {} }
+        async function markNotificationsRef() { try { await fetch('/api/notifications/read', { method: 'POST' }); loadNotifications(); } catch (err) {} }
 
         document.addEventListener('click', () => {
             const dropdown = document.getElementById('notifDropdown');
