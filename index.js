@@ -54,11 +54,13 @@ let botConfig = {
     promotionWebhook: process.env.PROMOTION_WEBHOOK || "",
     reviewWebhook: process.env.REVIEW_WEBHOOK || "",
     auditWebhook: process.env.AUDIT_WEBHOOK || "",
+    commsWebhook: process.env.COMMS_WEBHOOK || "",
     managerRoleIds: ["1425618356912001135", "1425618591637835797", "1425632069479960686"]
 };
 
 let sessionSettings = { sessionsChannel: "", autoKickDown: true, endShiftsOnShutdown: false, startupMessage: "A new roleplay session is starting now!", pollMinVotes: 10, pollMessage: "React below if you want to start a session!", shutdownAutoEnd: true, shutdownAutoErlc: true, shutdownIngameMsg: "The server is now shutting down." };
 let shiftSettings = { shiftLogging: false, inGameRequirement: true, minPlayercount: 2, maxOnShift: null };
+let serverReminders = [];
 
 let activeServerSession = null; 
 let sessionHistory = [];
@@ -133,11 +135,84 @@ app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-k
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serverConfig.serverIcon));
 
+// --- AUTOMATED COMMS CHECKER & ER:LC REMINDERS WORKER ---
+async function checkCommsAndRunReminders() {
+    if (!ERLC_API_KEY || !BOT_TOKEN || !GUILD_ID) return;
+    try {
+        const resp = await fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const livePlayers = data.players || data || [];
+        const playerCount = livePlayers.length;
+
+        let guildMembersMap = new Map();
+        try {
+            const guildMembersRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
+            if (guildMembersRes.ok) {
+                const membersData = await guildMembersRes.json();
+                membersData.forEach(m => {
+                    const nickOrName = (m.nick || m.user.global_name || m.user.username || '').toLowerCase();
+                    guildMembersMap.set(nickOrName, m);
+                });
+            }
+        } catch (e) {}
+
+        for (const p of livePlayers) {
+            let rawName = p.Player || p.Name || p.username || '';
+            if (rawName.includes(':')) rawName = rawName.split(':')[0].trim();
+            if (!rawName) continue;
+
+            const cleanRobloxName = rawName.toLowerCase();
+            let foundInComms = false;
+
+            for (const [key, m] of guildMembersMap.entries()) {
+                if (key.includes(cleanRobloxName)) {
+                    foundInComms = true;
+                    break;
+                }
+            }
+
+            if (!foundInComms) {
+                const pmMsg = `:pm ${rawName} We have detected that you are not in our comms. You must join our comms or will be moderated.`;
+                await fetch('https://api.erlc.gg/v1/server/command', {
+                    method: 'POST',
+                    headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: pmMsg })
+                }).catch(() => {});
+
+                sendDiscordLog(botConfig.commsWebhook || botConfig.auditWebhook, {
+                    title: "🚨 Comms Check Alert",
+                    color: 0xed4245,
+                    description: `Player **${rawName}** was detected in-game but not found in Discord comms format (PLRP | Name). PM warning issued.`
+                });
+            }
+        }
+
+        const now = Date.now();
+        for (const rem of serverReminders) {
+            if (playerCount >= (rem.minPlayers || 0)) {
+                if (!rem.lastRun || (now - rem.lastRun >= rem.intervalMs)) {
+                    rem.lastRun = now;
+                    if (rem.erlcType && rem.erlcType !== 'None') {
+                        const cmdText = `${rem.erlcType} ${rem.message}`;
+                        await fetch('https://api.erlc.gg/v1/server/command', {
+                            method: 'POST',
+                            headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ command: cmdText })
+                        }).catch(() => {});
+                    }
+                }
+            }
+        }
+    } catch (err) {}
+}
+setInterval(checkCommsAndRunReminders, 60000);
+
 // --- ER:LC PLAYER POLLING WORKER ---
 async function pollErlcPlayers() {
     if (!ERLC_API_KEY) return;
     try {
-        const resp = await fetch('https://api.erlc.gg/v2/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
+        const resp = await fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
         if (!resp.ok) return;
         const data = await resp.json();
         const livePlayers = data.players || data || [];
@@ -209,12 +284,34 @@ app.get('/api/auth/user', async (req, res) => {
 
 app.get('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
 
+// --- REMINDERS API ENDPOINTS ---
+app.get('/api/reminders/list', requireManagerAuth, (req, res) => res.json({ success: true, reminders: serverReminders }));
+app.post('/api/reminders/create', requireManagerAuth, (req, res) => {
+    const { title, intervalMinutes, message, erlcType, minPlayers } = req.body;
+    const newRem = {
+        id: `rem_${Date.now()}`,
+        title: title || "Reminder",
+        intervalMs: (parseInt(intervalMinutes) || 5) * 60000,
+        message: message || "",
+        erlcType: erlcType || ":h Hint",
+        minPlayers: parseInt(minPlayers) || 1,
+        lastRun: 0
+    };
+    serverReminders.push(newRem);
+    res.json({ success: true, reminders: serverReminders });
+});
+app.post('/api/reminders/delete', requireManagerAuth, (req, res) => {
+    const { id } = req.body;
+    serverReminders = serverReminders.filter(r => r.id !== id);
+    res.json({ success: true, reminders: serverReminders });
+});
+
 // --- MODERATOR PANEL & TELEMETRY API ENDPOINTS ---
 app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     const { command } = req.body;
     if (!ERLC_API_KEY) return res.status(400).json({ success: false, error: "No API Key configured." });
     try {
-        const resp = await fetch('https://api.erlc.gg/v2/server/command', { 
+        const resp = await fetch('https://api.erlc.gg/v1/server/command', { 
             method: 'POST', 
             headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ command: command }) 
@@ -243,27 +340,20 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     const log = { id: Date.now(), targetUser, robloxId: robloxId || "N/A", punishmentType, reason, staffName: req.session.user.displayName, removed: false, createdAt: new Date().toLocaleString() };
     punishmentLogs.unshift(log);
 
-    // Send Discord Logging Webhook
     const embed = new EmbedBuilder().setTitle(`🔨 Punishment Logged: ${punishmentType}`).setColor(0xed4245).addFields({ name: "Target Player", value: targetUser, inline: true }, { name: "Roblox ID", value: log.robloxId, inline: true }, { name: "Issued By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason || "No reason provided", inline: false });
     sendDiscordLog(botConfig.punishmentWebhook, embed.toJSON());
 
-    // Send ER:LC In-Game Warning
     if (punishmentType.toLowerCase().includes("warn") && ERLC_API_KEY) {
         const warnCount = punishmentLogs.filter(l => l.targetUser.toLowerCase() === targetUser.toLowerCase() && l.punishmentType.toLowerCase().includes("warn") && !l.removed).length;
         const pmMessage = `:pm ${targetUser} You have been warned ${warnCount} times. You have been warned by ${req.session.user.displayName}. Reason: ${reason}`;
         
         try {
-            await fetch('https://api.erlc.gg/v2/server/command', {
+            await fetch('https://api.erlc.gg/v1/server/command', {
                 method: 'POST',
-                headers: { 
-                    'Server-Key': ERLC_API_KEY, 
-                    'Content-Type': 'application/json' 
-                },
+                headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ command: pmMessage })
             });
-        } catch(err) { 
-            console.error("[ERLC WARN PM FAILED]:", err.message); 
-        }
+        } catch(err) {}
     }
 
     res.json({ success: true });
@@ -297,35 +387,18 @@ app.post('/api/support/create', async (req, res) => {
     res.json({ success: true });
 });
 
-// UPGRADED V2 IN-GAME ACTIVITY FEED ROUTE
+// ACTIVITY FEED ROUTE
 app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
     if (!ERLC_API_KEY) return res.json({ success: true, logs: [] });
     try {
-        const [joinsRes, killsRes, cmdsRes] = await Promise.all([
-            fetch('https://api.erlc.gg/v2/server/joinlogs', { headers: { 'Server-Key': ERLC_API_KEY } }),
-            fetch('https://api.erlc.gg/v2/server/killlogs', { headers: { 'Server-Key': ERLC_API_KEY } }),
-            fetch('https://api.erlc.gg/v2/server/commandlogs', { headers: { 'Server-Key': ERLC_API_KEY } })
-        ]);
-
-        let combinedLogs = [];
-        if (joinsRes.ok) {
-            const data = await joinsRes.json();
-            if (Array.isArray(data)) combinedLogs.push(...data.map(item => ({ ...item, display: `📥 Join/Leave: ${item.Player || item.Name || 'User'}`, timestamp: item.Timestamp || Date.now() })));
+        const resp = await fetch('https://api.erlc.gg/v1/server/modlogs', { headers: { 'Server-Key': ERLC_API_KEY } });
+        if (resp.ok) {
+            const data = await resp.json();
+            res.json({ success: true, logs: Array.isArray(data) ? data.slice(0, 20) : [] });
+        } else {
+            res.json({ success: true, logs: [] });
         }
-        if (killsRes.ok) {
-            const data = await killsRes.json();
-            if (Array.isArray(data)) combinedLogs.push(...data.map(item => ({ ...item, display: `⚔️ Kill: ${item.Killed || item.Victim || 'Someone'} killed by ${item.Killer || 'Someone'}`, timestamp: item.Timestamp || Date.now() })));
-        }
-        if (cmdsRes.ok) {
-            const data = await cmdsRes.json();
-            if (Array.isArray(data)) combinedLogs.push(...data.map(item => ({ ...item, display: `💻 Command: ${item.Command || item.Action || 'Executed'}`, timestamp: item.Timestamp || Date.now() })));
-        }
-
-        res.json({ success: true, logs: combinedLogs.slice(0, 25) });
-    } catch (err) { 
-        console.error("[ACTIVITY FETCH ERROR]:", err.message);
-        res.json({ success: true, logs: [] }); 
-    }
+    } catch (err) { res.json({ success: true, logs: [] }); }
 });
 
 // --- DEPARTMENTS API ENDPOINTS ---
@@ -446,7 +519,7 @@ app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
             activeServerSession = null;
             if (sessionSettings.shutdownAutoErlc && ERLC_API_KEY) {
                 const kickCmd = `:m ${sessionSettings.shutdownIngameMsg || "The server is now shutting down."}`;
-                fetch('https://api.erlc.gg/v2/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
+                fetch('https://api.erlc.gg/v1/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
             }
             if (sessionSettings.endShiftsOnShutdown) {
                 activeShifts.forEach(s => completedShifts.unshift({ id: `shift_${Date.now()}`, userId: s.userId, durationMinutes: Math.floor((Date.now() - s.startTime) / 60000), shiftType: s.department || "Default", waveId: "wave_1" }));
@@ -633,13 +706,11 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
     discordClient.once('ready', () => console.log(`[DISCORD] Ready as ${discordClient.user.tag}`));
     discordClient.login(BOT_TOKEN).catch(err => console.error("\n❌ [DISCORD LOGIN ERROR] The bot failed to log in!\nReason:", err.message, "\n"));
 } else {
-    console.log("⚠️ [DISCORD] Skipping bot startup: Missing Tokens in Render/Railway");
+    console.log("⚠️ [DISCORD] Skipping bot startup: Missing Tokens");
 }
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Lenaris Dashboard running on port ${PORT}`);
-    
-    // Fetch and log the external IP for ER:LC Whitelisting
     fetch('https://api.ipify.org?format=json')
         .then(res => res.json())
         .then(data => {
@@ -648,5 +719,5 @@ app.listen(PORT, '0.0.0.0', () => {
             console.log(`   -> Copy this IP and paste it into your ER:LC API Settings!`);
             console.log('======================================================\n');
         })
-        .catch(() => console.log("⚠️ Could not fetch public IP automatically."));
+        .catch(() => {});
 });
