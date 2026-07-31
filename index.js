@@ -138,7 +138,7 @@ app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serv
 async function pollErlcPlayers() {
     if (!ERLC_API_KEY) return;
     try {
-        const resp = await fetch('https://api.erlc.gg/v1/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
+        const resp = await fetch('https://api.erlc.gg/v2/server/players', { headers: { 'Server-Key': ERLC_API_KEY } });
         if (!resp.ok) return;
         const data = await resp.json();
         const livePlayers = data.players || data || [];
@@ -215,7 +215,7 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
     const { command } = req.body;
     if (!ERLC_API_KEY) return res.status(400).json({ success: false, error: "No API Key configured." });
     try {
-        const resp = await fetch('https://api.erlc.gg/v1/server/command', { 
+        const resp = await fetch('https://api.erlc.gg/v2/server/command', { 
             method: 'POST', 
             headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ command: command }) 
@@ -254,7 +254,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
         const pmMessage = `:pm ${targetUser} You have been warned ${warnCount} times. You have been warned by ${req.session.user.displayName}. Reason: ${reason}`;
         
         try {
-            await fetch('https://api.erlc.gg/v1/server/command', {
+            await fetch('https://api.erlc.gg/v2/server/command', {
                 method: 'POST',
                 headers: { 
                     'Server-Key': ERLC_API_KEY, 
@@ -298,19 +298,35 @@ app.post('/api/support/create', async (req, res) => {
     res.json({ success: true });
 });
 
-// IN-GAME ACTIVITY FEED ROUTE
+// UPGRADED V2 IN-GAME ACTIVITY FEED ROUTE
 app.get('/api/erlc/activity', requireStaffAuth, async (req, res) => {
     if (!ERLC_API_KEY) return res.json({ success: true, logs: [] });
     try {
-        const resp = await fetch('https://api.erlc.gg/v1/server/modlogs', { headers: { 'Server-Key': ERLC_API_KEY } });
-        if (resp.ok) {
-            const data = await resp.json();
-            res.json({ success: true, logs: Array.isArray(data) ? data.slice(0, 20) : (data.logs ? data.logs.slice(0,20) : []) });
-        } else {
-            console.error("[ERLC API ERROR] Modlogs Failed:", await resp.text());
-            res.json({ success: true, logs: [] });
+        const [joinsRes, killsRes, cmdsRes] = await Promise.all([
+            fetch('https://api.erlc.gg/v2/server/joinlogs', { headers: { 'Server-Key': ERLC_API_KEY } }),
+            fetch('https://api.erlc.gg/v2/server/killlogs', { headers: { 'Server-Key': ERLC_API_KEY } }),
+            fetch('https://api.erlc.gg/v2/server/commandlogs', { headers: { 'Server-Key': ERLC_API_KEY } })
+        ]);
+
+        let combinedLogs = [];
+        if (joinsRes.ok) {
+            const data = await joinsRes.json();
+            if (Array.isArray(data)) combinedLogs.push(...data.map(item => ({ ...item, display: `📥 Join/Leave: ${item.Player || item.Name || 'User'}`, timestamp: item.Timestamp || Date.now() })));
         }
-    } catch (err) { res.json({ success: true, logs: [] }); }
+        if (killsRes.ok) {
+            const data = await killsRes.json();
+            if (Array.isArray(data)) combinedLogs.push(...data.map(item => ({ ...item, display: `⚔️ Kill: ${item.Killed || item.Victim || 'Someone'} killed by ${item.Killer || 'Someone'}`, timestamp: item.Timestamp || Date.now() })));
+        }
+        if (cmdsRes.ok) {
+            const data = await cmdsRes.json();
+            if (Array.isArray(data)) combinedLogs.push(...data.map(item => ({ ...item, display: `💻 Command: ${item.Command || item.Action || 'Executed'}`, timestamp: item.Timestamp || Date.now() })));
+        }
+
+        res.json({ success: true, logs: combinedLogs.slice(0, 25) });
+    } catch (err) { 
+        console.error("[ACTIVITY FETCH ERROR]:", err.message);
+        res.json({ success: true, logs: [] }); 
+    }
 });
 
 // --- DEPARTMENTS API ENDPOINTS ---
@@ -431,7 +447,7 @@ app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
             activeServerSession = null;
             if (sessionSettings.shutdownAutoErlc && ERLC_API_KEY) {
                 const kickCmd = `:m ${sessionSettings.shutdownIngameMsg || "The server is now shutting down."}`;
-                fetch('https://api.erlc.gg/v1/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
+                fetch('https://api.erlc.gg/v2/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
             }
             if (sessionSettings.endShiftsOnShutdown) {
                 activeShifts.forEach(s => completedShifts.unshift({ id: `shift_${Date.now()}`, userId: s.userId, durationMinutes: Math.floor((Date.now() - s.startTime) / 60000), shiftType: s.department || "Default", waveId: "wave_1" }));
@@ -629,7 +645,7 @@ app.listen(PORT, '0.0.0.0', () => {
         .then(res => res.json())
         .then(data => {
             console.log('\n======================================================');
-            console.log(`🌐 [NETWORK] Your Railway Public IP is: ${data.ip}`);
+            console.log(`🌐 [NETWORK] Your Server Public IP is: ${data.ip}`);
             console.log(`   -> Copy this IP and paste it into your ER:LC API Settings!`);
             console.log('======================================================\n');
         })
