@@ -58,7 +58,18 @@ let botConfig = {
     managerRoleIds: ["1425618356912001135", "1425618591637835797", "1425632069479960686"]
 };
 
-let sessionSettings = { sessionsChannel: "", autoKickDown: true, endShiftsOnShutdown: false, startupMessage: "A new roleplay session is starting now!", pollMinVotes: 10, pollMessage: "React below if you want to start a session!", shutdownAutoEnd: true, shutdownAutoErlc: true, shutdownIngameMsg: "The server is now shutting down." };
+let sessionSettings = { 
+    sessionsChannel: "", 
+    autoKickDown: true, 
+    endShiftsOnShutdown: false, 
+    startupMessage: "A new roleplay session is starting now!", 
+    pollMinVotes: 10, 
+    pollMessage: "React below if you want to start a session!", 
+    shutdownAutoEnd: true, 
+    shutdownAutoErlc: true, 
+    shutdownIngameMsg: "The server is now shutting down." 
+};
+
 let shiftSettings = { shiftLogging: false, inGameRequirement: true, minPlayercount: 2, maxOnShift: null };
 let waveSettings = { durationType: "Weekly", requiredHours: 10, inactivityDays: 7 };
 let serverReminders = [];
@@ -293,6 +304,14 @@ app.post('/api/waves/settings', requireManagerAuth, (req, res) => {
     res.json({ success: true, settings: waveSettings });
 });
 
+// --- SESSIONS API ENDPOINTS ---
+app.get('/api/sessions/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: sessionSettings }));
+app.post('/api/sessions/settings', requireManagerAuth, (req, res) => {
+    Object.assign(sessionSettings, req.body);
+    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Session Settings Updated", color: 0xf1c40f, description: `Session settings were updated by <@${req.session.user.id}>.` });
+    res.json({ success: true, settings: sessionSettings });
+});
+
 // --- REMINDERS API ENDPOINTS ---
 app.get('/api/reminders/list', requireManagerAuth, (req, res) => res.json({ success: true, reminders: serverReminders }));
 app.post('/api/reminders/create', requireManagerAuth, (req, res) => {
@@ -486,57 +505,6 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
         sendDiscordLog(targetWebhook, embed.toJSON());
     }
     res.json({ success: true });
-});
-
-// --- SESSIONS API ENDPOINTS ---
-app.get('/api/sessions/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: sessionSettings }));
-app.post('/api/sessions/settings', requireManagerAuth, (req, res) => {
-    Object.assign(sessionSettings, req.body);
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Session Settings Updated", color: 0xf1c40f, description: `Session settings were updated by <@${req.session.user.id}>.` });
-    res.json({ success: true, settings: sessionSettings });
-});
-app.get('/api/sessions/overview', requireStaffAuth, (req, res) => { res.json({ success: true, activeSession: activeServerSession, history: sessionHistory, analytics: { uniquePlayers: 1, modCalls: 0, modCommands: 1 } }); });
-app.post('/api/sessions/poll', requireManagerAuth, async (req, res) => {
-    const { question, options } = req.body;
-    if (!sessionSettings.sessionsChannel || !discordClient) return res.status(400).json({ success: false, error: "Sessions channel not configured or bot offline." });
-    try {
-        const channel = await discordClient.channels.fetch(sessionSettings.sessionsChannel);
-        if (!channel) return res.status(404).json({ success: false, error: "Channel not found." });
-        const embed = new EmbedBuilder().setTitle(`📊 Server Poll: ${question}`).setColor(0x3498db).setDescription(options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n\n'));
-        const msg = await channel.send({ content: sessionSettings.pollMessage, embeds: [embed] });
-        const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
-        for (let i = 0; i < options.length && i < emojis.length; i++) await msg.react(emojis[i]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ success: false }); }
-});
-app.post('/api/sessions/toggle', requireManagerAuth, async (req, res) => {
-    const { action } = req.body;
-    if (action === 'START') {
-        activeServerSession = { startTime: Date.now() };
-        if (sessionSettings.sessionsChannel && discordClient) {
-            try {
-                const channel = await discordClient.channels.fetch(sessionSettings.sessionsChannel);
-                if (channel) {
-                    const embed = new EmbedBuilder().setTitle("🟢 Roleplay Session Started").setColor(0x57f287).setDescription(sessionSettings.startupMessage);
-                    await channel.send({ content: "@everyone", embeds: [embed] });
-                }
-            } catch (err) {}
-        }
-    } else {
-        if (activeServerSession) {
-            sessionHistory.unshift({ id: Date.now(), startTime: activeServerSession.startTime, endTime: Date.now() });
-            activeServerSession = null;
-            if (sessionSettings.shutdownAutoErlc && ERLC_API_KEY) {
-                const kickCmd = `:m ${sessionSettings.shutdownIngameMsg || "The server is now shutting down."}`;
-                fetch('https://api.erlc.gg/v1/server/command', { method: 'POST', headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: kickCmd }) }).catch(() => {});
-            }
-            if (sessionSettings.endShiftsOnShutdown) {
-                activeShifts.forEach(s => completedShifts.unshift({ id: `shift_${Date.now()}`, userId: s.userId, durationMinutes: Math.floor((Date.now() - s.startTime) / 60000), shiftType: s.department || "Default", waveId: "wave_1" }));
-                activeShifts = [];
-            }
-        }
-    }
-    res.json({ success: true, activeSession: activeServerSession });
 });
 
 // --- SHIFTS & ACTIVITY ENDPOINTS ---
