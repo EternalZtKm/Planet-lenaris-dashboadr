@@ -964,6 +964,7 @@
             if (tabKey === 'general') { titleEl.textContent = "General"; descEl.textContent = "Configure general server branding."; renderGeneralTab(); return; }
             if (tabKey === 'panel') { titleEl.textContent = "Panel"; descEl.textContent = "Configure moderator panel access."; renderPanelTab(); return; }
             if (tabKey === 'members-list') { titleEl.textContent = "Staff Members"; descEl.textContent = "Current staff members verified with Discord staff roles."; renderMembersListTab(); return; }
+            if (tabKey === 'activity-waves') { titleEl.textContent = "Wave Duration"; descEl.textContent = "Configure how long activity waves should last."; renderWavesTab(); return; }
             if (tabKey === 'activity-shifts') { titleEl.textContent = "Shift Settings"; descEl.textContent = "Configure shift logging and restrictions."; renderActivityShiftsTab(); return; }
             if (tabKey === 'infractions-members') { titleEl.textContent = "Staff Infractions"; descEl.textContent = "Review staff infraction records."; renderInfractionsMembersTab(); return; }
             if (tabKey === 'infractions-settings') { titleEl.textContent = "Infraction Settings"; descEl.textContent = "Configure infraction levels."; renderInfractionsSettingsTab(); return; }
@@ -1052,6 +1053,74 @@
             } catch (err) {}
         }
 
+        async function renderWavesTab() {
+            document.getElementById('sdContentContainer').innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-6">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Wave Duration</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Configure how long activity waves should last</p>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase">Duration Type</label>
+                        <p class="text-[11px] text-slate-500">How should the activity wave duration be determined?</p>
+                        <select id="waveDurationType" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
+                            <option value="Weekly">Weekly</option>
+                            <option value="Bi-Weekly">Bi-Weekly</option>
+                            <option value="Monthly">Monthly</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-slate-800">
+                        <h3 class="text-base font-bold text-white">Hour Requirements</h3>
+                        <p class="text-xs text-slate-400">Set the required hours moderators must meet</p>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase">Required Hours</label>
+                        <p class="text-[11px] text-slate-500">What is the hour requirement moderators must meet per activity wave? Leave empty to have no requirement.</p>
+                        <input type="number" id="waveRequiredHours" placeholder="e.g. 10" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800">
+                        <button onclick="alert('Custom activity requirements manager')" class="bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/80 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2">
+                            <i class="fa-solid fa-clock"></i>
+                            <span>Manage Custom Activity Requirements</span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-2 pt-2 border-t border-slate-800">
+                        <h3 class="text-base font-bold text-white">Inactivity Settings</h3>
+                        <p class="text-xs text-slate-400">Configure when members should be flagged as inactive</p>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase">Inactivity Flag Period</label>
+                        <p class="text-[11px] text-slate-500">How many days should it take for a user to be flagged as inactive if they have not done any shifts? Leave empty to not flag users as inactive.</p>
+                        <input type="number" id="waveInactivityDays" placeholder="e.g. 7" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-slate-800">
+                        <button onclick="saveWaveSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Wave Settings</button>
+                    </div>
+                </div>
+            `;
+            try {
+                const res = await fetch('/api/waves/settings');
+                const data = await res.json();
+                if (data.success && data.settings) {
+                    document.getElementById('waveDurationType').value = data.settings.durationType || "Weekly";
+                    document.getElementById('waveRequiredHours').value = data.settings.requiredHours || "";
+                    document.getElementById('waveInactivityDays').value = data.settings.inactivityDays || "";
+                }
+            } catch (err) {}
+        }
+
+        async function saveWaveSettings() {
+            const payload = {
+                durationType: document.getElementById('waveDurationType').value,
+                requiredHours: document.getElementById('waveRequiredHours').value,
+                inactivityDays: document.getElementById('waveInactivityDays').value
+            };
+            try {
+                const res = await fetch('/api/waves/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) alert("Wave settings saved successfully!");
+            } catch (err) {}
+        }
+
         async function renderActivityShiftsTab() {
             document.getElementById('sdContentContainer').innerHTML = `
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -1080,6 +1149,67 @@
         async function saveShiftSettingsUI() {
             const payload = { shiftLogging: document.getElementById('shiftLoggingToggle').checked, inGameRequirement: document.getElementById('inGameReqToggle').checked, minPlayercount: document.getElementById('shiftMinPlayers').value, maxOnShift: document.getElementById('shiftMaxOnShift').value };
             try { const res = await fetch('/api/shifts/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) alert("Shift settings saved!"); } catch (err) {}
+        }
+
+        async function renderInfractionsMembersTab() {
+            document.getElementById('sdContentContainer').innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3"><h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-gavel text-rose-400"></i> Staff Members & Infractions</h3></div>
+                    <div id="infStaffList" class="space-y-2 max-h-[600px] overflow-y-auto custom-scroll pr-1"><p class="text-xs text-slate-500 text-center py-4">Fetching staff infraction records...</p></div>
+                </div>
+            `;
+            try {
+                const res = await fetch('/api/members');
+                const data = await res.json();
+                if (data.success && data.members) {
+                    document.getElementById('infStaffList').innerHTML = data.members.map(m => `
+                        <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                            <div class="flex items-center space-x-3"><img src="${escapeHtml(m.avatarUrl)}" class="w-9 h-9 rounded-full border border-slate-700 object-cover"><div><span class="font-bold text-white block">${escapeHtml(m.displayName)} <span class="text-[10px] text-slate-400">(@${escapeHtml(m.username)})</span></span><span class="text-[10px] text-emerald-400 font-semibold">${escapeHtml(m.roleName)}</span></div></div>
+                            <div class="flex items-center space-x-3"><span class="text-[10px] px-2.5 py-1 rounded-full bg-rose-950/80 text-rose-300 border border-rose-800 font-bold">${m.activeStrikes || 0} Strikes</span><button onclick="openIssueInfractionModal('${m.id}', '${escapeHtml(m.displayName)}')" class="bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 border border-rose-800/80 px-3 py-1 rounded-lg font-bold transition">Issue Infraction</button></div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+
+        async function renderInfractionsSettingsTab() {
+            document.getElementById('sdContentContainer').innerHTML = `
+                <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold text-white">Manage Custom Infraction Levels</h3>
+                    <div class="flex space-x-2"><input type="text" id="inputNewInfractionLevel" placeholder="Enter custom level..." class="flex-1 rounded-xl px-3 py-2 text-xs"><button onclick="addCustomInfractionLevel()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition">+ Add Level</button></div>
+                    <div id="infractionLevelsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2"><p class="text-xs text-slate-500">Loading levels...</p></div>
+                </div>
+            `;
+            try {
+                const res = await fetch('/api/infractions/levels');
+                const data = await res.json();
+                if (data.success) document.getElementById('infractionLevelsContainer').innerHTML = data.levels.map((level, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs"><span class="font-bold text-white">${escapeHtml(level)}</span><button onclick="removeCustomInfractionLevel(${idx})" class="text-rose-400 hover:text-rose-300 transition text-xs"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
+            } catch (err) {}
+        }
+
+        async function openIssueInfractionModal(userId, displayName) {
+            document.getElementById('infractionTargetUserId').value = userId;
+            document.getElementById('infractionTargetUser').value = displayName;
+            try {
+                const res = await fetch('/api/infractions/levels');
+                const data = await res.json();
+                if (data.success) document.getElementById('infractionLevelSelect').innerHTML = data.levels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+            } catch (err) {}
+            document.getElementById('issueInfractionModal').classList.remove('hidden');
+        }
+        function closeIssueInfractionModal() { document.getElementById('issueInfractionModal').classList.add('hidden'); }
+        async function submitStaffInfraction(e) {
+            e.preventDefault();
+            const payload = { targetUserId: document.getElementById('infractionTargetUserId').value, targetUser: document.getElementById('infractionTargetUser').value, level: document.getElementById('infractionLevelSelect').value, reason: document.getElementById('infractionReasonText').value, proof: document.getElementById('infractionProofText').value };
+            try { const res = await fetch('/api/infractions/issue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (res.ok) { alert('Infraction Issued!'); closeIssueInfractionModal(); renderInfractionsMembersTab(); } } catch (err) {}
+        }
+        async function addCustomInfractionLevel() {
+            const name = document.getElementById('inputNewInfractionLevel').value.trim();
+            if (!name) return;
+            try { const res = await fetch('/api/infractions/levels/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
+        }
+        async function removeCustomInfractionLevel(index) {
+            try { const res = await fetch('/api/infractions/levels/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ index }) }); if (res.ok) renderInfractionsSettingsTab(); } catch (err) {}
         }
 
         async function renderRemindersTab() {
