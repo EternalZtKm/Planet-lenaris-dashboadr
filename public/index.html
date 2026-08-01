@@ -30,10 +30,16 @@
                     <h2 class="text-xl font-bold text-white txt-server-name">Planet Lenaris Hub</h2>
                     <p class="text-xs text-slate-400 mt-1">Connect your Discord account to view server features.</p>
                 </div>
-                <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg">
+                
+                <a href="/api/auth/discord/login" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg mb-3">
                     <i class="fa-brands fa-discord text-lg"></i>
                     <span>Connect Discord Account</span>
                 </a>
+
+                <button onclick="checkAuth()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-xl text-xs transition border border-slate-700 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Verify Connection</span>
+                </button>
             </div>
         </div>
 
@@ -1596,7 +1602,11 @@
                 } else { document.getElementById('loginOverlay').classList.remove('hidden'); }
             } catch (err) {}
         }
-        setInterval(checkAuth, 4000);
+
+        // We run checkAuth on page load, but REMOVED the interval that forces it every 4 seconds.
+        // Users will press the manual "Verify Connection" button if needed.
+        document.addEventListener('DOMContentLoaded', checkAuth);
+
         async function logout() { await fetch('/api/auth/logout'); window.location.href = '/'; }
 
         async function loadServerInfo() {
@@ -1844,7 +1854,10 @@
             if(dropdown && !dropdown.classList.contains('hidden')) dropdown.classList.add('hidden');
         });
 
+        // We run checkAuth on page load, but REMOVED the interval that forces it every 4 seconds.
+        // Users will press the manual "Verify Connection" button if needed.
         document.addEventListener('DOMContentLoaded', checkAuth);
+
     </script>
 </body>
 </html>
