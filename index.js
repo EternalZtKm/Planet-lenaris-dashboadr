@@ -193,7 +193,8 @@ async function requireManagerAuth(req, res, next) {
 
 app.use(cors());
 app.use(express.json());
-app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key', resave: true, saveUninitialized: true, cookie: { maxAge: 86400000, secure: true, sameSite: 'lax' } }));
+// SECURE SET TO FALSE TO PREVENT BROWSER FROM DROPPING THE COOKIE
+app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key', resave: true, saveUninitialized: true, cookie: { maxAge: 86400000, secure: false, sameSite: 'lax' } }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serverConfig.serverIcon));
 
