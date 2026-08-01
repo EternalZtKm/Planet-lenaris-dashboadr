@@ -60,6 +60,16 @@ let botConfig = {
     waveChannel: "",
     demotionChannel: "",
     staffReviewChannel: "",
+    chanShift: "",
+    chanMod: "",
+    chanLoa: "",
+    chanVote: "",
+    chanReview: "",
+    chanAudit: "",
+    chanWaveEnd: "",
+    chanStaffReview: "",
+    chanPromo: "",
+    chanDemo: "",
     managerRoleIds: ["1425618356912001135", "1425618591637835797", "1425632069479960686"]
 };
 
@@ -77,6 +87,7 @@ let sessionSettings = {
 
 let shiftSettings = { shiftLogging: false, inGameRequirement: true, minPlayercount: 2, maxOnShift: null };
 let waveSettings = { durationType: "Weekly", requiredHours: 10, inactivityDays: 7 };
+let nicknameSettings = { nickStaff: "ON SHIFT |", nickLoa: "LOA |", nickLdot: "LDOT |", nickLhp: "LHP |", nickLfd: "LFD |", nickLledp: "LLEDP |" };
 let serverReminders = [];
 
 let activeServerSession = null; 
@@ -136,6 +147,33 @@ async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
         const memberData = await memberRes.json();
         return (memberData.roles || []).includes(verifiedRoleId);
     } catch (err) { return false; }
+}
+
+// Function to update a discord user's nickname based on the prefix
+async function updateDiscordNickname(userId, newPrefix) {
+    if (!BOT_TOKEN || !GUILD_ID) return;
+    try {
+        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
+        if (!memberRes.ok) return;
+        const memberData = await memberRes.json();
+        let currentNick = memberData.nick || memberData.user.global_name || memberData.user.username;
+        
+        // Remove old prefixes (anything before the first '|')
+        if (currentNick.includes('|')) {
+            currentNick = currentNick.substring(currentNick.indexOf('|') + 1).trim();
+        }
+        
+        let newNick = newPrefix ? `${newPrefix} ${currentNick}` : currentNick;
+        
+        // Ensure nickname is not over 32 chars
+        if (newNick.length > 32) newNick = newNick.substring(0, 32);
+
+        await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bot ${BOT_TOKEN}` },
+            body: JSON.stringify({ nick: newNick })
+        });
+    } catch (err) { console.error("[NICKNAME SYNC ERROR]:", err.message); }
 }
 
 async function requireStaffAuth(req, res, next) {
@@ -324,11 +362,21 @@ app.get('/api/discord/channels', requireManagerAuth, async (req, res) => {
     }
 });
 
+// --- DISCORD NICKNAMES ENDPOINTS ---
+app.get('/api/discord/nicknames', requireManagerAuth, (req, res) => {
+    res.json({ success: true, settings: nicknameSettings });
+});
+app.post('/api/discord/nicknames', requireManagerAuth, (req, res) => {
+    Object.assign(nicknameSettings, req.body);
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Nicknames Updated", color: 0xf1c40f, description: `Discord nickname prefixes updated by <@${req.session.user.id}>.` });
+    res.json({ success: true, settings: nicknameSettings });
+});
+
 // --- ACTIVITY WAVES API ENDPOINTS ---
 app.get('/api/waves/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: waveSettings }));
 app.post('/api/waves/settings', requireManagerAuth, (req, res) => {
     Object.assign(waveSettings, req.body);
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Wave Settings Updated", color: 0xf1c40f, description: `Activity wave configuration was updated by <@${req.session.user.id}>.` });
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Wave Settings Updated", color: 0xf1c40f, description: `Activity wave configuration was updated by <@${req.session.user.id}>.` });
     res.json({ success: true, settings: waveSettings });
 });
 
@@ -336,7 +384,7 @@ app.post('/api/waves/settings', requireManagerAuth, (req, res) => {
 app.get('/api/sessions/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: sessionSettings }));
 app.post('/api/sessions/settings', requireManagerAuth, (req, res) => {
     Object.assign(sessionSettings, req.body);
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Session Settings Updated", color: 0xf1c40f, description: `Session settings were updated by <@${req.session.user.id}>.` });
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Session Settings Updated", color: 0xf1c40f, description: `Session settings were updated by <@${req.session.user.id}>.` });
     res.json({ success: true, settings: sessionSettings });
 });
 app.get('/api/sessions/overview', requireStaffAuth, (req, res) => { res.json({ success: true, activeSession: activeServerSession, history: sessionHistory, analytics: { uniquePlayers: 1, modCalls: 0, modCommands: 1 } }); });
@@ -417,7 +465,7 @@ app.post('/api/erlc/command', requireStaffAuth, async (req, res) => {
         });
         
         if (resp.ok) {
-            sendDiscordLog(botConfig.auditWebhook, { title: "💻 ER:LC Command Executed", color: 0x3498db, description: `**Command:** \`${command}\`\n**Executed By:** <@${req.session.user.id}>` });
+            sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "💻 ER:LC Command Executed", color: 0x3498db, description: `**Command:** \`${command}\`\n**Executed By:** <@${req.session.user.id}>` });
             res.json({ success: true }); 
         } else {
             res.status(400).json({ success: false, error: "ER:LC API rejected the command." });
@@ -438,7 +486,7 @@ app.post('/api/punishments/create', requireStaffAuth, async (req, res) => {
     punishmentLogs.unshift(log);
 
     const embed = new EmbedBuilder().setTitle(`🔨 Punishment Logged: ${punishmentType}`).setColor(0xed4245).addFields({ name: "Target Player", value: targetUser, inline: true }, { name: "Roblox ID", value: log.robloxId, inline: true }, { name: "Issued By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason || "No reason provided", inline: false });
-    sendDiscordLog(botConfig.punishmentWebhook, embed.toJSON());
+    sendDiscordLog(botConfig.punishmentWebhook || botConfig.chanMod, embed.toJSON());
 
     if (punishmentType.toLowerCase().includes("warn") && ERLC_API_KEY) {
         const warnCount = punishmentLogs.filter(l => l.targetUser.toLowerCase() === targetUser.toLowerCase() && l.punishmentType.toLowerCase().includes("warn") && !l.removed).length;
@@ -460,7 +508,7 @@ app.post('/api/punishments/remove-warning', requireStaffAuth, (req, res) => {
     const log = punishmentLogs.find(l => l.id == req.body.logId);
     if (log) {
         log.removed = true;
-        sendDiscordLog(botConfig.auditWebhook, { title: "🗑️ Punishment Removed", color: 0xe67e22, description: `A punishment log for **${log.targetUser}** was removed by <@${req.session.user.id}>.` });
+        sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🗑️ Punishment Removed", color: 0xe67e22, description: `A punishment log for **${log.targetUser}** was removed by <@${req.session.user.id}>.` });
     }
     res.json({ success: true });
 });
@@ -469,14 +517,14 @@ app.get('/api/punishments/list', requireStaffAuth, (req, res) => res.json({ succ
 
 app.post('/api/assistance/request', requireStaffAuth, (req, res) => {
     const supportPing = SUPPORT_ROLE_IDS.map(id => `<@&${id}>`).join(' ');
-    sendDiscordLog(botConfig.assistanceWebhook, { title: "🚨 Staff Assistance Requested", color: 15548997, fields: [{ name: "Requested By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Details", value: req.body.reason, inline: false }] }, `🚨 **STAFF ASSISTANCE NEEDED**\n${supportPing}`);
+    sendDiscordLog(botConfig.assistanceWebhook || botConfig.chanMod, { title: "🚨 Staff Assistance Requested", color: 15548997, fields: [{ name: "Requested By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Details", value: req.body.reason, inline: false }] }, `🚨 **STAFF ASSISTANCE NEEDED**\n${supportPing}`);
     res.json({ success: true });
 });
 
 app.post('/api/support/create', async (req, res) => {
     const { subject, message } = req.body;
     const user = req.session.user || { id: "Unknown", displayName: "Guest User" };
-    sendDiscordLog(botConfig.assistanceWebhook, {
+    sendDiscordLog(botConfig.assistanceWebhook || botConfig.chanMod, {
         title: "🎫 New Support Ticket",
         color: 0x3498db,
         fields: [{ name: "User", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Subject", value: subject, inline: false }, { name: "Message", value: message, inline: false }]
@@ -525,7 +573,7 @@ app.post('/api/departments/update', requireManagerAuth, (req, res) => {
     if (autoClockOutHours !== undefined) dept.autoClockOutHours = parseInt(autoClockOutHours) || 4;
     if (inGameReq !== undefined) dept.inGameReq = !!inGameReq;
 
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Department Updated", color: 0xf1c40f, description: `**${dept.name}** settings were updated by <@${req.session.user.id}>.` });
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Department Updated", color: 0xf1c40f, description: `**${dept.name}** settings were updated by <@${req.session.user.id}>.` });
     res.json({ success: true, department: dept });
 });
 
@@ -540,13 +588,21 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
     if (!isVerified && !user.isManager) return res.status(403).json({ success: false });
 
     const existingShift = activeShifts.find(s => s.userId === user.id && s.deptId === deptId);
-    const targetWebhook = dept.webhookUrl || botConfig.shiftWebhook;
+    const targetWebhook = dept.webhookUrl || botConfig.shiftWebhook || botConfig.chanShift;
 
     if (action === 'CLOCK_IN') {
         activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
         activeShifts.push({ userId: user.id, username: user.username, robloxName: user.displayName || user.username, avatar: user.avatar, startTime: Date.now(), department: dept.shortName, deptId: dept.id, isOnBreak: false, breakStart: null, totalBreakMs: 0 });
         const embed = new EmbedBuilder().setTitle(`🟢 Department Shift Clocked In: ${dept.shortName}`).setColor(0x57f287).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Department", value: dept.name, inline: true });
         sendDiscordLog(targetWebhook, embed.toJSON());
+        
+        let deptPrefix = "";
+        if (dept.shortName === "LDOT") deptPrefix = nicknameSettings.nickLdot;
+        else if (dept.shortName === "LHP") deptPrefix = nicknameSettings.nickLhp;
+        else if (dept.shortName === "LFD") deptPrefix = nicknameSettings.nickLfd;
+        else if (dept.shortName === "LLEDP") deptPrefix = nicknameSettings.nickLledp;
+        if (deptPrefix) updateDiscordNickname(user.id, deptPrefix);
+
     } else if (action === 'TOGGLE_BREAK') {
         if (existingShift) {
             if (existingShift.isOnBreak) { 
@@ -572,6 +628,7 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
         activeShifts = activeShifts.filter(s => !(s.userId === user.id && s.deptId === deptId));
         const embed = new EmbedBuilder().setTitle(`🔴 Department Shift Clocked Out: ${dept.shortName}`).setColor(0xed4245).addFields({ name: "Worker", value: `${user.displayName} (<@${user.id}>)`, inline: true }, { name: "Department", value: dept.name, inline: true });
         sendDiscordLog(targetWebhook, embed.toJSON());
+        updateDiscordNickname(user.id, ""); // Reset prefix
     }
     res.json({ success: true });
 });
@@ -580,7 +637,7 @@ app.post('/api/departments/shift/toggle', async (req, res) => {
 app.get('/api/shifts/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: shiftSettings }));
 app.post('/api/shifts/settings', requireManagerAuth, (req, res) => { 
     Object.assign(shiftSettings, req.body); 
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Shift Settings Updated", color: 0xf1c40f, description: `Shift settings were updated by <@${req.session.user.id}>.` });
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Shift Settings Updated", color: 0xf1c40f, description: `Shift settings were updated by <@${req.session.user.id}>.` });
     res.json({ success: true, settings: shiftSettings }); 
 });
 app.get('/api/shifts/all', requireManagerAuth, (req, res) => res.json({ success: true, shifts: completedShifts }));
@@ -604,7 +661,9 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
         activeShifts = activeShifts.filter(s => s.userId !== user.id);
         activeShifts.push({ userId: user.id, username: user.username, robloxName: user.displayName, avatar: user.avatar, startTime: Date.now(), department: department || "General Staff", isOnBreak: false, breakStart: null, totalBreakMs: 0 });
         const embed = new EmbedBuilder().setTitle(`🟢 General Shift Clocked In`).setColor(0x57f287).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
-        sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+        sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
+        if (nicknameSettings.nickStaff) updateDiscordNickname(user.id, nicknameSettings.nickStaff);
+
     } else if (action === 'TOGGLE_BREAK') {
         if (existingShift) {
             if (existingShift.isOnBreak) { 
@@ -612,12 +671,12 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
                 existingShift.totalBreakMs += (Date.now() - existingShift.breakStart); 
                 existingShift.breakStart = null; 
                 const embed = new EmbedBuilder().setTitle(`☕ General Break Ended`).setColor(0x3498db).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
-                sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+                sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
             } else { 
                 existingShift.isOnBreak = true; 
                 existingShift.breakStart = Date.now(); 
                 const embed = new EmbedBuilder().setTitle(`☕ General Break Started`).setColor(0xf1c40f).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
-                sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+                sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
             }
         }
     } else if (action === 'CLOCK_OUT') {
@@ -627,9 +686,10 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
             const durationMs = (Date.now() - existingShift.startTime) - finalBreakMs;
             completedShifts.unshift({ id: `shift_${Date.now()}`, userId: user.id, durationMinutes: Math.max(0, Math.floor(durationMs / 60000)), shiftType: existingShift.department || "Default", waveId: "wave_1" });
             const embed = new EmbedBuilder().setTitle(`🔴 General Shift Clocked Out`).setColor(0xed4245).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
-            sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+            sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
         }
         activeShifts = activeShifts.filter(s => s.userId !== user.id);
+        updateDiscordNickname(user.id, ""); // Reset prefix
     }
     res.json({ success: true });
 });
@@ -638,7 +698,8 @@ app.post('/api/shifts/force-end', requireManagerAuth, (req, res) => {
     const { targetUserId } = req.body;
     activeShifts = activeShifts.filter(s => s.userId !== targetUserId);
     const embed = new EmbedBuilder().setTitle(`🔴 Staff Shift Force-Ended`).setColor(0xed4245).addFields({ name: "Staff", value: `<@${targetUserId}>`, inline: true }, { name: "Ended By", value: `<@${req.session.user.id}>`, inline: true });
-    sendDiscordLog(botConfig.shiftWebhook, embed.toJSON());
+    sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
+    updateDiscordNickname(targetUserId, "");
     res.json({ success: true });
 });
 
@@ -647,12 +708,12 @@ app.get('/api/settings/general', (req, res) => res.json({ success: true, config:
 app.get('/api/settings/webhooks', requireManagerAuth, (req, res) => res.json({ success: true, webhooks: botConfig }));
 app.post('/api/settings/general', requireManagerAuth, (req, res) => { 
     Object.assign(serverConfig, req.body); 
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ General Settings Updated", color: 0xf1c40f, description: `General configuration was updated by <@${req.session.user.id}>.` });
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ General Settings Updated", color: 0xf1c40f, description: `General configuration was updated by <@${req.session.user.id}>.` });
     res.json({ success: true, config: serverConfig }); 
 });
 app.post('/api/settings/webhooks', requireManagerAuth, (req, res) => { 
     Object.assign(botConfig, req.body); 
-    sendDiscordLog(botConfig.auditWebhook, { title: "🛠️ Webhook Settings Updated", color: 0xf1c40f, description: `Webhook URLs were updated by <@${req.session.user.id}>.` });
+    sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Webhook & Channel Settings Updated", color: 0xf1c40f, description: `Settings were updated by <@${req.session.user.id}>.` });
     res.json({ success: true, webhooks: botConfig }); 
 });
 app.get('/api/notifications/list', (req, res) => res.json({ success: true, notifications: notificationsList }));
@@ -684,7 +745,7 @@ app.post('/api/infractions/issue', requireManagerAuth, (req, res) => {
     const { targetUserId, targetUser, level, reason, proof } = req.body;
     staffInfractionLogs.unshift({ id: `inf_${Date.now()}`, targetUserId, targetUser, level, reason, proof: proof || "None Provided", issuedBy: req.session.user.displayName, createdAt: new Date().toLocaleString() });
     const embed = new EmbedBuilder().setTitle(`⚠️ Staff Infraction Issued`).setColor(0xed4245).addFields({ name: "Staff Member", value: targetUser, inline: true }, { name: "Level", value: level, inline: true }, { name: "Issued By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason, inline: false }, { name: "Proof", value: proof || "None Provided", inline: false });
-    sendDiscordLog(botConfig.infractionWebhook, embed.toJSON());
+    sendDiscordLog(botConfig.infractionWebhook || botConfig.chanMod, embed.toJSON());
     res.json({ success: true });
 });
 
@@ -692,7 +753,7 @@ app.post('/api/infractions/promote', requireManagerAuth, (req, res) => {
     const { targetUserId, targetUser, newRole, reason } = req.body;
     staffPromotionLogs.unshift({ id: `prom_${Date.now()}`, targetUserId, targetUser, newRole, reason, promotedBy: req.session.user.displayName, createdAt: new Date().toLocaleString() });
     const embed = new EmbedBuilder().setTitle(`📈 Staff Promotion`).setColor(0x57f287).addFields({ name: "Staff Member", value: targetUser, inline: true }, { name: "New Rank", value: newRole, inline: true }, { name: "Updated By", value: `<@${req.session.user.id}>`, inline: true }, { name: "Reason", value: reason || "None Provided", inline: false });
-    sendDiscordLog(botConfig.promotionWebhook, embed.toJSON());
+    sendDiscordLog(botConfig.promotionWebhook || botConfig.chanPromo, embed.toJSON());
     res.json({ success: true });
 });
 
@@ -753,7 +814,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
             const rating = options.getInteger('rating');
             const reviewEmbed = new EmbedBuilder().setTitle("Lenaris Staff Reviews").setColor(0x3498db).setDescription(`**Staff member:**\n<@${targetUser.id}>\n\n**Rating:**\n${"⭐".repeat(rating)}\n\n**Note:** ${options.getString('note')}`);
             await interaction.reply({ embeds: [reviewEmbed] });
-            if (botConfig.reviewWebhook) sendDiscordLog(botConfig.reviewWebhook, reviewEmbed.toJSON());
+            if (botConfig.reviewWebhook || botConfig.chanStaffReview) sendDiscordLog(botConfig.reviewWebhook || botConfig.chanStaffReview, reviewEmbed.toJSON());
             return;
         }
 
@@ -774,7 +835,7 @@ if (BOT_TOKEN && CLIENT_ID && GUILD_ID) {
 
             staffInfractionLogs.unshift({ id: `inf_${Date.now()}`, targetUserId: targetUser.id, targetUser: targetUser.tag, level, reason, proof, issuedBy: interaction.user.tag, createdAt: new Date().toLocaleString() });
             const embed = new EmbedBuilder().setTitle(`⚠️ Staff Infraction Issued`).setColor(0xed4245).addFields({ name: "Staff Member", value: `<@${targetUser.id}>`, inline: true }, { name: "Level", value: level, inline: true }, { name: "Issued By", value: `<@${interaction.user.id}>`, inline: true }, { name: "Reason", value: reason, inline: false }, { name: "Proof", value: proof, inline: false });
-            sendDiscordLog(botConfig.infractionWebhook, embed.toJSON());
+            sendDiscordLog(botConfig.infractionWebhook || botConfig.chanMod, embed.toJSON());
             return interaction.reply({ content: `✅ Successfully issued ${level} infraction to <@${targetUser.id}>.`, ephemeral: true });
         }
 
