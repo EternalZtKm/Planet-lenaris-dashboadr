@@ -219,7 +219,8 @@ app.use(express.json());
 app.use(session({
     secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
     resave: true,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: { maxAge: 86400000, secure: false, sameSite: 'lax' }
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
