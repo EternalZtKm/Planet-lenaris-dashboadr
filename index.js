@@ -178,6 +178,13 @@ async function updateDiscordNickname(userId, newPrefix) {
 
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
+    
+    // DEV BYPASS: Auto-Approve if missing Bot Token during setup
+    if (!BOT_TOKEN || !GUILD_ID) {
+        req.session.user.isManager = true;
+        return next();
+    }
+
     const check = await verifyUserRoleLive(req.session.user.id);
     if (!check || !check.hasRole) return res.status(403).json({ success: false, error: "Access Denied" });
     req.session.user.isManager = check.isManager;
@@ -186,6 +193,13 @@ async function requireStaffAuth(req, res, next) {
 
 async function requireManagerAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
+
+    // DEV BYPASS: Auto-Approve if missing Bot Token during setup
+    if (!BOT_TOKEN || !GUILD_ID) {
+        req.session.user.isManager = true;
+        return next();
+    }
+
     const check = await verifyUserRoleLive(req.session.user.id);
     if (!check || !check.isManager) return res.status(403).json({ success: false, error: "Management Access Required" });
     next();
@@ -193,8 +207,15 @@ async function requireManagerAuth(req, res, next) {
 
 app.use(cors());
 app.use(express.json());
-// SECURE SET TO FALSE TO PREVENT BROWSER FROM DROPPING THE COOKIE
-app.use(session({ secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key', resave: true, saveUninitialized: true, cookie: { maxAge: 86400000, secure: false, sameSite: 'lax' } }));
+
+// Set secure to false to prevent the browser from eating the cookie, preventing login loops
+app.use(session({ 
+    secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key', 
+    resave: false, 
+    saveUninitialized: false, 
+    cookie: { maxAge: 86400000, secure: false, httpOnly: true } 
+}));
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get(['/Logo.png', '/logo.png', '/api/logo'], (req, res) => res.redirect(serverConfig.serverIcon));
 
@@ -305,26 +326,43 @@ async function pollErlcPlayers() {
 setInterval(pollErlcPlayers, 10000);
 
 // --- AUTHENTICATION ROUTES ---
-app.get('/api/auth/discord/login', (req, res) => res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`));
+app.get('/api/auth/discord/login', (req, res) => {
+    // DEV BYPASS: If no Client ID is provided, auto-login as Developer
+    if (!CLIENT_ID) {
+        req.session.user = { id: "123456789", username: "DevBypassUser", displayName: "Developer", avatar: "https://cdn.discordapp.com/embed/avatars/0.png" };
+        req.session.verifiedRole = true;
+        return req.session.save(() => res.redirect('/?discord=connected&devmode=true'));
+    }
+    res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`);
+});
+
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
-    if (!code) return res.redirect('/?auth=failed');
+    if (!code) return res.redirect('/?auth=failed_nocode');
     try {
         const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
             method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI })
         });
         const tokenData = await tokenRes.json();
-        if (!tokenData.access_token) return res.redirect('/?auth=failed');
+        if (!tokenData.access_token) return res.redirect('/?auth=failed_invalidtoken');
         const userRes = await fetch('https://discord.com/api/v10/users/@me', { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
         const userData = await userRes.json();
         req.session.user = { id: userData.id, username: userData.username, displayName: userData.global_name || userData.username, avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' };
         req.session.save(() => res.redirect('/?discord=connected'));
-    } catch (err) { res.redirect('/?auth=failed'); }
+    } catch (err) { res.redirect('/?auth=failed_crash'); }
 });
 
 app.post('/api/auth/verify-role', async (req, res) => {
     if (!req.session || !req.session.user) return res.status(400).json({ success: false });
+
+    // DEV BYPASS: If no bot token, automatically grant manager role for UI testing
+    if (!BOT_TOKEN || !GUILD_ID) {
+        req.session.user.isManager = true;
+        req.session.verifiedRole = true;
+        return req.session.save(() => res.json({ success: true, user: req.session.user }));
+    }
+
     const check = await verifyUserRoleLive(req.session.user.id);
     if (!check || !check.hasRole) return res.status(403).json({ success: false });
     req.session.user.isManager = check.isManager;
@@ -334,6 +372,13 @@ app.post('/api/auth/verify-role', async (req, res) => {
 
 app.get('/api/auth/user', async (req, res) => {
     if (req.session && req.session.user) {
+        // DEV BYPASS: If no bot token, approve them to let them into the dashboard
+        if (!BOT_TOKEN || !GUILD_ID) {
+            req.session.verifiedRole = true;
+            req.session.user.isManager = true;
+            return res.json({ success: true, user: req.session.user });
+        }
+
         const check = await verifyUserRoleLive(req.session.user.id);
         if (check && check.hasRole) {
             req.session.verifiedRole = true;
