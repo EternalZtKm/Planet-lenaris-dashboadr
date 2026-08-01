@@ -23,15 +23,8 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 
 const REQUIRED_ROLE_ID = "1427083014147407995"; 
 const REVIEW_CHANNEL_ID = "1424047205517492375"; 
+const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.up.railway.app/api/auth/discord/callback";
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
-
-// Dynamically resolve the Redirect URI to prevent OAuth loops on Localhost vs Hosting
-function getRedirectUri(req) {
-    if (process.env.REDIRECT_URI) return process.env.REDIRECT_URI;
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    return `${protocol}://${host}/api/auth/discord/callback`;
-}
 
 // --- GLOBAL STORES ---
 let departmentsData = [
@@ -140,11 +133,17 @@ async function sendDiscordLog(destination, embed, content = null) {
 async function verifyUserRoleLive(userId) {
     try {
         const memberRes = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, { headers: { Authorization: `Bot ${BOT_TOKEN}` } });
-        if (!memberRes.ok) return false;
+        if (!memberRes.ok) {
+            console.error(`[ROLE CHECK ERROR] Status: ${memberRes.status}`);
+            return { error: `Discord API returned ${memberRes.status}. Ensure the bot is in your server and Bot Token is valid.` };
+        }
         const memberData = await memberRes.json();
         const userRoles = memberData.roles || [];
         return { hasRole: userRoles.includes(REQUIRED_ROLE_ID), isManager: userRoles.some(r => botConfig.managerRoleIds.includes(r)), roles: userRoles, nickname: memberData.nick || null };
-    } catch (err) { return false; }
+    } catch (err) { 
+        console.error(`[ROLE CHECK CRASH] ${err.message}`);
+        return { error: "Failed to connect to Discord API." }; 
+    }
 }
 
 async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
@@ -156,7 +155,6 @@ async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
     } catch (err) { return false; }
 }
 
-// Function to update a discord user's nickname based on the prefix
 async function updateDiscordNickname(userId, newPrefix) {
     if (!BOT_TOKEN || !GUILD_ID) return;
     try {
@@ -165,14 +163,11 @@ async function updateDiscordNickname(userId, newPrefix) {
         const memberData = await memberRes.json();
         let currentNick = memberData.nick || memberData.user.global_name || memberData.user.username;
         
-        // Remove old prefixes (anything before the first '|')
         if (currentNick.includes('|')) {
             currentNick = currentNick.substring(currentNick.indexOf('|') + 1).trim();
         }
         
         let newNick = newPrefix ? `${newPrefix} ${currentNick}` : currentNick;
-        
-        // Ensure nickname is not over 32 chars
         if (newNick.length > 32) newNick = newNick.substring(0, 32);
 
         await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -180,47 +175,41 @@ async function updateDiscordNickname(userId, newPrefix) {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bot ${BOT_TOKEN}` },
             body: JSON.stringify({ nick: newNick })
         });
-    } catch (err) { console.error("[NICKNAME SYNC ERROR]:", err.message); }
+    } catch (err) {}
 }
 
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
-    
-    // DEV BYPASS: Auto-Approve if missing Bot Token during setup
     if (!BOT_TOKEN || !GUILD_ID) {
         req.session.user.isManager = true;
         return next();
     }
-
     const check = await verifyUserRoleLive(req.session.user.id);
-    if (!check || !check.hasRole) return res.status(403).json({ success: false, error: "Access Denied" });
+    if (check.error || !check.hasRole) return res.status(403).json({ success: false, error: check.error || "Access Denied" });
     req.session.user.isManager = check.isManager;
     next();
 }
 
 async function requireManagerAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
-
-    // DEV BYPASS: Auto-Approve if missing Bot Token during setup
     if (!BOT_TOKEN || !GUILD_ID) {
         req.session.user.isManager = true;
         return next();
     }
-
     const check = await verifyUserRoleLive(req.session.user.id);
-    if (!check || !check.isManager) return res.status(403).json({ success: false, error: "Management Access Required" });
+    if (check.error || !check.isManager) return res.status(403).json({ success: false, error: check.error || "Management Access Required" });
     next();
 }
 
 app.use(cors());
 app.use(express.json());
 
-// REVERTED TO BASIC SESSION CONFIG - Removes secure enforcing to fix login loops across domains
+// REVERTED TO BASIC SESSION CONFIG - Removes secure enforcing to fix login loops
 app.use(session({
     secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
     resave: true,
     saveUninitialized: true,
-    cookie: { maxAge: 86400000, secure: false, sameSite: 'lax' }
+    cookie: { maxAge: 86400000, secure: false } // Force secure false to prevent dropped cookies
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -334,38 +323,43 @@ setInterval(pollErlcPlayers, 10000);
 
 // --- AUTHENTICATION ROUTES ---
 app.get('/api/auth/discord/login', (req, res) => {
-    // DEV BYPASS: If no Client ID is provided, auto-login as Developer
-    if (!CLIENT_ID) {
+    // DEV BYPASS
+    if (!CLIENT_ID || !CLIENT_SECRET) {
         req.session.user = { id: "123456789", username: "DevBypassUser", displayName: "Developer", avatar: "https://cdn.discordapp.com/embed/avatars/0.png" };
         req.session.verifiedRole = true;
         return req.session.save(() => res.redirect('/?discord=connected&devmode=true'));
     }
-    const redirect = getRedirectUri(req);
-    res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&scope=identify`);
+    // Hardcoded old redirect URI
+    res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`);
 });
 
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     if (!code) return res.redirect('/?auth=failed_nocode');
     try {
-        const redirect = getRedirectUri(req);
         const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
             method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'authorization_code', code, redirect_uri: redirect })
+            body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI })
         });
         const tokenData = await tokenRes.json();
-        if (!tokenData.access_token) return res.redirect('/?auth=failed_invalidtoken');
+        if (!tokenData.access_token) {
+            console.error("[OAUTH EXCH ERROR]", tokenData);
+            return res.redirect('/?auth=failed_invalidtoken');
+        }
         const userRes = await fetch('https://discord.com/api/v10/users/@me', { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
         const userData = await userRes.json();
         req.session.user = { id: userData.id, username: userData.username, displayName: userData.global_name || userData.username, avatar: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png' };
         req.session.save(() => res.redirect('/?discord=connected'));
-    } catch (err) { res.redirect('/?auth=failed_crash'); }
+    } catch (err) { 
+        console.error("[OAUTH CRASH]", err);
+        res.redirect('/?auth=failed_crash'); 
+    }
 });
 
+// Mod Panel Gates - Improved Error Logging
 app.post('/api/auth/verify-role', async (req, res) => {
-    if (!req.session || !req.session.user) return res.status(400).json({ success: false });
+    if (!req.session || !req.session.user) return res.status(400).json({ success: false, message: "No active login session." });
 
-    // DEV BYPASS: If no bot token, automatically grant manager role for UI testing
     if (!BOT_TOKEN || !GUILD_ID) {
         req.session.user.isManager = true;
         req.session.verifiedRole = true;
@@ -373,7 +367,9 @@ app.post('/api/auth/verify-role', async (req, res) => {
     }
 
     const check = await verifyUserRoleLive(req.session.user.id);
-    if (!check || !check.hasRole) return res.status(403).json({ success: false });
+    if (check.error) return res.status(403).json({ success: false, message: check.error });
+    if (!check.hasRole) return res.status(403).json({ success: false, message: `Access Denied: You do not have the required staff role (ID: ${REQUIRED_ROLE_ID}).` });
+    
     req.session.user.isManager = check.isManager;
     req.session.verifiedRole = true;
     req.session.save(() => res.json({ success: true, user: req.session.user }));
@@ -381,15 +377,13 @@ app.post('/api/auth/verify-role', async (req, res) => {
 
 app.get('/api/auth/user', async (req, res) => {
     if (req.session && req.session.user) {
-        // DEV BYPASS: If no bot token, approve them to let them into the dashboard
         if (!BOT_TOKEN || !GUILD_ID) {
             req.session.verifiedRole = true;
             req.session.user.isManager = true;
             return res.json({ success: true, user: req.session.user });
         }
-
         const check = await verifyUserRoleLive(req.session.user.id);
-        if (check && check.hasRole) {
+        if (check && !check.error && check.hasRole) {
             req.session.verifiedRole = true;
             req.session.user.isManager = check.isManager;
             return res.json({ success: true, user: req.session.user });
@@ -412,15 +406,11 @@ app.get('/api/discord/channels', requireManagerAuth, async (req, res) => {
         const channels = await resp.json();
         const textChannels = channels.filter(c => c.type === 0 || c.type === 5).map(c => ({ id: c.id, name: c.name }));
         res.json({ success: true, channels: textChannels });
-    } catch(e) {
-        res.json({ success: false, channels: [] });
-    }
+    } catch(e) { res.json({ success: false, channels: [] }); }
 });
 
 // --- DISCORD NICKNAMES ENDPOINTS ---
-app.get('/api/discord/nicknames', requireManagerAuth, (req, res) => {
-    res.json({ success: true, settings: nicknameSettings });
-});
+app.get('/api/discord/nicknames', requireManagerAuth, (req, res) => { res.json({ success: true, settings: nicknameSettings }); });
 app.post('/api/discord/nicknames', requireManagerAuth, (req, res) => {
     Object.assign(nicknameSettings, req.body);
     sendDiscordLog(botConfig.auditWebhook || botConfig.chanAudit, { title: "🛠️ Nicknames Updated", color: 0xf1c40f, description: `Discord nickname prefixes updated by <@${req.session.user.id}>.` });
@@ -730,7 +720,7 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
             } else { 
                 existingShift.isOnBreak = true; 
                 existingShift.breakStart = Date.now(); 
-                const embed = new EmbedBuilder().setTitle(`☕ General Break Started`).setColor(0xf1c40f).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
+                const embed = new Builder().setTitle(`☕ General Break Started`).setColor(0xf1c40f).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
                 sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
             }
         }
