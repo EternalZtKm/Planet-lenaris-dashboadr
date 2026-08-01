@@ -919,7 +919,7 @@
                 const data = await res.json();
                 if (data.success) { closeModPanelGate(); switchView('modPanel'); }
                 else {
-                    document.getElementById('gateErrorBox').textContent = "Access Denied: You do not have the required Staff role in the Discord server.";
+                    document.getElementById('gateErrorBox').textContent = data.message || "Access Denied: You do not have the required Staff role in the Discord server.";
                     document.getElementById('gateErrorBox').classList.remove('hidden');
                 }
             } catch (err) {
@@ -1579,6 +1579,11 @@
         async function toggleDepartmentActive(deptId, active) { try { const res = await fetch('/api/departments/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deptId, active }) }); if (res.ok) renderDepartmentsOverviewTab(); } catch (err) {} }
 
         async function checkAuth() {
+            // Added direct API manual verify state processing to show exact failures
+            const btn = document.querySelector('button[onclick="checkAuth()"]');
+            let ogText = "";
+            if(btn) { ogText = btn.innerHTML; btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Checking...</span>`; }
+
             try {
                 const res = await fetch('/api/auth/user');
                 const data = await res.json();
@@ -1599,8 +1604,14 @@
                     document.getElementById('loginOverlay').classList.add('hidden');
                     document.getElementById('userProfile').classList.remove('hidden');
                     fetchGeneralSettings(); loadHubDepartments();
-                } else { document.getElementById('loginOverlay').classList.remove('hidden'); }
-            } catch (err) {}
+                } else { 
+                    document.getElementById('loginOverlay').classList.remove('hidden'); 
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+            }
+
+            if(btn) btn.innerHTML = ogText;
         }
 
         // We run checkAuth on page load, but REMOVED the interval that forces it every 4 seconds.
@@ -1853,10 +1864,6 @@
             const dropdown = document.getElementById('notifDropdown');
             if(dropdown && !dropdown.classList.contains('hidden')) dropdown.classList.add('hidden');
         });
-
-        // We run checkAuth on page load, but REMOVED the interval that forces it every 4 seconds.
-        // Users will press the manual "Verify Connection" button if needed.
-        document.addEventListener('DOMContentLoaded', checkAuth);
 
     </script>
 </body>
