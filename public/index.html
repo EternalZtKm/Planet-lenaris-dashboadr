@@ -759,6 +759,23 @@
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Message *</label>
                     <textarea id="remMessage" required rows="3" placeholder="Reminder message content..." class="w-full rounded-lg px-3 py-2 text-xs"></textarea>
                 </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Linked Action</label>
+                    <p class="text-[10px] text-slate-500 mb-1">What action should the staff be prompted to complete?</p>
+                    <select id="remLinkedAction" class="w-full rounded-lg px-3 py-2 text-xs">
+                        <option value="">Select Action</option>
+                        <option value="Server Bump">Server Bump</option>
+                    </select>
+                </div>
+
+                <div class="flex items-start space-x-2 pt-1 pb-1">
+                    <input type="checkbox" id="remPostErlc" checked class="mt-1 accent-emerald-500 rounded cursor-pointer">
+                    <div>
+                        <label class="block text-xs font-bold text-white">Post message in ER:LC</label>
+                        <span class="text-[10px] text-slate-400">Should we integrate this reminder within ER:LC?</span>
+                    </div>
+                </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">ER:LC Type *</label>
@@ -777,6 +794,14 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Minimum ER:LC Players</label>
                     <input type="number" id="remMinPlayers" min="0" value="1" class="w-full rounded-lg px-3 py-2 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Discord Channel</label>
+                    <p class="text-[10px] text-slate-500 mb-1">What discord channel should we send the reminder to?</p>
+                    <select id="remDiscordChannel" class="w-full rounded-lg px-3 py-2 text-xs">
+                        <option value=""># Select Channel</option>
+                    </select>
                 </div>
 
                 <div class="flex space-x-2 pt-2 border-t border-slate-800">
@@ -963,7 +988,8 @@
             if (tabKey === 'sessions-overview') { titleEl.textContent = "Sessions Overview"; descEl.textContent = "View session analytics."; renderSessionsOverviewTab(); return; }
             if (tabKey === 'sessions-settings') { titleEl.textContent = "Sessions Settings"; descEl.textContent = "Configure session settings."; renderSessionsSettingsTab(); return; }
             if (tabKey === 'reminders-list') { titleEl.textContent = "Server Reminders"; descEl.textContent = "Set up automated reminders for your server."; renderRemindersTab(); return; }
-            if (tabKey === 'discord-nicknames') { titleEl.textContent = "Discord Nickname Prefixes"; descEl.textContent = "Configure the prefixes applied to Discord server nicknames for members on shift or department."; renderNicknamesTab(); return; }
+            if (tabKey === 'discord-nicknames') { titleEl.textContent = "Discord Nickname Prefixes"; descEl.textContent = "Configure the prefixes applied to Discord server nicknames for members on shift or LOA."; renderNicknamesTab(); return; }
+            if (tabKey === 'discord-channels') { titleEl.textContent = "Discord Channels"; descEl.textContent = "Configure which Discord channels are used for different features and logs."; renderChannelsTab(); return; }
 
             const formattedTitle = tabKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
             titleEl.textContent = formattedTitle;
@@ -1050,32 +1076,97 @@
                 <div class="card p-6 rounded-2xl border border-slate-800 space-y-6">
                     <div>
                         <h3 class="text-base font-bold text-white">Discord Nickname Prefixes</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Configure the prefixes applied to Discord server nicknames for staff or departments (replaces text before the first |).</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Configure the prefixes applied to Discord server nicknames for members on shift or LOA.</p>
                     </div>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">On Shift Nickname (Staff)</label>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">On Shift Nickname</label>
+                            <p class="text-[11px] text-slate-500 mb-2">Which prefix should be applied to a Discord server nickname while on shift?</p>
                             <input type="text" id="nickStaff" value="ON SHIFT |" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">LDOT Department Nickname Prefix</label>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">On LOA Nickname</label>
+                            <p class="text-[11px] text-slate-500 mb-2">Which prefix should be applied to a Discord server nickname while on LOA?</p>
+                            <input type="text" id="nickLoa" placeholder="" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">LDOT Department</label>
                             <input type="text" id="nickLdot" value="LDOT |" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">LHP Department Nickname Prefix</label>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">LHP Department</label>
                             <input type="text" id="nickLhp" value="LHP |" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">LFD Department Nickname Prefix</label>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">LFD Department</label>
                             <input type="text" id="nickLfd" value="LFD |" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">LLEDP Department Nickname Prefix</label>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">LLEDP Department</label>
                             <input type="text" id="nickLledp" value="LLEDP |" class="w-full rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white">
                         </div>
                     </div>
                     <div class="flex justify-end pt-4 border-t border-slate-800">
                         <button onclick="alert('Nickname prefixes saved!')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Nickname Settings</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function renderChannelsTab() {
+            document.getElementById('sdContentContainer').innerHTML = `<p class="text-xs text-slate-500 py-4 text-center">Loading channels...</p>`;
+            try {
+                const res = await fetch('/api/discord/channels');
+                const data = await res.json();
+                let options = `<option value=""># Select Channel</option>`;
+                if (data.success && data.channels) {
+                    options += data.channels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
+                }
+
+                document.getElementById('sdContentContainer').innerHTML = `
+                    <div class="space-y-6">
+                        <div class="card p-6 rounded-2xl border border-slate-800 space-y-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">Channel Overrides <i class="fa-solid fa-triangle-exclamation text-rose-400 text-[10px]"></i></h3>
+                                <p class="text-xs text-slate-400 mt-1">Channel overrides allow you to separate audit logs or moderation logs into their own channels!</p>
+                            </div>
+                            <button onclick="alert('Channel overrides panel')" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2">
+                                <i class="fa-solid fa-gear"></i> <span>Manage Channel Overrides</span>
+                            </button>
+                        </div>
+
+                        <div class="card p-6 rounded-2xl border border-slate-800 space-y-6">
+                            ${createChannelSelect('Shift Logs Discord Channel', 'What channel should shift events (when a shift is started, on break, or ended) go to?', 'chanShift', options)}
+                            ${createChannelSelect('Moderation Logs Discord Channel', 'What channel should log events (when a log is created, edited, or deleted) go to?', 'chanMod', options)}
+                            ${createChannelSelect('Leave of Absence Channel', 'What channel should leave of absence events be submitted to, such as submissions, results, and end events?', 'chanLoa', options)}
+                            ${createChannelSelect('Voting Channel', 'What channel should we announce to when someone votes for your server on the server directory?', 'chanVote', options)}
+                            ${createChannelSelect('Reviews Channel', 'What channel should we announce to when someone writes a review on your server?', 'chanReview', options)}
+                            ${createChannelSelect('Audit Logs Channel', 'What channel should we send audit log events to?', 'chanAudit', options)}
+                            ${createChannelSelect('Activity End Wave Channel', 'What channel should we send activity wave end logs to?', 'chanWaveEnd', options)}
+                            ${createChannelSelect('Staff Review Channel', 'What channel should we send staff review notifications to?', 'chanStaffReview', options)}
+                            ${createChannelSelect('Promotion Logs Channel', 'When a member is promoted, we\\'ll send a log to this channel.', 'chanPromo', options)}
+                            ${createChannelSelect('Demotion Logs Channel', 'When a member is demoted, we\\'ll send a log to this channel.', 'chanDemo', options)}
+                            <div class="flex justify-end pt-4 border-t border-slate-800">
+                                <button onclick="alert('Channels saved!')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-lg">Save Channels</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {}
+        }
+
+        function createChannelSelect(title, desc, id, options) {
+            return `
+                <div>
+                    <label class="block text-sm font-bold text-white mb-1">${title}</label>
+                    <p class="text-[11px] text-slate-400 mb-2">${desc}</p>
+                    <div class="flex space-x-2">
+                        <select id="${id}" class="flex-1 rounded-xl px-3 py-2 text-xs bg-slate-900 border border-slate-700 text-white custom-scroll">
+                            ${options}
+                        </select>
+                        <button class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl border border-slate-700 transition" title="Refresh">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -1335,7 +1426,19 @@
             } catch (err) {}
         }
 
-        function openCreateReminderModal() { document.getElementById('createReminderModal').classList.remove('hidden'); }
+        async function openCreateReminderModal() { 
+            try {
+                const res = await fetch('/api/discord/channels');
+                const data = await res.json();
+                let options = `<option value=""># Select Channel</option>`;
+                if (data.success && data.channels) {
+                    options += data.channels.map(c => `<option value="${c.id}"># ${escapeHtml(c.name)}</option>`).join('');
+                }
+                const channelSelect = document.getElementById('remDiscordChannel');
+                if (channelSelect) channelSelect.innerHTML = options;
+            } catch(e) {}
+            document.getElementById('createReminderModal').classList.remove('hidden'); 
+        }
         function closeCreateReminderModal() { document.getElementById('createReminderModal').classList.add('hidden'); }
 
         async function submitNewReminder(e) {
