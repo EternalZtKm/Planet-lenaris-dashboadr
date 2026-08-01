@@ -179,7 +179,7 @@ async function checkCommsAndRunReminders() {
             }
 
             if (!foundInComms) {
-                const pmMsg = `:pm ${rawName} We have detected that you are not in our comms. You must join our comms or will be moderated.`;
+                const pmMsg = `:pm ${rawName} We have detected that your not in the mandatory comms. Call !mod by saying “!mod” and tell them you have received this pm.`;
                 await fetch('https://api.erlc.gg/v1/server/command', {
                     method: 'POST',
                     headers: { 'Server-Key': ERLC_API_KEY, 'Content-Type': 'application/json' },
