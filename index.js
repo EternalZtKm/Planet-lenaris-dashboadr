@@ -55,6 +55,11 @@ let botConfig = {
     reviewWebhook: process.env.REVIEW_WEBHOOK || "",
     auditWebhook: process.env.AUDIT_WEBHOOK || "",
     commsWebhook: process.env.COMMS_WEBHOOK || "",
+    loaChannel: "",
+    votingChannel: "",
+    waveChannel: "",
+    demotionChannel: "",
+    staffReviewChannel: "",
     managerRoleIds: ["1425618356912001135", "1425618591637835797", "1425632069479960686"]
 };
 
@@ -91,14 +96,27 @@ function addNotification(title, message) {
     if (notificationsList.length > 20) notificationsList.pop();
 }
 
-async function sendDiscordLog(webhookUrl, embed, content = null) {
-    if (!webhookUrl) return;
+async function sendDiscordLog(destination, embed, content = null) {
+    if (!destination) return;
     try { 
         let payload = { embeds: [embed] };
         if (content) payload.content = content;
-        const response = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
-        if (!response.ok) console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
-    } catch (err) { console.error("[WEBHOOK FETCH ERROR]:", err.message); }
+        
+        if (destination.startsWith('http')) {
+            const response = await fetch(destination, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+            if (!response.ok) console.error(`[WEBHOOK ERROR] ${response.status}:`, await response.text());
+        } else if (BOT_TOKEN) {
+            const response = await fetch(`https://discord.com/api/v10/channels/${destination}/messages`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bot ${BOT_TOKEN}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) console.error(`[BOT API ERROR] ${response.status}:`, await response.text());
+        }
+    } catch (err) { console.error("[DISCORD LOG FETCH ERROR]:", err.message); }
 }
 
 async function verifyUserRoleLive(userId) {
@@ -289,6 +307,22 @@ app.get('/api/auth/user', async (req, res) => {
 });
 
 app.get('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
+
+// --- DISCORD CHANNELS ENDPOINT ---
+app.get('/api/discord/channels', requireManagerAuth, async (req, res) => {
+    if (!BOT_TOKEN || !GUILD_ID) return res.json({ success: false, channels: [] });
+    try {
+        const resp = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/channels`, {
+            headers: { 'Authorization': `Bot ${BOT_TOKEN}` }
+        });
+        if (!resp.ok) return res.json({ success: false, channels: [] });
+        const channels = await resp.json();
+        const textChannels = channels.filter(c => c.type === 0 || c.type === 5).map(c => ({ id: c.id, name: c.name }));
+        res.json({ success: true, channels: textChannels });
+    } catch(e) {
+        res.json({ success: false, channels: [] });
+    }
+});
 
 // --- ACTIVITY WAVES API ENDPOINTS ---
 app.get('/api/waves/settings', requireManagerAuth, (req, res) => res.json({ success: true, settings: waveSettings }));
