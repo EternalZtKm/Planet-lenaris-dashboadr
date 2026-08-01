@@ -23,8 +23,15 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 
 const REQUIRED_ROLE_ID = "1427083014147407995"; 
 const REVIEW_CHANNEL_ID = "1424047205517492375"; 
-const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.up.railway.app/api/auth/discord/callback";
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
+
+// Dynamically resolve the Redirect URI to prevent OAuth loops on Localhost vs Hosting
+function getRedirectUri(req) {
+    if (process.env.REDIRECT_URI) return process.env.REDIRECT_URI;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    return `${protocol}://${host}/api/auth/discord/callback`;
+}
 
 // --- GLOBAL STORES ---
 let departmentsData = [
@@ -208,12 +215,11 @@ async function requireManagerAuth(req, res, next) {
 app.use(cors());
 app.use(express.json());
 
-// Set secure to false to prevent the browser from eating the cookie, preventing login loops
-app.use(session({ 
-    secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key', 
-    resave: false, 
-    saveUninitialized: false, 
-    cookie: { maxAge: 86400000, secure: false, httpOnly: true } 
+// REVERTED TO BASIC SESSION CONFIG - Removes secure enforcing to fix login loops across domains
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'planet-lenaris-secret-key',
+    resave: true,
+    saveUninitialized: true
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -333,16 +339,18 @@ app.get('/api/auth/discord/login', (req, res) => {
         req.session.verifiedRole = true;
         return req.session.save(() => res.redirect('/?discord=connected&devmode=true'));
     }
-    res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify`);
+    const redirect = getRedirectUri(req);
+    res.redirect(`https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&scope=identify`);
 });
 
 app.get('/api/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     if (!code) return res.redirect('/?auth=failed_nocode');
     try {
+        const redirect = getRedirectUri(req);
         const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
             method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'authorization_code', code, redirect_uri: REDIRECT_URI })
+            body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'authorization_code', code, redirect_uri: redirect })
         });
         const tokenData = await tokenRes.json();
         if (!tokenData.access_token) return res.redirect('/?auth=failed_invalidtoken');
