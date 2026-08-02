@@ -23,8 +23,15 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID || "";
 
 const REQUIRED_ROLE_ID = "1427083014147407995"; 
 const REVIEW_CHANNEL_ID = "1424047205517492375"; 
-const REDIRECT_URI = process.env.REDIRECT_URI || "https://planet-lenaris-dashboard.up.railway.app/api/auth/discord/callback";
 const ERLC_API_KEY = process.env.ERLC_API_KEY || "";
+
+// Dynamically resolve the Redirect URI to prevent OAuth loops on Localhost vs Hosting
+function getRedirectUri(req) {
+    if (process.env.REDIRECT_URI) return process.env.REDIRECT_URI;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    return `${protocol}://${host}/api/auth/discord/callback`;
+}
 
 // --- GLOBAL STORES ---
 let departmentsData = [
@@ -155,6 +162,7 @@ async function checkUserDepartmentRole(userId, deptGuildId, verifiedRoleId) {
     } catch (err) { return false; }
 }
 
+// Function to update a discord user's nickname based on the prefix
 async function updateDiscordNickname(userId, newPrefix) {
     if (!BOT_TOKEN || !GUILD_ID) return;
     try {
@@ -163,11 +171,14 @@ async function updateDiscordNickname(userId, newPrefix) {
         const memberData = await memberRes.json();
         let currentNick = memberData.nick || memberData.user.global_name || memberData.user.username;
         
+        // Remove old prefixes (anything before the first '|')
         if (currentNick.includes('|')) {
             currentNick = currentNick.substring(currentNick.indexOf('|') + 1).trim();
         }
         
         let newNick = newPrefix ? `${newPrefix} ${currentNick}` : currentNick;
+        
+        // Ensure nickname is not over 32 chars
         if (newNick.length > 32) newNick = newNick.substring(0, 32);
 
         await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members/${userId}`, {
@@ -175,15 +186,18 @@ async function updateDiscordNickname(userId, newPrefix) {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bot ${BOT_TOKEN}` },
             body: JSON.stringify({ nick: newNick })
         });
-    } catch (err) {}
+    } catch (err) { console.error("[NICKNAME SYNC ERROR]:", err.message); }
 }
 
 async function requireStaffAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
+    
+    // DEV BYPASS: Auto-Approve if missing Bot Token during setup
     if (!BOT_TOKEN || !GUILD_ID) {
         req.session.user.isManager = true;
         return next();
     }
+
     const check = await verifyUserRoleLive(req.session.user.id);
     if (check.error || !check.hasRole) return res.status(403).json({ success: false, error: check.error || "Access Denied" });
     req.session.user.isManager = check.isManager;
@@ -192,10 +206,13 @@ async function requireStaffAuth(req, res, next) {
 
 async function requireManagerAuth(req, res, next) {
     if (!req.session || !req.session.user) return res.status(401).json({ success: false, error: "Unauthorized Session" });
+
+    // DEV BYPASS: Auto-Approve if missing Bot Token during setup
     if (!BOT_TOKEN || !GUILD_ID) {
         req.session.user.isManager = true;
         return next();
     }
+
     const check = await verifyUserRoleLive(req.session.user.id);
     if (check.error || !check.isManager) return res.status(403).json({ success: false, error: check.error || "Management Access Required" });
     next();
@@ -720,7 +737,7 @@ app.post('/api/shifts/toggle', requireStaffAuth, (req, res) => {
             } else { 
                 existingShift.isOnBreak = true; 
                 existingShift.breakStart = Date.now(); 
-                const embed = new Builder().setTitle(`☕ General Break Started`).setColor(0xf1c40f).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
+                const embed = new EmbedBuilder().setTitle(`☕ General Break Started`).setColor(0xf1c40f).addFields({ name: "Staff", value: `<@${user.id}>`, inline: true });
                 sendDiscordLog(botConfig.shiftWebhook || botConfig.chanShift, embed.toJSON());
             }
         }
